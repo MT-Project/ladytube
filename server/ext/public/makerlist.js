@@ -45,6 +45,19 @@
         menuEl.style.top = top + 'px';
     }
 
+    // アニメーション画像 (GIF / APNG / アニメーション WebP) か。切り取って描き直すと止まってしまうので、
+    // これらは元のまま保存し、表示範囲だけ別に持つ。先頭 256KB だけ見る。
+    // ponytail: GIF は1コマでもアニメーション扱い (元のまま保存しても表示は同じ)
+    function isAnimated(dataUrl) {
+        const i = dataUrl.indexOf(',') + 1;
+        const b64 = dataUrl.slice(i, i + 349524);
+        const s = atob(b64.slice(0, b64.length - b64.length % 4));
+        if (s.startsWith('GIF8')) return true;
+        if (s.startsWith('\x89PNG')) { const a = s.indexOf('acTL'); return a > 0 && a < s.indexOf('IDAT'); }
+        if (s.startsWith('RIFF') && s.slice(8, 16) === 'WEBPVP8X') return (s.charCodeAt(20) & 0x02) !== 0;
+        return false;
+    }
+
     async function render() {
         const page = h('div', { class: 'wlext-maker-page wlext-ext-page' });
         page.appendChild(WL.pageHeader());
@@ -103,6 +116,13 @@
                     const im = h('img', { loading: 'lazy', alt: m.name });
                     im.onerror = () => { m.hasImage = false; paintImg(); };
                     im.src = WL.api.makerImageUrl(m.name, Date.now());
+                    // アニメーション画像は元のまま保存してあるので、登録時の表示範囲をここで当てる
+                    const v = m.imageView;
+                    if (v) Object.assign(im.style, {
+                        position: 'absolute', objectFit: 'fill', maxWidth: 'none',
+                        width: (100 / v.w) + '%', height: (100 / v.h) + '%',
+                        left: (-v.x / v.w * 100) + '%', top: (-v.y / v.h * 100) + '%'
+                    });
                     img.appendChild(im);
                 } else {
                     img.style.background = WL.colorFor(m.name);
@@ -118,10 +138,18 @@
                 input.addEventListener('change', () => {
                     const file = input.files && input.files[0]; if (!file) return;
                     const reader = new FileReader();
-                    reader.onload = () => WL.cropDialog(reader.result, async (dataUrl) => {
-                        try { await WL.api.setMakerImage(m.name, dataUrl); m.hasImage = true; paintImg(); WL.toast('メーカー画像を登録しました', 'success'); }
+                    reader.onload = () => WL.cropDialog(reader.result, async (dataUrl, view) => {
+                        const anim = isAnimated(reader.result);
+                        try {
+                            await WL.api.setMakerImage(m.name, anim ? reader.result : dataUrl, anim ? view : null);
+                            m.hasImage = true; m.imageView = anim ? view : null; paintImg();
+                            WL.toast('メーカー画像を登録しました', 'success');
+                        }
                         catch (e) { WL.toast('登録に失敗: ' + e.message, 'error'); }
-                    }, { aspect: [1, 1], outW: 600, title: 'メーカー画像を切り取り', hint: 'ドラッグで位置調整・スライダーで拡大し、正方形に切り取ります。' });
+                    }, {
+                        aspect: [1, 1], outW: 600, fit: 'contain', title: 'メーカー画像を登録',
+                        hint: 'そのまま登録すると画像全体を中央に表示します。拡大すると正方形に切り取れます（ドラッグで位置調整）。'
+                    });
                     reader.readAsDataURL(file);
                 });
                 document.body.appendChild(input); input.click(); setTimeout(() => input.remove(), 1000);
@@ -205,20 +233,25 @@
                 class: 'wlext-maker-fanza', href: m.listUrl || '#', target: '_blank', rel: 'noopener noreferrer',
                 title: 'FANZAのリストページを開く'
             }, 'FANZA');
-            const paintFanza = () => {
+            const siteEl = h('a', {
+                class: 'wlext-maker-site', target: '_blank', rel: 'noopener noreferrer', title: 'メーカーの公式サイトを開く'
+            }, '公式サイト');
+            const paintLinks = () => {
                 fanzaEl.href = m.listUrl || '#';
                 fanzaEl.style.display = m.listUrl ? '' : 'none';
+                siteEl.href = m.siteUrl || '#';
+                siteEl.style.display = m.siteUrl ? '' : 'none';
             };
-            paintFanza();
+            paintLinks();
 
-            function repaint() { paintName(); paintCatch(); paintFanza(); }
+            function repaint() { paintName(); paintCatch(); paintLinks(); }
 
             return h('div', { class: 'wlext-maker-row' }, [
                 img,
                 h('div', { class: 'wlext-maker-body' }, [nameEl, catchEl, tagsEl, labelsEl]),
                 h('div', { class: 'wlext-maker-side' }, [
                     h('div', { class: 'wlext-maker-side-top' }, [ratingEl, menuBtn]),
-                    fanzaEl
+                    h('div', { class: 'wlext-maker-links' }, [siteEl, fanzaEl])
                 ])
             ]);
         }
@@ -232,6 +265,7 @@
         const inFuri = h('input', { class: 'wlext-input', value: m.furigana || '', placeholder: 'めーかーめい' });
         const inCatch = h('input', { class: 'wlext-input', value: m.catchCopy || '' });
         const inUrl = h('input', { class: 'wlext-input', value: m.listUrl || '', placeholder: 'https://...' });
+        const inSite = h('input', { class: 'wlext-input', value: m.siteUrl || '', placeholder: 'https://...' });
         const field = (label, node) => h('div', { class: 'wlext-field' }, [h('label', null, label), node]);
 
         const body = h('div', null, [
@@ -240,18 +274,20 @@
             field('メーカー名', h('div', { class: 'wlext-maker-readonly' }, m.name)),
             field('ふりがな', inFuri),
             field('キャッチコピー', inCatch),
-            field('リストページURL (FANZA)', inUrl)
+            field('リストページURL (FANZA)', inUrl),
+            field('公式サイトURL', inSite)
         ]);
 
         WL.dialog('メーカー情報を編集 — ' + m.name, body, {
             onSave: async (close) => {
                 try {
                     await WL.api.saveMaker({
-                        name: m.name, furigana: inFuri.value, catch_copy: inCatch.value, list_url: inUrl.value
+                        name: m.name, furigana: inFuri.value, catch_copy: inCatch.value, list_url: inUrl.value, site_url: inSite.value
                     });
                     m.furigana = inFuri.value.trim();
                     m.catchCopy = inCatch.value.trim();
                     m.listUrl = inUrl.value.trim();
+                    m.siteUrl = inSite.value.trim();
                     onDone();
                     WL.toast('メーカー情報を保存しました', 'success');
                     close();

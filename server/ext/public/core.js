@@ -161,7 +161,7 @@
         let m = now.getMonth() - d.getMonth();
         if (now.getDate() < d.getDate()) m--;
         if (m < 0) { y--; m += 12; }
-        if (y < 0) return '';
+        if (y < 0) return '発売前';
         if (y === 0) return (m <= 0 ? '今月' : m + 'ヶ月前');
         return y + '年' + (m > 0 ? m + 'ヶ月' : '') + '前';
     }
@@ -236,11 +236,41 @@
     }
     WL.cacheVideoTags = cacheVideoTags;
 
+    // 検索画面で同じ品番の動画を1枚のカードにまとめるか (表示形式ボタンの右のトグル。既定はON)
+    const GROUP_KEY = 'wlext_group_model';
+    WL.groupByModel = () => {
+        try { return localStorage.getItem(GROUP_KEY) !== '0'; } catch (e) { return true; }
+    };
+    WL.setGroupByModel = (on) => {
+        try { localStorage.setItem(GROUP_KEY, on ? '1' : '0'); } catch (e) { }
+    };
+    const grouping = () => location.pathname === '/search' && WL.groupByModel();
+
+    // まとめたカードの中身: 代表 id -> メンバーの id (ファイル名順)。一括操作・「N本」の一覧で使う
+    WL._groupIds = WL._groupIds || {};
+    WL.groupMembers = (id) => WL._groupIds[id] || [Number(id)];
+    function applyGroups(list) {
+        if (!Array.isArray(list)) return;
+        list.forEach(v => {
+            if (!v || !(v.ext_group_count > 1)) return;
+            WL._groupIds[v.id] = String(v.ext_group_ids || '').split(',').map(Number).filter(n => n > 0);
+            // カードの名前はパート番号を外す (「…vol.5_1.mp4」→「…vol.5.mp4」)
+            v.filename = String(v.filename).replace(/_\d+(\.[^.\\/]+)?$/, '$1');
+        });
+    }
+
     // '@' で始まるフィールド検索 → search.js、それ以外の通常キーワード → fullsearch.js。
     // 拡張ソート(ext_rating / ext_screenshots 等)は両経路の sortMap で適用されるため、
     // 振り分けは検索語の種類だけで決める(キーワード+拡張ソートの併用を壊さない)。
+    // 品番でまとめるときはまとめ方を1か所に寄せるため search.js に送る (キーワードも同じ条件で扱える)。
     function searchEndpointFor(q) {
+        if (grouping()) return '/ext/api/search';
         return String(q || '').trim().startsWith('@') ? '/ext/api/search' : '/ext/api/fullsearch';
+    }
+    function searchParams(u) {
+        const p = new URLSearchParams(u.searchParams);
+        if (grouping()) p.set('group', '1');
+        return p;
     }
 
     // 本家 ver.260914 から、件数は一覧とは別の /api/videos/count で取るようになった。
@@ -248,7 +278,7 @@
     // 件数も同じ条件で数え直す (例: @maker:"X" は本家だとキーワード扱いで 0 件になる)。
     async function handleVideoCountFetch(url, input, init) {
         const u = new URL(url, location.origin);
-        const p = new URLSearchParams(u.searchParams);
+        const p = searchParams(u);
         p.set('page', '1');
         p.set('perPage', '1');   // 欲しいのは totalCount だけ
         try {
@@ -266,10 +296,11 @@
         const endpoint = searchEndpointFor(u.searchParams.get('q'));
 
         try {
-            const r = await origFetch(endpoint + '?' + u.searchParams.toString());
+            const r = await origFetch(endpoint + '?' + searchParams(u).toString());
             if (r.ok) {
                 const data = await r.json();
                 applyDisplayName(data.videos);
+                applyGroups(data.videos);
                 cacheVideoTags(data.videos);
                 return jsonResponse(data);
             }
@@ -320,14 +351,35 @@
                     data.relatedVideos.forEach(v => { const m = map[v.id]; if (m && m.display_name) { v.ext_display_name = m.display_name; if (useDisp) v.filename = asFilename(m.display_name, v.filename); } });
                 } catch (e) { }
             }
+            // 動画ページの拡張 (更新日の表示・標準モードの関連動画) が使う
+            if (data && data.video) {
+                WL._watch = {
+                    id: String(id), updatedAt: data.video.updated_at, nextVideoId: data.nextVideoId,
+                    relatedIds: (data.relatedVideos || []).map(v => v.id),
+                };
+                WL.requestEnsure();
+            }
             return jsonResponse(data);
         } catch (e) { return clone; }
+    }
+
+    // グリッド表示の⋮(本家のタグメニュー)は代表の動画1本にタグを付け外しする。
+    // 品番でまとめたカードでは、同じ変更を中の動画すべてへ送る。
+    async function handleGroupTagFetch(id, url, input, init) {
+        const r = await origFetch(input, init);
+        if (r.ok) {
+            const others = WL.groupMembers(id).filter(x => x !== Number(id));
+            await Promise.all(others.map(o => origFetch(url.replace('/api/video/' + id + '/', '/api/video/' + o + '/'), init).catch(() => { })));
+        }
+        return r;
     }
 
     window.fetch = function (input, init) {
         try {
             const url = typeof input === 'string' ? input : (input && input.url) || '';
             if (typeof input === 'string') {
+                const mt = url.match(/\/api\/video\/(\d+)\/tags(\?|$)/);
+                if (mt && init && /^(POST|DELETE)$/i.test(init.method || '') && grouping()) return handleGroupTagFetch(mt[1], url, input, init);
                 if (/\/api\/videos\/count(\?|$)/.test(url)) return handleVideoCountFetch(url, input, init);
                 if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(url, input, init);
                 const mv = url.match(/\/api\/video\/(\d+)(\?|$)/);
@@ -388,8 +440,10 @@
     };
 
     /* ---------- 画像クロッパ (任意アスペクト比) ---------- */
-    // WL.cropDialog(dataUrl, onDone, { aspect:[w,h], outW, hint })
-    // 出演者画像(正方形)と同じ操作感で、指定比率に切り取って dataURL(PNG) を返す。
+    // WL.cropDialog(dataUrl, onDone, { aspect:[w,h], outW, hint, fit })
+    // 出演者画像(正方形)と同じ操作感で、指定比率に切り取って onDone(dataURL(PNG), view) を返す。
+    // fit:'contain' は最初に画像全体を枠の中央に収める (余白は透明)。拡大すると切り取りになる。
+    // view は枠に写っている範囲を元画像の幅・高さに対する割合で表したもの {x,y,w,h} (余白があると x,y<0・w,h>1)。
     WL.cropDialog = function (dataUrl, onDone, opts) {
         opts = opts || {};
         const aspect = opts.aspect || [1, 1];
@@ -400,14 +454,14 @@
 
         const stage = h('div', { class: 'wlext-cropper-stage', style: { width: STAGE_W + 'px', height: STAGE_H + 'px' } });
         const img = new Image();
-        let scale = 1, minScale = 1, ox = 0, oy = 0, nw = 0, nh = 0;
+        let scale = 1, minScale = 1, coverScale = 1, ox = 0, oy = 0, nw = 0, nh = 0;
 
+        // 枠より大きい向きは枠を埋める範囲、小さい向きは枠の中だけ動かせる
         function clamp() {
             if (scale < minScale) scale = minScale;
             const w = nw * scale, hh = nh * scale;
-            if (ox > 0) ox = 0; if (oy > 0) oy = 0;
-            if (ox < STAGE_W - w) ox = STAGE_W - w;
-            if (oy < STAGE_H - hh) oy = STAGE_H - hh;
+            ox = Math.min(Math.max(ox, Math.min(0, STAGE_W - w)), Math.max(0, STAGE_W - w));
+            oy = Math.min(Math.max(oy, Math.min(0, STAGE_H - hh)), Math.max(0, STAGE_H - hh));
         }
         function paint() {
             clamp();
@@ -416,14 +470,21 @@
             img.style.left = ox + 'px';
             img.style.top = oy + 'px';
         }
+        // 指定の倍率で中央に置き直す
+        function center(s) {
+            scale = s;
+            ox = (STAGE_W - nw * scale) / 2; oy = (STAGE_H - nh * scale) / 2;
+            zoom.value = String(scale / minScale);
+            paint();
+        }
         img.onload = () => {
             nw = img.naturalWidth; nh = img.naturalHeight;
-            minScale = Math.max(STAGE_W / nw, STAGE_H / nh);
-            scale = minScale;
-            ox = (STAGE_W - nw * scale) / 2; oy = (STAGE_H - nh * scale) / 2;
+            coverScale = Math.max(STAGE_W / nw, STAGE_H / nh);
+            minScale = opts.fit === 'contain' ? Math.min(STAGE_W / nw, STAGE_H / nh) : coverScale;
+            zoom.max = String(4 * coverScale / minScale);
             img.style.position = 'absolute';
             stage.appendChild(img);
-            paint();
+            center(minScale);
         };
         img.src = dataUrl;
 
@@ -438,9 +499,15 @@
         const zoom = h('input', { type: 'range', min: '1', max: '4', step: '0.01', value: '1', style: { flex: '1' } });
         zoom.addEventListener('input', () => { scale = minScale * parseFloat(zoom.value); paint(); });
 
+        const fitButtons = opts.fit === 'contain' ? h('div', { class: 'wlext-cropper-fit' }, [
+            h('button', { type: 'button', class: 'wlext-btn', onClick: () => center(minScale) }, '全体を表示'),
+            h('button', { type: 'button', class: 'wlext-btn', onClick: () => center(coverScale) }, '枠いっぱいに切り取る')
+        ]) : null;
+
         const body = h('div', null, [
             stage,
             h('div', { class: 'wlext-cropper-controls' }, [h('span', null, '拡大'), zoom]),
+            fitButtons,
             h('div', { style: { fontSize: '0.78rem', color: 'var(--text-secondary,#888)', marginTop: '0.4rem' } },
                 opts.hint || 'ドラッグで位置調整・スライダーで拡大して切り取ります。')
         ]);
@@ -452,12 +519,12 @@
             onSave: async (close) => {
                 const canvas = document.createElement('canvas'); canvas.width = OUT_W; canvas.height = OUT_H;
                 const ctx = canvas.getContext('2d');
-                const sSizeW = STAGE_W / scale, sSizeH = STAGE_H / scale;
-                const sxSrc = -ox / scale, sySrc = -oy / scale;
-                ctx.drawImage(img, sxSrc, sySrc, sSizeW, sSizeH, 0, 0, OUT_W, OUT_H);
+                const k = OUT_W / STAGE_W;
+                ctx.drawImage(img, ox * k, oy * k, nw * scale * k, nh * scale * k);
                 const out = canvas.toDataURL('image/png');
+                const view = { x: -ox / scale / nw, y: -oy / scale / nh, w: STAGE_W / scale / nw, h: STAGE_H / scale / nh };
                 cleanup();
-                await onDone(out);
+                await onDone(out, view);
                 close();
             }
         });

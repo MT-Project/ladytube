@@ -133,6 +133,48 @@ function buildConditions(tokens) {
     return { where, params };
 }
 
+// 「品番でまとめる」のまとめ単位。品番が空の動画は1本ずつ (id で別々にする)。
+const GROUP_KEY = "CASE WHEN IFNULL(e.model_no,'') = '' THEN 'i' || f.id ELSE 'm' || UPPER(e.model_no) END";
+
+// 同じ品番の動画を1件にまとめた一覧。検索に合った動画だけでまとめる。
+//  並び: グループ内で今のソート順の一番前に来る動画の位置 (新しい順なら一番新しい動画)
+//  代表: ファイル名の自然順で先頭 (_1 など)。ext_group_ids はメンバーの id をその順に並べたもの
+function groupedSearch(req, res, where, params, limit, offset) {
+    const { sort = 'updated_desc', seed } = req.query;
+    const base = `
+        FROM files f
+        JOIN metadata m ON f.hash = m.hash
+        LEFT JOIN ext_video_meta e ON e.hash = f.hash
+    `;
+    const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
+    const { orderBy, extraParams } = orderByFor(sort, seed);
+
+    const total = db.prepare(`SELECT COUNT(DISTINCT ${GROUP_KEY}) AS total ${base}${whereSql}`).get(...params).total;
+    // ORDER BY の乱数シード(extraParams)は hits の SELECT 句にあるので WHERE の値より前に渡す
+    const videos = db.prepare(`
+        WITH hits AS (
+            SELECT f.id AS id, ${GROUP_KEY} AS gk, ext_namekey(f.filename) AS nk,
+                   ROW_NUMBER() OVER (ORDER BY ${orderBy}, f.id) AS ord
+            ${base}${whereSql}
+        ), g AS (
+            SELECT id, gk, MIN(ord) OVER w AS gord, COUNT(*) OVER w AS gcount,
+                   ROW_NUMBER() OVER (PARTITION BY gk ORDER BY nk, id) AS rn
+            FROM hits WINDOW w AS (PARTITION BY gk)
+        )
+        SELECT ${VIDEO_FIELDS}, g.gcount AS ext_group_count,
+               CASE WHEN g.gcount > 1 THEN (SELECT GROUP_CONCAT(g2.id ORDER BY g2.rn) FROM g g2 WHERE g2.gk = g.gk) END AS ext_group_ids
+        FROM g
+        JOIN files f ON f.id = g.id
+        JOIN metadata m ON f.hash = m.hash
+        LEFT JOIN ext_video_meta e ON e.hash = f.hash
+        WHERE g.rn = 1
+        ORDER BY g.gord
+        LIMIT ? OFFSET ?
+    `).all(...extraParams, ...params, limit, offset);
+
+    res.json({ videos, totalCount: total });
+}
+
 exports.search = (req, res) => {
     try {
         const { q = '', page = 1, perPage = 20, sort = 'updated_desc', seed } = req.query;
@@ -140,6 +182,7 @@ exports.search = (req, res) => {
         const offset = (Math.max(1, parseInt(page, 10) || 1) - 1) * limit;
 
         const { where, params } = conditionsFor(req.query);
+        if (req.query.group === '1') return groupedSearch(req, res, where, params, limit, offset);
 
         // ext テーブルが必須となる条件があるか (performer/rating など) で JOIN種別を決める
         const joinType = 'LEFT JOIN';
@@ -241,21 +284,29 @@ exports.facets = (req, res) => {
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
 
         const rows = db.prepare(`
-            SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers
+            SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers,
+                   ${GROUP_KEY} AS gk
             FROM files f
             JOIN metadata m ON f.hash = m.hash
             LEFT JOIN ext_video_meta e ON e.hash = f.hash
             ${whereSql}
         `).all(...params);
 
+        // 品番でまとめているときは、一覧のカードと同じく「まとめた件数」で数える
+        const grouped = req.query.group === '1';
         const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map() };
-        const bump = (kind, v) => { const s = String(v == null ? '' : v).trim(); if (s) counts[kind].set(s, (counts[kind].get(s) || 0) + 1); };
+        const seen = new Set();
+        const bump = (kind, v, gk) => {
+            const s = String(v == null ? '' : v).trim(); if (!s) return;
+            if (grouped) { const k = kind + '\n' + s + '\n' + gk; if (seen.has(k)) return; seen.add(k); }
+            counts[kind].set(s, (counts[kind].get(s) || 0) + 1);
+        };
         rows.forEach(r => {
-            splitList(r.genres).forEach(v => bump('genre', v));
-            splitList(r.tags).forEach(v => bump('tag', v));
-            splitList(r.performers).forEach(v => bump('performer', v));
-            bump('maker', r.maker);
-            bump('series', r.series);
+            splitList(r.genres).forEach(v => bump('genre', v, r.gk));
+            splitList(r.tags).forEach(v => bump('tag', v, r.gk));
+            splitList(r.performers).forEach(v => bump('performer', v, r.gk));
+            bump('maker', r.maker, r.gk);
+            bump('series', r.series, r.gk);
         });
 
         // 出演者は id で数えているので氏名を引く
@@ -272,7 +323,7 @@ exports.facets = (req, res) => {
             .sort((a, b) => (b.count - a.count) || String(a.label).localeCompare(String(b.label), 'ja'));
 
         res.json({
-            total: rows.length,
+            total: grouped ? new Set(rows.map(r => r.gk)).size : rows.length,
             genre: list('genre'),
             tag: list('tag'),
             maker: list('maker'),
@@ -282,6 +333,74 @@ exports.facets = (req, res) => {
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search facets]', e);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// 一覧の小さな表示 (品番グループの中身・動画ページ右側の一覧) に使う項目
+const BRIEF_FIELDS = `
+    f.id, f.filename, m.duration, m.last_pos,
+    (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) AS thumbnail_size,
+    e.display_name AS ext_display_name, e.rating AS ext_rating,
+    e.release_date AS ext_release_date, e.model_no AS ext_model_no
+`;
+const BRIEF_BASE = `
+    FROM files f
+    JOIN metadata m ON f.hash = m.hash
+    LEFT JOIN ext_video_meta e ON e.hash = f.hash
+`;
+
+// GET /ext/api/videos/brief?ids=3,1,2   指定した id の動画を、指定した順で返す
+exports.brief = (req, res) => {
+    try {
+        const ids = String(req.query.ids || '').split(',').map(s => parseInt(s, 10)).filter(n => Number.isInteger(n)).slice(0, 500);
+        if (!ids.length) return res.json({ videos: [] });
+        const rows = db.prepare(`SELECT ${BRIEF_FIELDS} ${BRIEF_BASE} WHERE f.id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+        const byId = new Map(rows.map(r => [r.id, r]));
+        res.json({ videos: ids.map(id => byId.get(id)).filter(Boolean) });
+    } catch (e) {
+        console.error('[ext videos brief]', e);
+        res.status(500).json({ error: e.message });
+    }
+};
+
+// GET /ext/api/video/:id/siblings   動画ページ右側の「同じシリーズの動画」
+//  parts: 同じ品番の動画 (ファイル名の自然順)
+//  works: 同じシリーズの動画を品番でまとめたもの (公開日の古い順・公開日なしは最後)。group_count はまとめた本数
+exports.siblings = (req, res) => {
+    try {
+        const cur = db.prepare(`SELECT f.id, e.model_no, e.series ${BRIEF_BASE} WHERE f.id = ?`).get(req.params.id);
+        if (!cur) return res.status(404).json({ error: '動画が見つかりません' });
+        const modelNo = String(cur.model_no || '').trim(), series = String(cur.series || '').trim();
+
+        const parts = modelNo ? db.prepare(`
+            SELECT ${BRIEF_FIELDS} ${BRIEF_BASE}
+            WHERE e.model_no = ? COLLATE NOCASE
+            ORDER BY ext_namekey(f.filename), f.id
+        `).all(modelNo) : [];
+
+        const works = series ? db.prepare(`
+            WITH s AS (
+                SELECT f.id AS id, ${GROUP_KEY} AS gk, ext_namekey(f.filename) AS nk,
+                       NULLIF(e.release_date, '') AS rd
+                ${BRIEF_BASE}
+                WHERE e.series = ? COLLATE NOCASE
+            ), g AS (
+                SELECT id, COUNT(*) OVER w AS gcount, MIN(rd) OVER w AS grd,
+                       ROW_NUMBER() OVER (PARTITION BY gk ORDER BY nk, id) AS rn
+                FROM s WINDOW w AS (PARTITION BY gk)
+            )
+            SELECT ${BRIEF_FIELDS}, g.gcount AS group_count
+            FROM g JOIN files f ON f.id = g.id
+            JOIN metadata m ON f.hash = m.hash
+            LEFT JOIN ext_video_meta e ON e.hash = f.hash
+            WHERE g.rn = 1
+            ORDER BY g.grd IS NULL, g.grd, ext_namekey(f.filename)
+        `).all(series) : [];
+
+        res.json({ modelNo, series, parts, works });
+    } catch (e) {
+        console.error('[ext video siblings]', e);
         res.status(500).json({ error: e.message });
     }
 };

@@ -239,7 +239,9 @@
             class: 'wlext-search-fab',
             title: '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）',
             html: searchFabSvg(),
-            onClick: () => runDmmSearch(vid)
+            // 差し込み口: WL.metaSearch が登録されていれば、それに検索を任せる (複数の情報ソースを並べる個人用モジュールなど)。
+            // 無ければ従来どおり FANZA を品番で検索する。
+            onClick: () => (WL.metaSearch ? WL.metaSearch(vid) : runDmmSearch(vid))
         });
         document.body.appendChild(btn);
     }
@@ -314,8 +316,10 @@
     }
 
     function itemThumb(item) {
-        return item.imageLarge
-            ? h('img', { src: item.imageLarge, class: 'wlext-dmm-thumb', loading: 'lazy', referrerpolicy: 'no-referrer' })
+        // thumb はブラウザから見える画像 URL (情報ソースによってはサーバー側でしか取れない imageLarge と分けて渡す)
+        const src = item.thumb || item.imageLarge;
+        return src
+            ? h('img', { src, class: 'wlext-dmm-thumb', loading: 'lazy', referrerpolicy: 'no-referrer' })
             : h('div', { class: 'wlext-dmm-thumb', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontSize: '0.7rem' } }, 'no image');
     }
 
@@ -424,6 +428,9 @@
             }
         });
     }
+
+    // 差し込み口: 選んだ情報を確認画面に出して反映する (反映は /ext/api/dmm/apply。item は dmm.js mapItem と同じ形)
+    WL.showMetaPreview = (vid, item) => showDmmPreview(vid, item);
 
     async function applyDmm(vid, item) {
         try {

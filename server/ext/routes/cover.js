@@ -70,22 +70,13 @@ async function storeCoverFromUrl(hash, url) {
 exports.storeCoverFromUrl = storeCoverFromUrl;
 
 // --- カバー画像本体 ---
-// 1) DB保存(ext_video_cover) を優先 2) なければ cover_folder から同名画像
+// 1) cover_folder の同名画像を優先 (ユーザーが置いた画像) 2) なければ DB保存(ext_video_cover)
 exports.getCover = (req, res) => {
     try {
         const row = db.prepare('SELECT filename, path, hash FROM files WHERE id = ?').get(req.params.id);
         if (!row) return res.status(404).end();
 
-        // 1) DB 保存のカバー
-        const dbCover = db.prepare('SELECT image FROM ext_video_cover WHERE hash = ?').get(row.hash);
-        if (dbCover && dbCover.image) {
-            const buf = dbCover.image;
-            res.set('Content-Type', imageContentType(buf));
-            res.set('Cache-Control', 'no-cache');
-            return res.send(buf);
-        }
-
-        // 2) フォルダのカバー
+        // 1) フォルダのカバー
         const folderCover = findFolderCover(row);
         if (folderCover) {
             res.set('Content-Type', MIME[folderCover.ext] || 'application/octet-stream');
@@ -93,6 +84,15 @@ exports.getCover = (req, res) => {
             const stream = fs.createReadStream(folderCover.path);
             stream.on('error', () => { if (!res.headersSent) res.status(500).end(); });
             return stream.pipe(res);
+        }
+
+        // 2) DB 保存のカバー
+        const dbCover = db.prepare('SELECT image FROM ext_video_cover WHERE hash = ?').get(row.hash);
+        if (dbCover && dbCover.image) {
+            const buf = dbCover.image;
+            res.set('Content-Type', imageContentType(buf));
+            res.set('Cache-Control', 'no-cache');
+            return res.send(buf);
         }
 
         return res.status(404).end();

@@ -124,6 +124,8 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/search', search.search);
     app.get('/ext/api/fullsearch', fullsearch.fullSearch);
     app.get('/ext/api/search/facets', search.facets);
+    app.get('/ext/api/videos/brief', search.brief);
+    app.get('/ext/api/video/:id/siblings', search.siblings);
     app.get('/ext/api/release-calendar', search.releaseCalendar);
     app.get('/ext/api/series', search.seriesList);
 

@@ -466,6 +466,7 @@
     position: absolute; transform-origin: 0 0; user-select: none; -webkit-user-drag: none;
 }
 .wlext-cropper-controls { margin-top: 0.8rem; display: flex; align-items: center; gap: 0.6rem; }
+.wlext-cropper-fit { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
 
 /* =============================================================
    出演者ページ (React 未定義ルート /performer/:id を拡張で描画)
@@ -817,6 +818,13 @@
     color: #e50914; text-decoration: none; white-space: nowrap;
 }
 .wlext-maker-fanza:hover { text-decoration: underline; }
+/* 公式サイト / FANZA を右詰めで並べる (FANZA が無ければ公式サイトが右端) */
+.wlext-maker-links { display: flex; align-items: baseline; justify-content: flex-end; gap: 0.8rem; }
+.wlext-maker-site {
+    font-size: 0.85rem; font-weight: 700; white-space: nowrap;
+    color: var(--text-primary, #222); text-decoration: none;
+}
+.wlext-maker-site:hover { color: var(--accent, #007acc); text-decoration: underline; }
 .wlext-maker-readonly {
     padding: 0.45rem 0.6rem; border-radius: 0.35rem;
     background: var(--bg-secondary, #f4f4f4); font-size: 0.9rem; word-break: break-all;
@@ -960,7 +968,8 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
 .wlext-card-meta .wlext-ss-badge { order: 2; }
 .wlext-card-meta .wlext-bm-btn { order: 3; }
 /* ポスター表示: 行そのものをサムネ左上のオーバーレイにする(タイトル欄が非表示のため)。
-   サイズはサムネ右上のメーカー名表示(.wlext-maker-ov, 10px)に合わせる */
+   サイズはサムネ右上のメーカー名表示(.wlext-maker-ov, 10px)に合わせる。
+   プレビュー中に出る本家のミュートボタンは、この行の下へずらす (「N本」バッジの後ろの規則) */
 .wlext-card-meta.wlext-card-meta-poster {
     position: absolute; top: 4px; left: 4px; z-index: 4;
     margin: 0; padding: 2px 5px; border-radius: 3px; gap: 0.3rem;
@@ -1300,3 +1309,141 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
 .wlext-lib-form .wlext-input { min-width: 12rem; }
 .wlext-lib-mode { flex: 1; }
 .wlext-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+/* ---- 同じ品番の動画をまとめたカード (groupview.js) ---- */
+/* 「N本」バッジ: サムネ左上。選択モードのチェックと重ならないよう右へずらす。
+   ポスター表示は左上を評価行が使うので左下、プレビューのシークバー(seekBarContainer_: 下端28px)と題名帯(posterTitle_: 約31px)の上 */
+.wlext-group-badge {
+    position: absolute; top: 4px; left: 4px; z-index: 5;
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 6px; border-radius: 4px;
+    background: rgba(0, 0, 0, 0.75); color: #fff;
+    font-size: 11px; font-weight: bold; line-height: 1.3;
+    cursor: pointer;
+}
+.wlext-group-badge:hover { background: var(--accent, #007acc); }
+a:has(> .wlext-sel-badge) .wlext-group-badge { left: 34px; }
+.poster .wlext-group-badge { top: auto; bottom: 34px; left: 4px; }
+/* 本家のミュートボタン(volumeButton_: プレビュー中だけ左上4px・32px角)は、左上に「N本」や
+   ポスター表示の評価行があるカードではその下へずらす (後の規則ほど優先: ポスターは評価行の下) */
+[class*="thumbnailWrapper_"]:has(> .wlext-group-badge) [class*="volumeButton_"] { top: 26px; }
+[class*="thumbnailWrapper_"]:has(> .wlext-card-meta-poster) [class*="volumeButton_"] { top: 24px; }
+
+/* 動画の一覧行 (まとめた動画の一覧 / 動画ページ右側の一覧) */
+.wlext-vrow-list { display: flex; flex-direction: column; gap: 4px; }
+.wlext-vrow {
+    display: flex; gap: 8px; padding: 4px; border-radius: 6px;
+    color: var(--text-primary, inherit); text-decoration: none;
+}
+.wlext-vrow:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.12)); }
+.wlext-vrow.current { background: var(--bg-tertiary, rgba(127, 127, 127, 0.18)); box-shadow: inset 3px 0 0 var(--accent, #007acc); }
+.wlext-vrow-thumb {
+    position: relative; flex: 0 0 160px; height: 90px;
+    border-radius: 6px; overflow: hidden; background: #000;
+}
+.wlext-vrow-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wlext-vrow-dur, .wlext-vrow-count {
+    position: absolute; padding: 1px 4px; border-radius: 3px;
+    background: rgba(0, 0, 0, 0.75); color: #fff; font-size: 11px; line-height: 1.3;
+}
+.wlext-vrow-dur { right: 4px; bottom: 4px; }
+.wlext-vrow-count { left: 4px; top: 4px; display: inline-flex; align-items: center; gap: 3px; font-weight: bold; }
+.wlext-vrow-prog { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent, #007acc); }
+.wlext-vrow-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.wlext-vrow-name {
+    font-size: 0.85rem; line-height: 1.35; word-break: break-all;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.wlext-vrow-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.75rem; color: var(--text-secondary, #888); }
+.wlext-vrow-sub .wlext-rating { margin: 0; }
+.wlext-vrow-sub .wlext-star { font-size: 0.8rem; }
+.wlext-vrow-note { color: var(--accent, #007acc); font-weight: bold; }
+
+/* ---- 動画ページの標準モード (standard.js) ---- */
+/* 本家の要素は動かさず、右欄の位置へ重ねる。右欄に出すのは選んでいる項目(data-wlext-tab)の1つだけ */
+body.wlext-std { --wlext-std-w: clamp(320px, 27vw, 460px); --wlext-std-head: 44px; }
+body.wlext-std [class*="playerSection_"],
+body.wlext-std [class*="pageContentContainer_"] { margin-right: var(--wlext-std-w); }
+body.wlext-std [class*="playerSection_"] { width: auto; }   /* 本家は幅を直に指定している */
+body.wlext-std [class*="page_"]:has(> [class*="playerSection_"]) { padding-bottom: 0; }   /* 1画面に収めるので下の余白は要らない */
+body.wlext-std [class*="playerWrapper_"] { max-height: var(--wlext-std-player-h, 60vh); }
+body.wlext-std [data-wlext-std="related"] { display: none !important; }
+
+body.wlext-std [class*="screenshotsSection_"],
+body.wlext-std [class*="infoLayoutContainer_"],
+body.wlext-std [class*="imageListContainer_"],
+body.wlext-std .wlext-std-pane {
+    position: fixed !important;   /* スクショの大きさ変更(ssresize.js)が relative を直書きするので上書き */
+    top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head)); right: 0; bottom: 0;
+    width: var(--wlext-std-w); margin: 0 !important; padding: 8px 12px 5rem;   /* 下は右下のボタン列の分あけてスクロールで出せるように */
+    box-sizing: border-box; overflow-y: auto; background: var(--bg-primary, #111); z-index: 15;
+}
+/* イメージリスト: 操作行(大きく表示・間隔・再作成)と生成中の行は上に固定し、画像はその下でスクロール */
+body.wlext-std [class*="imageListControls_"],
+body.wlext-std [class*="imageListLoading_"] {
+    position: fixed !important; top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head)); right: 0;
+    width: var(--wlext-std-w); margin: 0 !important; box-sizing: border-box;
+    background: var(--bg-primary, #111); z-index: 16;
+}
+body.wlext-std [class*="imageListContainer_"] { top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head) + 44px); align-content: flex-start; }
+
+body.wlext-std:not([data-wlext-tab="media"]) [class*="screenshotsSection_"],
+body.wlext-std:not([data-wlext-tab="info"]) [class*="infoLayoutContainer_"],
+body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListContainer_"],
+body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListControls_"],
+body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListLoading_"] { display: none !important; }
+.wlext-std-pane { display: none; }
+.fullscreen .wlext-layout-btn { display: none !important; }   /* フルスクリーン中は切り替えない */
+body.wlext-std[data-wlext-tab="series"] .wlext-std-pane[data-pane="series"],
+body.wlext-std[data-wlext-tab="related"] .wlext-std-pane[data-pane="related"] { display: block; }
+
+/* 右欄の見出し: 矢印と項目名 */
+.wlext-std-head { display: none; }
+body.wlext-std .wlext-std-head {
+    display: flex; align-items: center; gap: 4px;
+    position: fixed; top: var(--wlext-std-top, 56px); right: 0; z-index: 16;
+    width: var(--wlext-std-w); height: var(--wlext-std-head); padding: 0 8px; box-sizing: border-box;
+    background: var(--bg-primary, #111);
+}
+.wlext-std-arrow {
+    flex: 0 0 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; color: var(--text-primary, #eee);
+}
+.wlext-std-arrow:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.15)); }
+.wlext-std-chips { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.wlext-std-chips::-webkit-scrollbar { display: none; }
+.wlext-std-chip {
+    flex: 0 0 auto; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+    font-size: 0.8rem; font-weight: bold; color: var(--text-primary, #eee); background: var(--bg-tertiary, rgba(127, 127, 127, 0.18));
+}
+.wlext-std-chip:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.25)); }
+.wlext-std-chip.active { background: var(--accent, #007acc); color: #fff; }
+.wlext-std-sec { margin: 10px 0 6px; font-size: 0.85rem; font-weight: bold; color: var(--text-secondary, #999); }
+.wlext-std-sec:first-child { margin-top: 2px; }
+.wlext-std-sec-n { font-weight: normal; margin-left: 2px; }
+.wlext-std-msg { padding: 12px 4px; font-size: 0.85rem; color: var(--text-secondary, #999); }
+
+/* 右下のボタン (詳細情報を編集・タグ編集・動画情報検索・ブックマーク・本家のイメージリスト) は、
+   縦に積むと右欄の一覧に重なるので、右欄の下端に横一列で並べる */
+body.wlext-std .wlext-edit-fab,
+body.wlext-std .wlext-tag-fab,
+body.wlext-std .wlext-search-fab,
+body.wlext-std .wlext-bm-fab { bottom: 1rem; }
+body.wlext-std .wlext-edit-fab { right: 1rem; }
+body.wlext-std .wlext-tag-fab:not(.wlext-edit-fab) { right: 4.5rem; }
+body.wlext-std .wlext-search-fab { right: 8rem; }
+body.wlext-std .wlext-bm-fab { right: 11.5rem; }
+body.wlext-std [class*="imageListFab_"] { right: 15rem; bottom: calc(1rem + 6px); }
+/* カバーとサムネイル: カバーは右欄の幅いっぱい。スクリーンショットは大きさ変更の幅を最小にして列に詰め、余りは広げて埋める */
+body.wlext-std [class*="screenshotsSection_"] { display: flex; flex-direction: column; gap: 6px; }
+body.wlext-std .wlext-ss-resize { position: static; order: -1; align-self: flex-end; }   /* 重ねるとカバーが隠れるので上の行へ */
+body.wlext-std [class*="screenshotsGrid_"] {
+    display: grid !important; gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(var(--wlext-ss-w, 160px), 100%), 1fr));
+}
+body.wlext-std [class*="screenshotsSection_"] .wlext-cover-card,
+body.wlext-std [class*="noScreenshots_"] { grid-column: 1 / -1; }
+body.wlext-std [class*="screenshotsSection_"] [class*="screenshotCard_"],
+body.wlext-std [class*="screenshotsSection_"] [class*="screenshotImageWrapper_"],
+body.wlext-std [class*="screenshotsSection_"] [class*="screenshotImage_"],
+body.wlext-std [class*="screenshotsSection_"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }

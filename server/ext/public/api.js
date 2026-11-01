@@ -93,6 +93,9 @@
         getMeta: (id) => req('/ext/api/video/' + id + '/meta'),
         saveMeta: (id, m) => req('/ext/api/video/' + id + '/meta', jsonOpts('PUT', m)),
         bulkMeta: (ids) => req('/ext/api/meta/bulk?ids=' + ids.join(',')),
+        videosBrief: (ids) => req('/ext/api/videos/brief?ids=' + ids.join(',')),
+        videoSiblings: (id) => req('/ext/api/video/' + id + '/siblings'),
+        thumbUrl: (v) => '/api/video/' + v.id + '/thumbnail?s=' + (v.thumbnail_size || 0),
 
         // コマ送り (フレームレート)
         frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
@@ -125,7 +128,7 @@
         makersList: () => req('/ext/api/makers'),
         saveMaker: (m) => req('/ext/api/maker', jsonOpts('PUT', m)),
         makerImageUrl: (name, bust) => '/ext/api/maker/image?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
-        setMakerImage: (name, dataUrl) => req('/ext/api/maker/image', jsonOpts('POST', { name, image: dataUrl })),
+        setMakerImage: (name, dataUrl, view) => req('/ext/api/maker/image', jsonOpts('POST', { name, image: dataUrl, view })),
 
         // タグ一覧 / タグサムネイル
         tagsList: () => req('/ext/api/tags'),

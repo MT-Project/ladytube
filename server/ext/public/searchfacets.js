@@ -89,12 +89,12 @@
     // 再生履歴ソート(未再生を除く)は、候補の集計にも効かせる。
     function currentScope() {
         const p = new URLSearchParams(location.search);
-        return { path: p.get('path') || '', sort: p.get('sort') || '' };
+        return { path: p.get('path') || '', sort: p.get('sort') || '', group: WL.groupByModel() ? '1' : '' };
     }
     // 検索語だけでなく絞り込み条件が変わったときも取り直す
     function stateKey() {
         const s = currentScope();
-        return [currentQuery(), s.path, s.sort].join('\n');
+        return [currentQuery(), s.path, s.sort, s.group].join('\n');
     }
     function go(tokens, keyword) {
         const p = new URLSearchParams(location.search);

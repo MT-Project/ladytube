@@ -54,6 +54,11 @@
         database: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
         check: '<path d="M20 6 9 17l-5-5"/>',
         'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+        'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+        'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+        // 動画ページのレイアウト切替 (標準モード=右に情報欄 / シアターモード=横いっぱい)
+        'panel-right': '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/>',
+        'rectangle-horizontal': '<rect width="20" height="12" x="2" y="6" rx="2"/>',
     };
 
     function iconSvg(name, size, sw) {

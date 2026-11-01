@@ -11,7 +11,7 @@ function pick(o, keys) { const r = {}; keys.forEach(k => { r[k] = (o && o[k] !==
 
 const META_KEYS = ['hash', 'rating', 'display_name', 'model_no', 'release_date', 'series', 'maker', 'label', 'directors', 'genres', 'performers', 'updated_at'];
 const PERF_KEYS = ['id', 'name', 'furigana', 'birthday', 'height', 'weight', 'bust', 'cup', 'waist', 'hip', 'blood_type', 'aliases', 'rating', 'tags', 'created_at', 'updated_at'];
-const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'updated_at'];
+const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'site_url', 'image_view', 'updated_at'];
 
 // GET /ext/api/backup/export
 exports.exportAll = (req, res) => {
@@ -85,8 +85,8 @@ exports.importAll = (req, res) => {
             db.prepare('DELETE FROM ext_makers').run();
             if (Array.isArray(d.makers)) {
                 const s = db.prepare(`INSERT OR REPLACE INTO ext_makers
-                    (name,furigana,catch_copy,list_url,image,updated_at)
-                    VALUES (@name,@furigana,@catch_copy,@list_url,@image,@updated_at)`);
+                    (name,furigana,catch_copy,list_url,site_url,image_view,image,updated_at)
+                    VALUES (@name,@furigana,@catch_copy,@list_url,@site_url,@image_view,@image,@updated_at)`);
                 d.makers.forEach(m => s.run({ ...pick(m, MAKER_KEYS), image: b64dec(m.image) }));
                 stats.makers = d.makers.length;
             }

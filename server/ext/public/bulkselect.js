@@ -128,8 +128,13 @@
             h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids); } }, '🗑 動画の削除'),
         ];
     }
+    // 品番でまとめたカードは、中の動画すべてを対象にする
+    function expand(ids) {
+        if (!WL.groupByModel()) return ids;
+        return [...new Set(ids.flatMap(id => WL.groupMembers(id)))];
+    }
     function openMenu() {
-        const ids = [...selected];
+        const ids = expand([...selected]);
         if (!ids.length) return;
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-sel-menu' }, [
@@ -144,7 +149,11 @@
     function openVideoMenu(id, anchor) {
         closeMenu();
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
-        menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, menuItems([id]));
+        const ids = expand([id]);
+        menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, [
+            ids.length > 1 ? h('div', { class: 'wlext-sel-menu-head' }, 'まとめた ' + ids.length + '本を操作') : null,
+            ...menuItems(ids),
+        ]);
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
         // アンカー(ボタン)直下に配置。画面外なら上側へ反転。

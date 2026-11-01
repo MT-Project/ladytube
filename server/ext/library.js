@@ -13,6 +13,7 @@
 //   ・出演者 (ext_performers) … 既定ライブラリの表を使う。追加ライブラリの接続には既定の
 //     videos.db を "shared" として ATTACH し、追加ライブラリ側には ext_performers を置かない。
 //     修飾なしの "ext_performers" は SQLite の名前解決で shared 側に届くので、既存の SQL はそのまま動く。
+//   ・メーカー情報 (ext_makers) … 出演者と同じ置き方 (v2.0.1 から)。一覧に出すメーカーは各ライブラリの動画から集める。
 //   ・SHARED_KEYS の設定 … 既定ライブラリの settings を正とし、起動時に写し、書き込みのたびに書き戻す。
 //
 // このファイルは preload から本体の DB より先に読まれる。先頭で ../db や ./db を require しないこと
@@ -208,15 +209,67 @@ function mergePerformersIntoShared(conn) {
     return { merged: rows.length, added };
 }
 
-// 拡張のスキーマ作成の前に呼ぶ (ext/db.js)。追加ライブラリの main に出演者表が残っていたら寄せる。
+/* ---------- メーカー情報を既定ライブラリへ寄せる (v2.0.1 で共通にした) ---------- */
+// conn には既定ライブラリが shared として繋がっていること。conn の main にある ext_makers を
+// 名前で突き合わせて shared 側へまとめ、main の表を消す。同じメーカーが両方にあるときは共有側を正とし、
+// 空の項目だけ埋める (画像と表示範囲 image_view は組で扱う)。
+function mergeMakersIntoShared(conn) {
+    if (!hasTable(conn, 'main', 'ext_makers')) return { merged: 0, added: 0 };
+    const ddl = conn.prepare("SELECT sql FROM main.sqlite_master WHERE type = 'table' AND name = 'ext_makers'").get().sql;
+    conn.exec(ddl.replace(/^CREATE TABLE\s+(IF NOT EXISTS\s+)?"?ext_makers"?/i, 'CREATE TABLE IF NOT EXISTS shared.ext_makers'));
+    const colsOf = (schema) => conn.prepare(`PRAGMA ${schema}.table_info(ext_makers)`).all();
+    // 寄せる側にしか無い列 (拡張の版の違い) は共有側に足してから写す
+    const sharedCols = new Set(colsOf('shared').map(c => c.name));
+    colsOf('main').filter(c => !sharedCols.has(c.name)).forEach(c => conn.exec(`ALTER TABLE shared.ext_makers ADD COLUMN ${c.name} ${c.type}`));
+    const cols = colsOf('main').map(c => c.name);
+
+    const rows = conn.prepare('SELECT * FROM main.ext_makers').all();
+    const byName = conn.prepare('SELECT * FROM shared.ext_makers WHERE name = ?');
+    const ins = conn.prepare(`INSERT INTO shared.ext_makers (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`);
+    const empty = (v) => v == null || v === '';
+    let added = 0;
+    conn.transaction(() => {
+        rows.forEach(r => {
+            if (!r.name) return;
+            const s = byName.get(r.name);
+            if (!s) { ins.run(...cols.map(c => r[c])); added++; return; }
+            const fill = cols.filter(c => !['name', 'updated_at', 'image_view'].includes(c) && empty(s[c]) && !empty(r[c]));
+            if (fill.includes('image') && cols.includes('image_view')) fill.push('image_view');
+            if (fill.length) {
+                conn.prepare(`UPDATE shared.ext_makers SET ${fill.map(c => c + ' = ?').join(', ')} WHERE name = ?`)
+                    .run(...fill.map(c => r[c]), s.name);
+            }
+        });
+        conn.exec('DROP TABLE main.ext_makers');
+    })();
+    return { merged: rows.length, added };
+}
+
+// 拡張のスキーマ作成の前に呼ぶ (ext/db.js)。追加ライブラリの main に出演者表・メーカー表が残っていたら寄せる。
 function beforeSchema(db) {
     if (runtime.shared && hasTable(db, 'main', 'ext_performers')) {
         const r = mergePerformersIntoShared(db);
         console.log(`[WomanLive拡張] 出演者 ${r.merged}件を共通の出演者へまとめました (新規 ${r.added}件)`);
     }
+    const logMakers = (r, name) => console.log(`[WomanLive拡張] ${name} のメーカー情報 ${r.merged}件を共通のメーカー情報へまとめました (新規 ${r.added}件)`);
+    const reg = readRegistry();
+    if (runtime.shared && hasTable(db, 'main', 'ext_makers')) logMakers(mergeMakersIntoShared(db), (findLib(reg, runtime.id) || {}).name);
+    // 使用中でないライブラリに残っているメーカー情報も今寄せる (切り替えを待つと、その間の編集と食い違う)
+    reg.libraries.forEach(l => {
+        const file = dbPathOf(l.id);
+        if (l.id === DEFAULT_ID || l.id === runtime.id || !fs.existsSync(file)) return;
+        try {
+            const conn = new (raw())(file, { fileMustExist: true, timeout: 5000 });
+            try {
+                if (!hasTable(conn, 'main', 'ext_makers')) return;
+                conn.prepare('ATTACH DATABASE ? AS shared').run(DEFAULT_DB);
+                logMakers(mergeMakersIntoShared(conn), l.name);
+            } finally { conn.close(); }
+        } catch (e) { console.error('[WomanLive拡張] ' + l.name + ' のメーカー情報をまとめられませんでした: ' + e.message); }
+    });
 }
-// 出演者表を作る先。追加ライブラリでは既定ライブラリ側 (shared)
-function performersSchema() { return runtime.shared ? 'shared.' : ''; }
+// 共通の表 (出演者・メーカー) を作る先。追加ライブラリでは既定ライブラリ側 (shared)
+function sharedSchema() { return runtime.shared ? 'shared.' : ''; }
 
 /* ---------- ほかのライブラリへの波及 (出演者は共通なので) ---------- */
 // 使用中以外の各ライブラリで fn(conn, schema) を呼ぶ。既定ライブラリは本体の接続に shared として
@@ -316,7 +369,9 @@ function normalizeFile(file) {
     const conn = new (raw())(file, { fileMustExist: true, timeout: 5000 });
     try {
         conn.prepare('ATTACH DATABASE ? AS shared').run(DEFAULT_DB);
-        return mergePerformersIntoShared(conn);
+        const r = mergePerformersIntoShared(conn);
+        mergeMakersIntoShared(conn);
+        return r;
     } finally { conn.close(); }
 }
 
@@ -472,9 +527,9 @@ function isLocal(req) {
 
 module.exports = {
     DEFAULT_ID, RESTART_CODE, SHARED_KEYS, runtime,
-    installDbHook, verify, beforeSchema, performersSchema, syncSharedOut,
+    installDbHook, verify, beforeSchema, sharedSchema, syncSharedOut,
     performerIdsUsedElsewhere, removePerformersElsewhere,
     list, clientInfo, create, importDb, rename, remove, switchTo, isLocal, readRegistry,
     // 検証用
-    _internal: { mergePerformersIntoShared, copySharedIn, dbPathOf, LIB_DIR, DEFAULT_DB },
+    _internal: { mergePerformersIntoShared, mergeMakersIntoShared, copySharedIn, dbPathOf, LIB_DIR, DEFAULT_DB },
 };

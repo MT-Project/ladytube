@@ -68,7 +68,7 @@ exports.list = (req, res) => {
 
         // 登録済みのメーカー情報 (name は COLLATE NOCASE なので小文字で突き合わせる)
         const info = new Map();
-        db.prepare('SELECT name, furigana, catch_copy, list_url, (image IS NOT NULL) AS has_image FROM ext_makers')
+        db.prepare('SELECT name, furigana, catch_copy, list_url, site_url, image_view, (image IS NOT NULL) AS has_image FROM ext_makers')
             .all().forEach(r => info.set(nocase(r.name), r));
 
         const byCountDesc = (a, b) => (b.count - a.count) || String(a.name).localeCompare(String(b.name), 'ja');
@@ -88,7 +88,9 @@ exports.list = (req, res) => {
                 furigana: inf.furigana || '',
                 catchCopy: inf.catch_copy || '',
                 listUrl: inf.list_url || '',
+                siteUrl: inf.site_url || '',
                 hasImage: !!inf.has_image,
+                imageView: inf.image_view ? JSON.parse(inf.image_view) : null,
                 topTags: tags.slice(0, TOP_TAGS),
                 labels: labelList
             };
@@ -107,7 +109,7 @@ function upsert(name, cols) {
         .run(...keys.map(k => cols[k]), name);
 }
 
-// PUT /ext/api/maker  { name, furigana, catch_copy, list_url }
+// PUT /ext/api/maker  { name, furigana, catch_copy, list_url, site_url }
 exports.update = (req, res) => {
     try {
         const b = req.body || {};
@@ -117,11 +119,12 @@ exports.update = (req, res) => {
         const cols = {};
         if (b.furigana !== undefined) cols.furigana = String(b.furigana).trim() || null;
         if (b.catch_copy !== undefined) cols.catch_copy = String(b.catch_copy).trim() || null;
-        if (b.list_url !== undefined) {
-            const url = String(b.list_url).trim();
-            // 外部リンクとして開くので http(s) 以外は受け付けない
-            if (url && !/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'リストページURLは http(s) で入力してください' });
-            cols.list_url = url || null;
+        // 外部リンクとして開くので http(s) 以外は受け付けない
+        for (const [key, label] of [['list_url', 'リストページURL'], ['site_url', '公式サイトURL']]) {
+            if (b[key] === undefined) continue;
+            const url = String(b[key]).trim();
+            if (url && !/^https?:\/\//i.test(url)) return res.status(400).json({ error: label + 'は http(s) で入力してください' });
+            cols[key] = url || null;
         }
         if (!Object.keys(cols).length) return res.status(400).json({ error: '更新する項目がありません' });
 
@@ -157,6 +160,16 @@ exports.setImage = async (req, res) => {
         if (!m) return res.status(400).json({ error: 'invalid image data' });
 
         let buf = Buffer.from(m[1], 'base64');
+        // アニメーション画像 (GIF / APNG / WebP) は変換すると止まるので元のまま保存し、
+        // 表示範囲 view {x,y,w,h} (元画像に対する割合) を一緒に持つ。表示側 (makerlist.js) で当てる。
+        const v = b.view;
+        if (v && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(v[k])) && v.w > 0 && v.h > 0) {
+            const t = imageContentType(buf);
+            if (t !== 'image/gif' && t !== 'image/png' && buf.toString('latin1', 8, 12) !== 'WEBP')
+                return res.status(400).json({ error: 'GIF / PNG / WebP 以外の画像です' });
+            upsert(name, { image: buf, image_view: JSON.stringify({ x: v.x, y: v.y, w: v.w, h: v.h }) });
+            return res.json({ success: true });
+        }
         if (sharp) {
             try {
                 buf = await sharp(buf).resize(IMG_SIZE, IMG_SIZE, { fit: 'cover' }).webp({ quality: 85 }).toBuffer();
@@ -164,7 +177,7 @@ exports.setImage = async (req, res) => {
                 console.warn('[ext] 画像変換に失敗、元データを保存します:', err.message);
             }
         }
-        upsert(name, { image: buf });
+        upsert(name, { image: buf, image_view: null });
         res.json({ success: true });
     } catch (e) {
         console.error('[ext maker image]', e);

@@ -139,6 +139,15 @@ async function findItems(apiId, affId, pn) {
     return { result: {}, method: '' };
 }
 
+// 品番で FANZA を検索し、mapItem() の形で返す (ほかの情報ソースと並べて検索する個人用モジュールから使う)
+exports.searchItems = async (pn) => {
+    const apiId = getSetting('ext_dmm_api_id', '');
+    const affId = getSetting('ext_dmm_affiliate_id', '');
+    if (!apiId || !affId) { const e = new Error('DMM API ID / アフィリエイトID が未設定です'); e.notConfigured = true; throw e; }
+    const { result } = await findItems(apiId, affId, String(pn || '').trim());
+    return (result.items || []).map(mapItem);
+};
+
 // GET /ext/api/dmm/search?id=<videoId>
 exports.search = async (req, res) => {
     try {

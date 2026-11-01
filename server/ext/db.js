@@ -51,16 +51,6 @@ function initSchema() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
-        -- メーカー一覧ページ用のメーカー情報 (メーカー名をキーに保存)
-        CREATE TABLE IF NOT EXISTS ext_makers (
-            name       TEXT PRIMARY KEY COLLATE NOCASE,
-            furigana   TEXT,                  -- 読み仮名
-            catch_copy TEXT,                  -- キャッチコピー
-            list_url   TEXT,                  -- FANZA リストページURL
-            image      BLOB,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
         -- ブックマーク フォルダ
         CREATE TABLE IF NOT EXISTS ext_bookmark_folders (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,9 +78,23 @@ function initSchema() {
         CREATE INDEX IF NOT EXISTS idx_ext_related_rel ON ext_related(rel_hash);
     `);
 
-    // 出演者マスタ (全ライブラリ共通。追加ライブラリでは既定ライブラリの表を使う → library.js)
+    // 全ライブラリ共通の表。追加ライブラリでは既定ライブラリの表を使う (→ library.js)
+    const S = library.sharedSchema();
     db.exec(`
-        CREATE TABLE IF NOT EXISTS ${library.performersSchema()}ext_performers (
+        -- メーカー一覧ページ用のメーカー情報 (メーカー名をキーに保存)
+        CREATE TABLE IF NOT EXISTS ${S}ext_makers (
+            name       TEXT PRIMARY KEY COLLATE NOCASE,
+            furigana   TEXT,                  -- 読み仮名
+            catch_copy TEXT,                  -- キャッチコピー
+            list_url   TEXT,                  -- FANZA リストページURL
+            site_url   TEXT,                  -- 公式サイトURL
+            image      BLOB,
+            image_view TEXT,                  -- アニメーション画像の表示範囲 (JSON {x,y,w,h})。変換した画像は NULL
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 出演者マスタ
+        CREATE TABLE IF NOT EXISTS ${S}ext_performers (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
             name       TEXT UNIQUE COLLATE NOCASE,
             furigana   TEXT,
@@ -110,6 +114,12 @@ function initSchema() {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
     `);
+
+    // v2.0.1 で足した列 (それより前に作られた表には無い)
+    const makerCols = db.prepare(`PRAGMA ${S}table_info(ext_makers)`).all().map(c => c.name);
+    ['site_url TEXT', 'image_view TEXT'].forEach(def => {
+        if (!makerCols.includes(def.split(' ')[0])) db.exec(`ALTER TABLE ${S}ext_makers ADD COLUMN ${def}`);
+    });
 
     initialized = true;
     console.log('[WomanLive拡張] スキーマを初期化しました');
@@ -137,10 +147,11 @@ function hashOfVideo(id) {
     return row ? row.hash : null;
 }
 
-// 画像バッファ先頭のマジックバイトから Content-Type を判定 (PNG/JPEG 以外は webp とみなす)
+// 画像バッファ先頭のマジックバイトから Content-Type を判定 (PNG/JPEG/GIF 以外は webp とみなす)
 function imageContentType(buf) {
     if (buf[0] === 0x89) return 'image/png';
     if (buf[0] === 0xFF && buf[1] === 0xD8) return 'image/jpeg';
+    if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) return 'image/gif';
     return 'image/webp';
 }
 
