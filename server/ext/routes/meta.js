@@ -97,7 +97,7 @@ exports.putMeta = (req, res) => {
     }
 };
 
-// GET /ext/api/meta/bulk?ids=1,2,3  -> { "1": {display_name, rating, maker, performers}, ... }
+// GET /ext/api/meta/bulk?ids=1,2,3  -> { "1": {display_name, rating, maker, performers, series, directors, genres}, ... }
 // 一覧画面で表示名を置換するための軽量バルク取得
 exports.bulk = (req, res) => {
     try {
@@ -106,7 +106,7 @@ exports.bulk = (req, res) => {
 
         const placeholders = ids.map(() => '?').join(',');
         const rows = db.prepare(`
-            SELECT f.id, e.display_name, e.rating, e.maker, e.performers
+            SELECT f.id, e.display_name, e.rating, e.maker, e.performers, e.series, e.directors, e.genres
             FROM files f
             JOIN ext_video_meta e ON e.hash = f.hash
             WHERE f.id IN (${placeholders})
@@ -128,8 +128,10 @@ exports.bulk = (req, res) => {
             const performers = splitList(r.performers)
                 .map(pid => ({ id: parseInt(pid, 10), name: nameById.get(parseInt(pid, 10)) || '' }))
                 .filter(p => p.name);
-            if (r.display_name || r.rating || r.maker || performers.length) {
-                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0, maker: r.maker || '', performers };
+            const directors = splitList(r.directors), genres = splitList(r.genres);
+            if (r.display_name || r.rating || r.maker || performers.length || r.series || directors.length || genres.length) {
+                map[r.id] = { display_name: r.display_name || '', rating: r.rating || 0, maker: r.maker || '', performers,
+                              series: r.series || '', directors, genres };
             }
         }
         res.json(map);

@@ -952,7 +952,8 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85); pointer-events: none; z-index: 2;
 }
 /* リスト表示: タグを1行に収め、あふれた分は「…」(マウスオーバーで全タグ) */
-.trl3mnc.wlext-tagrow { flex-wrap: nowrap; overflow: hidden; }
+[class*="tagBadgeContainer_"].wlext-tagrow { flex-wrap: nowrap; overflow: hidden; }
+.wlext-tagrow > * { flex-shrink: 0; }
 .wlext-tag-ell { cursor: help; }
 
 .wlext-card-rating { display: inline-flex; align-items: center; vertical-align: middle; line-height: 1; }
@@ -989,6 +990,18 @@ body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 25
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     margin-bottom: 0.3rem;
 }
+.wlext-card-label { opacity: 0.75; }
+.wlext-card-label-gap { margin-left: 1em; }
+/* シリーズ名 (リスト表示のみ。評価行の先頭・行幅の半分まで) */
+.wlext-card-meta .wlext-card-series {
+    order: 0; max-width: 50%; flex-shrink: 1; min-width: 0;
+    font-size: 0.8rem; color: var(--text-secondary, #888); text-decoration: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wlext-card-meta .wlext-card-series:hover { color: var(--accent, #007acc); text-decoration: underline; }
+/* ジャンル (リスト表示のタグ行の先頭。動画ページのジャンルと同じチップ) と タグとの区切り */
+.wlext-tagrow .wlext-list-genre { flex-shrink: 0; white-space: nowrap; text-decoration: none; font-size: 10px; padding: 2px 6px; } /* 高さはタグバッジに合わせる */
+.wlext-tagrow .wlext-tagsep { flex-shrink: 0; align-self: center; color: var(--text-secondary, #888); opacity: 0.6; }
 .wlext-card-performer { color: inherit; text-decoration: none; }
 .wlext-card-performer:hover { color: var(--accent, #007acc); text-decoration: underline; }
 

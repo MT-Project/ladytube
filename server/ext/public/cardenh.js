@@ -44,28 +44,42 @@
         let mine = card.querySelector('.wlext-tagrow');
         if (!isList || !native) { if (mine) mine.remove(); if (native) native.style.display = ''; return; }
         const tags = splitTags(WL._videoTags && WL._videoTags[id]);
-        if (!tags.length) { if (mine) mine.remove(); native.style.display = ''; return; }
+        const meta = WL._cardMeta[id];
+        const genres = (meta && Array.isArray(meta.genres)) ? meta.genres : [];
+        if (!tags.length && !genres.length) { if (mine) mine.remove(); native.style.display = ''; return; }
         native.style.display = 'none';
         if (!mine) { mine = h('div', { class: native.className + ' wlext-tagrow' }); native.insertAdjacentElement('afterend', mine); }
-        const sig = mine.clientWidth + '|' + tags.join('');
-        if (mine.getAttribute('data-sig') === sig) return;   // 同じ幅・タグなら再フィットしない
+        const sig = mine.clientWidth + '|' + genres.join('\n') + '|' + tags.join('\n');
+        if (mine.getAttribute('data-sig') === sig) return;   // 同じ幅・内容なら再フィットしない
         mine.setAttribute('data-sig', sig);
-        fitTags(mine, tags, native);
+        fitTags(mine, genres, tags, native);
     }
 
-    function fitTags(cont, tags, native) {
+    // ジャンル(動画ページと同じチップ・押すと検索)を先に並べ、タグとの間に「│」を置く。あふれたら末尾(タグ側)から削る
+    function fitTags(cont, genres, tags, native) {
         // タグバッジ本体のクラスは native 内の既存バッジから拝借する(タグ0件時は本家プロパティ名で検索)
         const sample = native.querySelector('[class*="tagBadge_"]') || document.querySelector('[class*="tagBadge_"]:not([class*="tagBadgeContainer_"])');
         const badgeClass = sample ? sample.className : '';
         cont.innerHTML = '';
-        tags.forEach(t => cont.appendChild(h('span', { class: badgeClass }, t)));
-        const ell = h('span', { class: badgeClass + ' wlext-tag-ell', title: tags.join(' / ') }, '…');
+        const items = genres.map(g => searchLink('@genre:"' + g + '"', g, 'wlext-genre-chip wlext-list-genre'));
+        if (genres.length && tags.length) items.push(h('span', { class: 'wlext-tagsep' }, '│'));
+        tags.forEach(t => items.push(h('span', { class: badgeClass }, t)));
+        items.forEach(el => cont.appendChild(el));
+        const all = [genres.length ? 'ジャンル: ' + genres.join(' / ') : '', tags.length ? 'タグ: ' + tags.join(' / ') : ''].filter(Boolean).join('\n');
+        const ell = h('span', { class: badgeClass + ' wlext-tag-ell', title: all }, '…');
         cont.appendChild(ell);
         ell.style.display = 'none';
         if (cont.scrollWidth <= cont.clientWidth) { ell.remove(); return; } // 全部入る
         ell.style.display = '';
-        const badges = [...cont.querySelectorAll(':scope > span:not(.wlext-tag-ell)')];
-        while (cont.scrollWidth > cont.clientWidth && badges.length) badges.pop().remove();
+        while (cont.scrollWidth > cont.clientWidth && items.length) items.pop().remove();
+        // 区切りが末尾に残ったら一緒に消す
+        if (items.length && items[items.length - 1].classList.contains('wlext-tagsep')) items.pop().remove();
+    }
+
+    // カード内のリンク(押すとその条件で検索)。左クリックはカード本体(動画へ遷移)へ伝播させない
+    function searchLink(token, text, cls) {
+        const url = WL.searchHref(token);
+        return WL.navA(url, { class: cls, title: '「' + text + '」で検索', onClick: (e) => { e.stopPropagation(); WL.navigate(url); } }, text);
     }
 
     // 注入はすべて「カード内で1つ」に統一し、毎回 現在のビュー(グリッド/リスト)の
@@ -101,6 +115,14 @@
                 rc.innerHTML = '';
                 if (rating > 0) rc.appendChild(WL.starsEl(rating)); // 読み取り専用
             }
+            // シリーズ名 (リスト表示のみ。評価の左。行幅の半分までで「…」)
+            const series = (card.closest('.list') && meta && meta.series) || '';
+            let se = row.querySelector('.wlext-card-series');
+            if (!series) { if (se) se.remove(); }
+            else if (!se || se.textContent !== series) {
+                const next = searchLink('@series:"' + series + '"', series, 'wlext-card-series');
+                if (se) se.replaceWith(next); else row.prepend(next);
+            }
         }
 
         // 3) メーカー → サムネ右上 (半透明の白字)
@@ -115,23 +137,26 @@
         applyPerformers(card, meta);
     }
 
-    // リスト表示で、登録済みの出演者名を評価行の下(タグ行の上)に表示する。画像は出さない。
+    // リスト表示で、登録済みの出演者名と監督を評価行の下(タグ行の上)に「出演者：A、B　監督：X」の形で表示する。画像は出さない。
     function applyPerformers(card, meta) {
         const isList = !!card.closest('.list');
         const performers = (meta && Array.isArray(meta.performers)) ? meta.performers : [];
+        const directors = (meta && Array.isArray(meta.directors)) ? meta.directors : [];
         let row = card.querySelector('.wlext-card-performers');
-        if (!isList || !performers.length) { if (row) row.remove(); return; }
+        if (!isList || (!performers.length && !directors.length)) { if (row) row.remove(); return; }
 
         const metaRow = card.querySelector('.wlext-card-meta');
         const parent = metaRow && metaRow.parentElement;
         if (!parent) { if (row) row.remove(); return; }
 
-        const sig = performers.map(p => p.id).join(',');
+        const sig = performers.map(p => p.id).join(',') + '|' + directors.join('\n');
         if (!row) { row = h('div', { class: 'wlext-card-performers' }); }
         if (row.getAttribute('data-sig') !== sig) {
             row.setAttribute('data-sig', sig);
             row.innerHTML = '';
-            row.title = performers.map(p => p.name).join('、');
+            row.title = [performers.length ? '出演者：' + performers.map(p => p.name).join('、') : '',
+                         directors.length ? '監督：' + directors.join('、') : ''].filter(Boolean).join('　');
+            if (performers.length) row.appendChild(h('span', { class: 'wlext-card-label' }, '出演者：'));
             performers.forEach((p, i) => {
                 if (i > 0) row.appendChild(document.createTextNode('、'));
                 // <a href> にして中クリック(新規タブ)はブラウザ標準に任せる。
@@ -142,6 +167,13 @@
                     onClick: (e) => { e.stopPropagation(); WL.navigate(url); }
                 }, p.name));
             });
+            if (directors.length) {
+                row.appendChild(h('span', { class: 'wlext-card-label' + (performers.length ? ' wlext-card-label-gap' : '') }, '監督：'));
+                directors.forEach((d, i) => {
+                    if (i > 0) row.appendChild(document.createTextNode('、'));
+                    row.appendChild(searchLink('@director:"' + d + '"', d, 'wlext-card-performer'));
+                });
+            }
         }
         if (row.previousElementSibling !== metaRow || row.parentElement !== parent) {
             metaRow.insertAdjacentElement('afterend', row);
