@@ -284,7 +284,7 @@ export default function Navbar() {
             <nav className={styles.nav}>
                 <div className={styles.logoContainer}>
                     <Link to="/" className={styles.logoLink} title="ホーム">
-                        <span className={styles.logoText}>WomanLive</span>
+                        <span className={styles.logoText}>LadyTube</span>
                         <span className={styles.logoHomeIcon}>
                             <Home size={20} strokeWidth={1.5} />
                         </span>

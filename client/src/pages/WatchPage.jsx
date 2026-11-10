@@ -664,7 +664,7 @@ export default function WatchPage() {
     useEffect(() => {
         if (video && video.filename) {
             const filenameToDisplay = showExtension ? video.filename : removeExtension(video.filename);
-            document.title = `${filenameToDisplay} - WomanLive`;
+            document.title = `${filenameToDisplay} - LadyTube`;
         }
     }, [video, showExtension]);
 

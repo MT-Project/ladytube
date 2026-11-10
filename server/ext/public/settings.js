@@ -295,7 +295,7 @@
         const block = h('div', { class: 'wlext-settings-host wlext-settings-section' });
         block.appendChild(extH3('拡張機能：バックアップ（追加機能データ）'));
         block.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
-            '拡張機能のデータ（動画の追加メタデータ・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体やWomanLive標準のデータは含みません。'));
+            '拡張機能のデータ（動画の追加メタデータ・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体と、標準機能のデータ（タグ・再生回数など）は含みません。'));
 
         const result = h('div', { style: { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' } });
 

@@ -324,7 +324,7 @@ export default function SettingsPage() {
     const isTagRenameDisabled = () => !beforeTag.trim() || !afterTag.trim() || isRenaming;
 
     useEffect(() => {
-        document.title = '管理 - WomanLive';
+        document.title = '管理 - LadyTube';
         fetchSettings();
 
         // Check if scan is already running (e.g. page reload)
@@ -504,7 +504,7 @@ export default function SettingsPage() {
                 allow_public: enabled
             });
             showToast('設定を保存しました', 'success');
-            await confirm('この設定を反映するにはWomanLiveを再起動してください', {
+            await confirm('この設定を反映するにはLadyTubeを再起動してください', {
                 title: 'ネットワーク設定',
                 hideCancel: true
             });

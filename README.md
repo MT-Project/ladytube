@@ -1,12 +1,17 @@
-# WomanLive 拡張機能 (非公式アドオン)
+# LadyTube
 
-動画管理ソフト **WomanLive** に、個人利用向けの機能を追加する非公式アドオンです。
-**WomanLive 本体のファイルは一切変更しません**。
+動画管理ソフト **LadyTube** です。**WomanLive（woman projects）の派生版**で、WomanLive 本体に、
+v2.1.1 まで非公式アドオン「WomanLive 拡張機能」として配っていた機能をまとめて入れています。
+WomanLive を別に入れる必要はありません。
 
-> 本アドオンは WomanLive 本体を含みません。WomanLive がインストール・セットアップ済みの
-> 環境に追加してください。WomanLive 本体は MIT ライセンス (Copyright 2016 woman projects)。
+## 主な機能
+WomanLive から引き継いだ基本の機能:
+- 指定したフォルダの動画をスキャンして一覧にする（サムネイル・長さ・スクリーンショット）
+- ブラウザでの再生（ブラウザで再生できない形式は変換して再生）、再生位置・再生回数・再生履歴の記録
+- タグ付け、キーワード検索、フォルダ（カテゴリー）での絞り込み
+- 同じネットワークのスマホやタブレットからのアクセス（QR コードで開く）
 
-## 追加される主な機能
+追加した機能:
 - ライブラリ（動画・設定・メタデータをライブラリ単位で分けて切り替え。出演者などは共通）
 - カバー画像（指定フォルダから動画名と一致するものを自動表示）
 - メタデータの拡張（評価・動画の表示名・品番・公開日・シリーズ・メーカー・レーベル・監督・出演者・ジャンル）
@@ -26,68 +31,85 @@
 - コマ送り（`.` / `,` キー・Shift+ホイール・スマホ/タブレットのボタン）
 - メタデータの一括置換（タグ・ジャンル・出演者・シリーズ名・メーカー・レーベル）
 - 一覧ページ（シリーズ・出演者・タグ）からの一括削除
-- 参照されていない拡張データの削除（本体のクリーンアップに連動）
+- 参照されていない追加データの削除（クリーンアップに連動）
 - 出演者タグ機能、出演者タグの自動付与ルール
 - DMM(FANZA) 商品API・メーカーAPIによるメタデータ自動設定
 - ブックマーク機能
-等。機能の詳細は `server/ext/README.md` を参照してください。
+
+追加した機能の詳細は `server/ext/README.md` を参照してください。
 
 ## 動作要件
-- セットアップ済みの WomanLive（同梱の Node.js / ffmpeg / better-sqlite3 / sharp を利用）
-- 追加の部品インストールは不要（新しい npm パッケージは使いません）
+- Windows（起動に bat ファイルを使います）
+- 初回のセットアップ時にインターネット接続（Node.js と FFmpeg を公式の配布元からダウンロードします）
 - DMM 商品検索とカバー画像の取得時のみ、外部通信を使用
 
 ## 導入方法
-1. [Release](https://github.com/MT-Project/womanlive-ext/releases)から最新の **`womanlive-ext_X.X.X.zip`**（X.X.X はバージョン）をダウンロードして解凍
-2. 解凍した中身（**`server` フォルダ**と **`womanlive-ext.bat`**）を、WomanLive の**ルートフォルダ**（`womanlive.bat` と同じ場所）へ**そのままコピー**
-   `server` フォルダは既存の `server` に統合され、中の `ext` だけが追加されます（既存ファイルは上書きされません）
-3. WomanLive を一度終了し、**`womanlive-ext.bat`** から起動
-（以後、拡張機能つきで使うときは `womanlive-ext.bat` から起動してください）
+1. [Release](https://github.com/MT-Project/ladytube/releases) から最新の **`LadyTube_X.X.X.zip`**（X.X.X はバージョン）をダウンロードして解凍
+2. 中の **`LadyTube` フォルダ**を、書き込める場所（デスクトップやドキュメントなど）に置く
+3. **`setup.bat`** を実行。Node.js と FFmpeg をダウンロードし、必要な部品を入れてから起動します
+4. 2回目からは **`ladytube.bat`** で起動します
+
+最初の画面の案内に従い、管理画面で動画のあるフォルダを指定してスキャンしてください。
+
+## WomanLive ＋ 拡張機能（v2.x）からの移行
+WomanLive の `videos.db` と `libraries` フォルダは、そのまま LadyTube で使えます。
+
+1. WomanLive を終了する（コンソール画面を閉じる）。動かしたままコピーすると、最後の書き込みが `videos.db` に入らないことがあります
+2. 念のため、WomanLive のフォルダの `videos.db`（`videos.db-wal`・`videos.db-shm` があれば一緒に）と `libraries` フォルダを、別の場所にコピーしておく
+3. 上の「導入方法」の 1〜2 で `LadyTube` フォルダを置く
+4. **`setup.bat` を実行する前に**、WomanLive のフォルダの `videos.db`（`-wal`・`-shm` があれば一緒に）と `libraries` フォルダを `LadyTube` フォルダへコピーする。
+   先に `setup.bat` を実行すると空のデータベースができて起動するので、その場合は LadyTube を終了し、できた `videos.db`・`videos.db-wal`・`videos.db-shm` を消してからコピーしてください
+5. `setup.bat` を実行する。WomanLive の `.sys` フォルダを `LadyTube` フォルダへコピーしておくと、Node.js と FFmpeg のダウンロードを省けます（そのときも、残りの部品を入れるために `setup.bat` は一度実行します）
+6. 起動したら、動画の数・評価・ライブラリの切り替えを確かめる
+
+- ブラウザに残っている表示の設定（並び順・まとめ表示・サイドメニューの開閉など）は、開くアドレス（`http://localhost:19190`）が同じなので引き継がれます。
+- WomanLive と LadyTube は同じポートを使うので、同時には起動できません。
+- 元に戻すときは、WomanLive のフォルダで今までどおり `womanlive-ext.bat` から起動します。v3.0.0 はデータベースの形を変えていないので、そのまま戻れます。LadyTube で行った変更は LadyTube 側の `videos.db` にだけ入っているので、引き継ぐときは逆向きにコピーしてください。
 
 ## アンインストール
-- `womanlive-ext.bat` ではなく、通常の `womanlive.bat` から起動すれば拡張機能は無効になります。
-- 完全に削除する場合は `server/ext` フォルダと `womanlive-ext.bat` を削除してください。
-- 追加データも消す場合は、設定画面のバックアップでエクスポートしておいた上で、
-  `videos.db` の次のテーブルを削除（DROP）してください：
-  `ext_video_meta` / `ext_performers` / `ext_video_cover` / `ext_tag_thumb` /
-  `ext_makers` / `ext_bookmark_folders` / `ext_bookmarks`
-  （`ext_related` は再計算できるキャッシュなので任意。
-  `settings` テーブルの `ext_` で始まるキーも拡張用の設定です）
+`LadyTube` フォルダごと削除します。動画ファイルは削除されません。
+データ（`videos.db`・`libraries` フォルダ）を残したいときは、先に別の場所へコピーしてください。
 
 ## データ・バックアップ
-追加した情報（メタデータ・出演者・画像・ブックマーク・設定）は WomanLive の `videos.db` 内の
-**新規テーブル**に保存され、既存データは変更しません。設定画面の「バックアップ」から JSON で
-書き出し／復元できます。
-ライブラリを作った場合、追加したライブラリは WomanLive のルートの `libraries` フォルダに
-ライブラリごとの `videos.db` として保存されます（既定のライブラリは今までの `videos.db` です）。
+データは `LadyTube` フォルダの `videos.db` に保存されます。ライブラリを作った場合、追加したライブラリは
+`libraries` フォルダにライブラリごとの `videos.db` として保存されます（既定のライブラリは `videos.db` です）。
+管理画面の「バックアップ」から、追加した機能のデータ（メタデータ・出演者・画像・ブックマーク・設定）を
+JSON で書き出し／復元できます。
 
 ## ライセンス
-本アドオンは MIT ライセンスです（`LICENSE` 参照）。WomanLive 本体（MIT, Copyright 2016 woman projects）とは別の独立したプログラムであり、本体のコードは同梱していません。
-"WomanLive" の名称は対象ソフトの識別のために使用しているもので、woman projects による
-公式の承認・提供を受けたものではありません。
+LadyTube は MIT ライセンスです（`LICENSE` 参照）。派生元の WomanLive（Copyright 2026 woman projects, MIT）の
+著作権表示と許諾文は、`LICENSE` と `LICENSE.txt` に収めています。同梱しているライブラリのライセンスは
+`THIRD-PARTY-LICENSE.md` を見てください。
+"WomanLive" の名称は派生元を示すためにだけ使っています。LadyTube は woman projects の公式な承認や
+提供を受けたものではありません。
 [WomanLive 本体配布先](https://womanprojects.web.fc2.com)
 
 ## 配布物の構成
 ```
-womanlive-ext/
-  README.md            このファイル
-  LICENSE              MIT ライセンス
-  womanlive-ext.bat    拡張機能用起動ファイル（ルートへコピー）
-  server/              ルートへコピー（既存 server に統合される）
-    ext/               アドオン本体
-      preload.js       本体無改変で拡張機能をプリロードするためのファイル
-      index.js db.js inject.js library.js
-      routes/  public/ サーバーAPI / ブラウザ側UI
-      README.md        機能詳細
+LadyTube/
+  README.md              このファイル
+  LICENSE                MIT ライセンス（LadyTube）
+  LICENSE.txt            MIT ライセンス（派生元の WomanLive）
+  THIRD-PARTY-LICENSE.md 同梱ライブラリのライセンス
+  setup.bat              初回のセットアップ（Node.js・FFmpeg のダウンロード）と起動
+  ladytube.bat           起動
+  server/                サーバー
+    ext/                 追加した機能（機能の詳細は server/ext/README.md）
+  client/dist/           画面（ビルド済み）
 ```
 
 ## 更新履歴
+### v3.0.0 (2026-11-10)
+- **WomanLive 本体と拡張機能を一つのアプリにまとめました**: これまでは WomanLive に後から足すアドオンでしたが、本体ごと LadyTube として配布します。WomanLive を別に入れる必要はなくなりました。使える機能は v2.1.1 と同じです。
+- **名前を LadyTube に変えました**: ロゴ、ブラウザのタブ、初回の案内画面、ホーム画面に追加したときのアプリ名が変わります。起動ファイルは `ladytube.bat` の1つになり、`womanlive-ext.bat` は無くなりました。
+- **導入方法が変わりました**: zip を展開して `setup.bat` を実行します。WomanLive ＋ 拡張機能から移る場合は「WomanLive ＋ 拡張機能（v2.x）からの移行」を見てください。データはそのまま使えます。
+
+<details>
+<summary>過去の更新履歴（v2.1.1 以前）を表示</summary>
+
 ### v2.1.1 (2026-11-10)
 - **リスト表示にシリーズ・監督・ジャンルを表示**: 検索結果をリスト表示にしたとき、評価の左にシリーズ名を出します。行幅の半分を超える名前は末尾を「…」にします。出演者の行には「出演者：」の見出しを付け、右に「監督：」を並べます。タグの行の先頭にはジャンルを動画ページと同じ見た目で並べ、タグとの間を「│」で区切ります。行に収まらないときはタグの側から削り、マウスを乗せると全部を表示します。シリーズ名・監督・ジャンルを押すと、その条件で検索します。
 - **リスト表示でタグが折り返していたのを修正**: 本体 ver.260914 でクラス名が変わり、タグを1行に収める指定が効いていませんでした。
-
-<details>
-<summary>過去の更新履歴（v2.1.0 以前）を表示</summary>
 
 ### v2.1.0 (2026-11-01)
 - **同じ品番の動画を1枚のカードにまとめて表示**: 検索画面で、品番が同じ動画（`_1`、`_2` のようなパート）を1枚のカードにまとめます。表示形式ボタンの右のボタンで切り替えられ、最初はまとめる表示です。カードを押すと先頭のパートを再生します。サムネイル左上の「N本」を押すとパートの一覧が開き、そこから選んで再生できます。件数と絞り込みの件数は、まとめた後の数で数えます。一括操作とタグの付け外しは、まとめた全パートに効きます。

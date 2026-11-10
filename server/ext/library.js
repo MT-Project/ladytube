@@ -413,9 +413,9 @@ function checkCompatible(src) {
         require('../db').initDb(fresh);
         ['files', 'metadata', 'settings', 'screenshots'].forEach(t => {
             const have = new Set(src.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name));
-            if (!have.size) throw badRequest('WomanLive のデータベースではありません（' + t + ' がありません）');
+            if (!have.size) throw badRequest('LadyTube（WomanLive）のデータベースではありません（' + t + ' がありません）');
             const missing = fresh.prepare(`PRAGMA table_info(${t})`).all().map(c => c.name).filter(c => !have.has(c));
-            if (missing.length) throw badRequest('今の WomanLive とデータベースの形式が違います（' + t + ' に ' + missing.join(', ') + ' がありません）');
+            if (missing.length) throw badRequest('今の LadyTube とデータベースの形式が違います（' + t + ' に ' + missing.join(', ') + ' がありません）');
         });
     } finally { fresh.close(); }
 }

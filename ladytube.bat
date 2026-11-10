@@ -18,8 +18,8 @@ set FFMPEG=ffmpeg-8.0.1-full_build-shared
 set "PATH=%SYS_FOLDER%\%FFMPEG%\bin;%SYS_FOLDER%\%NODEJS%;%PATH%"
 set "NODE_COMPILE_CACHE=%SYS_FOLDER%\.node-cache"
 
-echo WomanLiveを開始します。 
+echo LadyTubeを開始します。 
 
-node server/index.js -browser
+node --require ./server/ext/preload.js server/index.js -browser
 
 pause

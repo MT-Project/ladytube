@@ -178,7 +178,7 @@
     WL.navigate = (url) => { window.location.assign(url); };
     // ページタイトル。本家の各ページと同じ "<名前> - WomanLive" 形式にする
     // (本家は自分のルートでしか title を設定しないため、拡張ページは自前で名乗る)
-    WL.setDocTitle = (name) => { document.title = name ? name + ' - WomanLive' : 'WomanLive'; };
+    WL.setDocTitle = (name) => { document.title = name ? name + ' - LadyTube' : 'LadyTube'; };
     WL.searchHref = (token) => '/search?q=' + encodeURIComponent(token);
     WL.searchBy = (token) => { WL.navigate(WL.searchHref(token)); };
     WL.openPerformer = (id) => { WL.navigate('/performer/' + id); };

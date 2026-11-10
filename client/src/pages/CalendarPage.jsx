@@ -86,7 +86,7 @@ export default function CalendarPage() {
     const navigate = useNavigate();
 
     useEffect(() => {
-        document.title = 'カレンダー - WomanLive';
+        document.title = 'カレンダー - LadyTube';
         fetch('/api/calendar/months')
             .then(res => res.json())
             .then(data => {

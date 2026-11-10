@@ -119,7 +119,7 @@ function TreeNode({ folder, level = 0 }) {
     };
 
     useEffect(() => {
-        document.title = 'フォルダーツリー - WomanLive';
+        document.title = 'フォルダーツリー - LadyTube';
         if (isExpanded && children.length === 0 && folder.hasChildren) {
             toggleExpand(null, true);
         }

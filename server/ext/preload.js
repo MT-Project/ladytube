@@ -68,7 +68,7 @@ try {
         Object.assign(wrapped, express);
         wrapped.__wlextWrapped = true;
         require.cache[expressPath].exports = wrapped;
-        console.log('[WomanLive拡張] preload 有効 (本体無改変モード)');
+        console.log('[LadyTube] 拡張を読み込みました');
     }
 } catch (e) {
     console.error('[WomanLive拡張] preload に失敗しました:', e);

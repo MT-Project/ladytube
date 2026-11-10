@@ -541,9 +541,9 @@ export default function SearchPage() {
 
   useEffect(() => {
     if (q) {
-      document.title = `${q} - WomanLive`;
+      document.title = `${q} - LadyTube`;
     } else {
-      document.title = 'すべての動画 - WomanLive';
+      document.title = 'すべての動画 - LadyTube';
     }
   }, [q]);
 

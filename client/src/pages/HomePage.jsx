@@ -216,7 +216,7 @@ export default function HomePage() {
 
     // ページタイトル設定
     useEffect(() => {
-        document.title = 'WomanLive';
+        document.title = 'LadyTube';
     }, []);
 
     // スキャンフォルダーと設定を取得

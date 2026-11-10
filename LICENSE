@@ -1,5 +1,6 @@
 MIT License
 
+Copyright 2026 woman projects
 Copyright (c) 2026 MT Project
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,16 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ---------------------------------------------------------------------------
-本ソフトウェア(WomanLive 拡張機能 / WomanLive Extension)は、動画管理ソフト
-"WomanLive" 用の非公式アドオンです。WomanLive 本体は含みません。
+LadyTube は、動画管理ソフト WomanLive (woman projects, MIT License) をもとにした
+派生版です。WomanLive の著作権表示と許諾文は、元のまま LICENSE.txt にも収めています。
 
-WomanLive 本体は以下の MIT ライセンスで配布されています(本アドオンの導入先で
-別途入手してください):
-
-    MIT License
-    Copyright 2016 woman projects
-
-本アドオンは WomanLive 本体のソースコードを同梱・改変・再配布しません。
-WomanLive と組み合わせて動作する独立した追加プログラムです。
-"WomanLive" の名称は識別のために使用しているもので、本アドオンは woman projects
-による公式な承認・提供を受けたものではありません。
+"WomanLive" の名称は派生元を示すためにだけ使っています。LadyTube は woman projects
+の公式な承認や提供を受けたものではありません。

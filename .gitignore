@@ -1,30 +1,36 @@
 # =============================================================
-# WomanLive 拡張機能 リポジトリ用 .gitignore
+# LadyTube リポジトリ用 .gitignore (allowlist 方式)
 #
-# このフォルダは WomanLive 本体のインストール先でもあり、個人データや
-# 巨大なバイナリが同居しています。事故防止のため「既定で全て無視し、
-# 拡張機能のファイルだけを明示的に追跡する」allowlist 方式にしています。
-#   - 追跡する: server/ext/ 配下、womanlive-ext.bat、README.md、LICENSE
-#   - 追跡しない: videos.db(個人データ) / .sys(Node・ffmpeg) / 本体(server,client 等)
-#                / node_modules / 配布zip など
+# 作業フォルダには個人データ (videos.db・libraries)、Node と ffmpeg (.sys)、
+# ビルド成果物が同居するので、既定で全て無視し、アプリのソースだけを追跡する。
+#   - 追跡する: 本体のソース (server・client/src 等)、拡張 (server/ext)、bat、README、ライセンス
+#   - 追跡しない: 個人用モジュール (server/private)、client/dist、node_modules、データ、配布 zip
 # =============================================================
 
 # まずルート直下を全て無視
 /*
-# server の中身も一旦無視（ext だけ後で解除するため、server ディレクトリ自体は残す）
-!/server/
-/server/*
 
-# ---- 追跡するもの（無視を解除）----
+# ---- 追跡するもの (無視を解除) ----
 !/.gitignore
 !/.gitattributes
 !/README.md
 !/LICENSE
-!/womanlive-ext.bat
-!/server/ext/
+!/LICENSE.txt
+!/THIRD-PARTY-LICENSE.md
+!/setup.bat
+!/ladytube.bat
 
-# ---- 念のための明示的な無視（データ・成果物・巨大物）----
-# allowlist 対象には一致しないので、誤った追加を二重に防ぎます。
+# server: 本体のソースと拡張。個人用モジュールと node_modules は除く
+!/server/
+/server/private/
+/server/node_modules/
+
+# client: ソースだけ。ビルド成果物と node_modules は除く
+!/client/
+/client/dist/
+/client/node_modules/
+
+# ---- 念のための明示的な無視 (データ・成果物・巨大物) ----
 videos.db
 *.db
 *.db-shm
@@ -32,3 +38,4 @@ videos.db
 *.zip
 .sys/
 node_modules/
+metasearch.config.json

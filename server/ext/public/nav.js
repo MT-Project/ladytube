@@ -179,10 +179,10 @@
     function buildHelpContent() {
         return [
             h('div', { class: 'wlext-help-title' }, '検索のヘルプ'),
-            h('h4', null, '基本 (WomanLive)'),
+            h('h4', null, '基本'),
             helpRow('犬 猫', 'AND 検索（すべて含む）'),
             helpRow('犬 OR 猫', 'OR 検索（どちらかを含む）'),
-            helpRow('"Woman Live"', '空白を含む語句をそのまま検索'),
+            helpRow('"Lady Tube"', '空白を含む語句をそのまま検索'),
             helpRow('-犬', '除外（その語を含まない）'),
             helpRow('!犬', '指定したタグを含む動画'),
             helpRow('~ (先頭)', '正規化検索（全角/半角・ひらがな/カタカナを区別しない）'),
@@ -329,7 +329,7 @@
     WL.pageHeader = function () {
         // ロゴ
         const logo = h('div', { class: 'wlext-logo' },
-            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'WomanLiveEX'));
+            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'LadyTube'));
         // 検索
         const input = h('input', { class: 'wlext-search-input', type: 'text', placeholder: '動画を検索...', spellcheck: 'false' });
         const submit = () => {
@@ -374,24 +374,7 @@
         }
     }
 
-    // 本家ヘッダーのロゴ「WomanLive」を「WomanLiveEX」へ置換 (拡張起動中の目印)
-    // ver.260914 でロゴが <a><span class="logoText_">WomanLive</span><svg…></a> の形になり、
-    // リンク直下のテキストではなくなった。中の「WomanLive」だけを持つ末端要素を探して置き換える
-    // (構造がまた変わっても、テキストの一致で追従できるようにしておく)。
-    function patchBrand() {
-        document.querySelectorAll('a[href="/"]').forEach(a => {
-            if (a.textContent.trim() !== 'WomanLive') return;
-            if (a.childElementCount === 0) { a.textContent = 'WomanLiveEX'; return; }
-            for (const el of a.querySelectorAll('*')) {
-                if (el.childElementCount === 0 && el.textContent.trim() === 'WomanLive') {
-                    el.textContent = 'WomanLiveEX';
-                    return;
-                }
-            }
-        });
-    }
-
-    WL.onEnsure(() => { patchReactHeader(); patchBrand(); patchSearchHelp(); maybeOpenQR(); patchCalendarLinks(); });
+    WL.onEnsure(() => { patchReactHeader(); patchSearchHelp(); maybeOpenQR(); patchCalendarLinks(); });
 
     /* ---------- ページ見出し (アイコン + テキスト) ---------- */
     WL.pageTitle = function (iconName, text) {

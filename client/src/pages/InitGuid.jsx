@@ -52,7 +52,7 @@ const styles = {
 
 export default function InitGuid() {
     useEffect(() => {
-        document.title = 'ホーム - WomanLive';
+        document.title = 'ホーム - LadyTube';
     }, []);
 
     return (
@@ -60,9 +60,9 @@ export default function InitGuid() {
             <Navbar />
             <div className={styles.content}>
                 <div className={styles.centerSection}>
-                    <h1 className={styles.title}>WomanLive</h1>
+                    <h1 className={styles.title}>LadyTube</h1>
                     <div className={styles.warningText}>
-                        WomanLiveへようこそ。<br />
+                        LadyTubeへようこそ。<br />
                         <br />
                         最初に動画を登録します。<br />
                         管理画面で、動画があるフォルダーを指定して「スキャン開始」ボタンで開始します。<br />

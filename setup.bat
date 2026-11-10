@@ -5,7 +5,7 @@ rem [注意] echoは日本語で文末が終わらないようにしてくださ
 
 cd /d "%~dp0"
 
-echo WomanLiveのセットアップを行います。 
+echo LadyTubeのセットアップを行います。 
 echo.
 echo 必要な部品をネットからダウンロードします。 
 echo ファイアウォールの警告が出る場合は許可してください。
@@ -81,9 +81,9 @@ if %errorlevel% neq 0 goto :ERROR
 echo セットアップが完了しました。 
 
 cd ..\
-echo WomanLiveを開始します。 
+echo LadyTubeを開始します。 
 
-node server/index.js -browser
+node --require ./server/ext/preload.js server/index.js -browser
 
 pause
 exit
