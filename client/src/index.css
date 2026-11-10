@@ -1,0 +1,142 @@
+:root {
+  /* Light Mode (Default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #f8f8f8;
+  --bg-modal: #ffffff;
+  --bg-hover: #e8e8e8;
+  --bg-selected: #e8e8e8;
+
+  --text-primary: #1e1e1e;
+  --text-secondary: #616161;
+  --text-inverse: #ffffff;
+
+  --border-primary: #e4e4e4;
+  --border-secondary: #d4d4d4;
+  --border-focus: #007acc;
+
+  --accent: #007acc;
+  --accent-hover: #005fa3;
+  --accent-light: rgba(0, 122, 204, 0.1);
+
+  --status-success: #388a34;
+  --status-error: #e51400;
+  --status-warning: #dd8800;
+  --status-info: #007acc;
+
+  --glass: rgba(255, 255, 255, 0.9);
+  --card-bg: #ffffff;
+  --border-color: #e4e4e4;
+}
+
+.dark {
+  /* Dark Mode (Lighter Gray + Orange Accent) */
+  --bg-primary: #2e2e2e;
+  /* Main background */
+  --bg-secondary: #252525;
+  /* Navbar / Sidebar (Darker) */
+  --bg-tertiary: #363636;
+  /* Inputs / Panels (Lighter) */
+  --bg-modal: #2e2e2e;
+  /* Dialogs */
+  --bg-hover: #404040;
+  /* Hover states */
+  --bg-selected: #404040;
+  /* Selected states */
+
+  --text-primary: #e0e0e0;
+  /* Main text */
+  --text-secondary: #a0a0a0;
+  /* Sub text */
+  --text-inverse: #ffffff;
+  /* Text on solid accent */
+
+  --border-primary: #606060;
+  /* Borders */
+  --border-secondary: #707070;
+  /* Lighter borders */
+  --border-focus: #e67e22;
+  /* Focus outlines */
+
+  --accent: #e67e22;
+  /* Dark Orange */
+  --accent-hover: #d35400;
+  /* Darker Orange */
+  --accent-light: rgba(230, 126, 34, 0.2);
+  /* Orange tint */
+
+  --status-success: #2ecc71;
+  --status-error: #e74c3c;
+  --status-warning: #f1c40f;
+  --status-info: #e67e22;
+  /* Match accent */
+
+  --glass: rgba(46, 46, 46, 0.95);
+  --card-bg: #2e2e2e;
+  --border-color: #444444;
+}
+
+* {
+  scrollbar-color: var(--border-color) var(--bg-primary);
+  box-sizing: border-box;
+  font-family: 'Segoe UI', 'Noto Sans JP', sans-serif;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+@keyframes dot-blink {
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.loading-dot {
+  animation: dot-blink 1.4s infinite both;
+  display: inline-block;
+}
+
+/* ASS Subtitle Styles */
+
+.ASS-box {
+  pointer-events: none !important;
+}
+
+.ASS-dialogue {
+  text-shadow:
+    1px 1px 3px #000,
+    -1px -1px 3px #000,
+    1px -1px 3px #000,
+    -1px 1px 3px #000 !important;
+}
+
+.ASS-dialogue [data-text] {
+  text-shadow:
+    1px 1px 3px #000,
+    -1px -1px 3px #000,
+    1px -1px 3px #000,
+    -1px 1px 3px #000 !important;
+}
