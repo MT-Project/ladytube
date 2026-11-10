@@ -1,8 +1,10 @@
 // =============================================================
-// 拡張検索 ルート
-// クライアントの fetch フックが、@ で始まる検索語や rating ソート時に
-// /api/videos の代わりにこのエンドポイントを呼びます。
-// 戻り値の形は /api/videos と同じ { videos, totalCount } に揃えます。
+// 検索 ルート
+// 本体の一覧 /api/videos と件数 /api/videos/count は、ここの videos / count で返す
+// (本体 server/services/videoService.js の getVideos / getVideoCount から呼ぶ)。
+// 検索語は @ で始まる項目トークンと本家互換のキーワード (fullsearch.js の keywordWhere)、
+// ほかに path (フォルダ絞り込み)・sort (拡張のソートを含む)・group=1 (品番でまとめる) を扱う。
+// 戻り値の形は本体と同じで、一覧は { videos }、件数は { totalCount }。
 // =============================================================
 const { db, splitList, SORT_MAP } = require('../db');
 const { keywordWhere, orderByFor, pathWhere, sortWhere } = require('./fullsearch');
@@ -136,26 +138,22 @@ function buildConditions(tokens) {
 // 「品番でまとめる」のまとめ単位。品番が空の動画は1本ずつ (id で別々にする)。
 const GROUP_KEY = "CASE WHEN IFNULL(e.model_no,'') = '' THEN 'i' || f.id ELSE 'm' || UPPER(e.model_no) END";
 
+const BASE = `
+    FROM files f
+    JOIN metadata m ON f.hash = m.hash
+    LEFT JOIN ext_video_meta e ON e.hash = f.hash
+`;
+
 // 同じ品番の動画を1件にまとめた一覧。検索に合った動画だけでまとめる。
 //  並び: グループ内で今のソート順の一番前に来る動画の位置 (新しい順なら一番新しい動画)
 //  代表: ファイル名の自然順で先頭 (_1 など)。ext_group_ids はメンバーの id をその順に並べたもの
-function groupedSearch(req, res, where, params, limit, offset) {
-    const { sort = 'updated_desc', seed } = req.query;
-    const base = `
-        FROM files f
-        JOIN metadata m ON f.hash = m.hash
-        LEFT JOIN ext_video_meta e ON e.hash = f.hash
-    `;
-    const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
-    const { orderBy, extraParams } = orderByFor(sort, seed);
-
-    const total = db.prepare(`SELECT COUNT(DISTINCT ${GROUP_KEY}) AS total ${base}${whereSql}`).get(...params).total;
+function groupedVideos(whereSql, params, orderBy, extraParams, limit, offset) {
     // ORDER BY の乱数シード(extraParams)は hits の SELECT 句にあるので WHERE の値より前に渡す
-    const videos = db.prepare(`
+    return db.prepare(`
         WITH hits AS (
             SELECT f.id AS id, ${GROUP_KEY} AS gk, ext_namekey(f.filename) AS nk,
                    ROW_NUMBER() OVER (ORDER BY ${orderBy}, f.id) AS ord
-            ${base}${whereSql}
+            ${BASE}${whereSql}
         ), g AS (
             SELECT id, gk, MIN(ord) OVER w AS gord, COUNT(*) OVER w AS gcount,
                    ROW_NUMBER() OVER (PARTITION BY gk ORDER BY nk, id) AS rn
@@ -171,47 +169,41 @@ function groupedSearch(req, res, where, params, limit, offset) {
         ORDER BY g.gord
         LIMIT ? OFFSET ?
     `).all(...extraParams, ...params, limit, offset);
-
-    res.json({ videos, totalCount: total });
 }
 
-exports.search = (req, res) => {
+// 本体と同じく、一覧と件数は別々に返す (一覧を先に出し、件数は後から取る作り)
+function respond(req, res, countOnly) {
     try {
-        const { q = '', page = 1, perPage = 20, sort = 'updated_desc', seed } = req.query;
-        const limit = Math.max(1, parseInt(perPage, 10) || 20);
-        const offset = (Math.max(1, parseInt(page, 10) || 1) - 1) * limit;
-
-        const { where, params } = conditionsFor(req.query);
-        if (req.query.group === '1') return groupedSearch(req, res, where, params, limit, offset);
-
-        // ext テーブルが必須となる条件があるか (performer/rating など) で JOIN種別を決める
-        const joinType = 'LEFT JOIN';
-        let base = `
-            FROM files f
-            JOIN metadata m ON f.hash = m.hash
-            ${joinType} ext_video_meta e ON e.hash = f.hash
-        `;
+        const query = req.query;
+        const { where, params } = conditionsFor(query);
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
+        const grouped = query.group === '1';
 
-        // ランダムは全文検索と同じシード付き乱数を使う (絞り込み中でも並びが保たれる)
-        const { orderBy, extraParams } = orderByFor(sort, seed);
+        if (countOnly) {
+            const total = db.prepare(`SELECT ${grouped ? `COUNT(DISTINCT ${GROUP_KEY})` : 'COUNT(*)'} AS total ${BASE}${whereSql}`).get(...params).total;
+            return res.json({ totalCount: total });
+        }
 
-        const total = db.prepare(`SELECT COUNT(*) AS total ${base}${whereSql}`).get(...params).total;
-
-        const videos = db.prepare(`
-            SELECT ${VIDEO_FIELDS}
-            ${base}${whereSql}
-            ORDER BY ${orderBy}
-            LIMIT ? OFFSET ?
-        `).all(...params, ...extraParams, limit, offset);
-
-        res.json({ videos, totalCount: total });
+        const limit = Math.max(1, parseInt(query.perPage, 10) || 20);
+        const offset = (Math.max(1, parseInt(query.page, 10) || 1) - 1) * limit;
+        const { orderBy, extraParams } = orderByFor(query.sort, query.seed);
+        const videos = grouped
+            ? groupedVideos(whereSql, params, orderBy, extraParams, limit, offset)
+            : db.prepare(`
+                SELECT ${VIDEO_FIELDS}
+                ${BASE}${whereSql}
+                ORDER BY ${orderBy}
+                LIMIT ? OFFSET ?
+            `).all(...params, ...extraParams, limit, offset);
+        res.json({ videos });
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search]', e);
-        res.status(500).json({ error: e.message });
+        res.status(500).json({ error: countOnly ? '動画数取得に失敗しました' : '検索に失敗しました' });
     }
-};
+}
+exports.videos = (req, res) => respond(req, res, false);
+exports.count = (req, res) => respond(req, res, true);
 
 // シリーズ別に集計 (シリーズ一覧用)
 //  name: シリーズ名 / count: 動画(ファイル)本数 / avgRating: 評価平均(0は除外) / thumbId: サムネ用動画id
@@ -286,10 +278,7 @@ exports.facets = (req, res) => {
         const rows = db.prepare(`
             SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers,
                    ${GROUP_KEY} AS gk
-            FROM files f
-            JOIN metadata m ON f.hash = m.hash
-            LEFT JOIN ext_video_meta e ON e.hash = f.hash
-            ${whereSql}
+            ${BASE}${whereSql}
         `).all(...params);
 
         // 品番でまとめているときは、一覧のカードと同じく「まとめた件数」で数える
@@ -344,18 +333,13 @@ const BRIEF_FIELDS = `
     e.display_name AS ext_display_name, e.rating AS ext_rating,
     e.release_date AS ext_release_date, e.model_no AS ext_model_no
 `;
-const BRIEF_BASE = `
-    FROM files f
-    JOIN metadata m ON f.hash = m.hash
-    LEFT JOIN ext_video_meta e ON e.hash = f.hash
-`;
 
 // GET /ext/api/videos/brief?ids=3,1,2   指定した id の動画を、指定した順で返す
 exports.brief = (req, res) => {
     try {
         const ids = String(req.query.ids || '').split(',').map(s => parseInt(s, 10)).filter(n => Number.isInteger(n)).slice(0, 500);
         if (!ids.length) return res.json({ videos: [] });
-        const rows = db.prepare(`SELECT ${BRIEF_FIELDS} ${BRIEF_BASE} WHERE f.id IN (${ids.map(() => '?').join(',')})`).all(...ids);
+        const rows = db.prepare(`SELECT ${BRIEF_FIELDS} ${BASE} WHERE f.id IN (${ids.map(() => '?').join(',')})`).all(...ids);
         const byId = new Map(rows.map(r => [r.id, r]));
         res.json({ videos: ids.map(id => byId.get(id)).filter(Boolean) });
     } catch (e) {
@@ -369,12 +353,12 @@ exports.brief = (req, res) => {
 //  works: 同じシリーズの動画を品番でまとめたもの (公開日の古い順・公開日なしは最後)。group_count はまとめた本数
 exports.siblings = (req, res) => {
     try {
-        const cur = db.prepare(`SELECT f.id, e.model_no, e.series ${BRIEF_BASE} WHERE f.id = ?`).get(req.params.id);
+        const cur = db.prepare(`SELECT f.id, e.model_no, e.series ${BASE} WHERE f.id = ?`).get(req.params.id);
         if (!cur) return res.status(404).json({ error: '動画が見つかりません' });
         const modelNo = String(cur.model_no || '').trim(), series = String(cur.series || '').trim();
 
         const parts = modelNo ? db.prepare(`
-            SELECT ${BRIEF_FIELDS} ${BRIEF_BASE}
+            SELECT ${BRIEF_FIELDS} ${BASE}
             WHERE e.model_no = ? COLLATE NOCASE
             ORDER BY ext_namekey(f.filename), f.id
         `).all(modelNo) : [];
@@ -383,7 +367,7 @@ exports.siblings = (req, res) => {
             WITH s AS (
                 SELECT f.id AS id, ${GROUP_KEY} AS gk, ext_namekey(f.filename) AS nk,
                        NULLIF(e.release_date, '') AS rd
-                ${BRIEF_BASE}
+                ${BASE}
                 WHERE e.series = ? COLLATE NOCASE
             ), g AS (
                 SELECT id, COUNT(*) OVER w AS gcount, MIN(rd) OVER w AS grd,

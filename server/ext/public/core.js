@@ -1,6 +1,6 @@
 /* =============================================================
    WomanLive 拡張 - コア
-   ・fetch フック (表示動画名の置換 / 拡張検索の振り分け)
+   ・fetch フック (表示動画名の置換 / 品番でまとめたカードの手直し / 関連動画の差し替え)
    ・SPA ルート検知
    ・DOM 監視 (React 再描画後の再注入)
    ・共通 UI (ライトボックス / トースト / チップ入力 など)
@@ -259,69 +259,18 @@
         });
     }
 
-    // '@' で始まるフィールド検索 → search.js、それ以外の通常キーワード → fullsearch.js。
-    // 拡張ソート(ext_rating / ext_screenshots 等)は両経路の sortMap で適用されるため、
-    // 振り分けは検索語の種類だけで決める(キーワード+拡張ソートの併用を壊さない)。
-    // 品番でまとめるときはまとめ方を1か所に寄せるため search.js に送る (キーワードも同じ条件で扱える)。
-    function searchEndpointFor(q) {
-        if (grouping()) return '/ext/api/search';
-        return String(q || '').trim().startsWith('@') ? '/ext/api/search' : '/ext/api/fullsearch';
-    }
-    function searchParams(u) {
-        const p = new URLSearchParams(u.searchParams);
-        if (grouping()) p.set('group', '1');
-        return p;
-    }
-
-    // 本家 ver.260914 から、件数は一覧とは別の /api/videos/count で取るようになった。
-    // 一覧だけを拡張へ振り向けると「件数は本家の検索結果」になって食い違うので、
-    // 件数も同じ条件で数え直す (例: @maker:"X" は本家だとキーワード扱いで 0 件になる)。
-    async function handleVideoCountFetch(url, input, init) {
-        const u = new URL(url, location.origin);
-        const p = searchParams(u);
-        p.set('page', '1');
-        p.set('perPage', '1');   // 欲しいのは totalCount だけ
-        try {
-            const r = await origFetch(searchEndpointFor(u.searchParams.get('q')) + '?' + p.toString());
-            if (r.ok) {
-                const data = await r.json();
-                if (data && typeof data.totalCount === 'number') return jsonResponse({ totalCount: data.totalCount });
-            }
-        } catch (e) { /* フォールバックへ */ }
-        return origFetch(input, init);
-    }
-
-    async function handleVideosFetch(url, input, init) {
-        const u = new URL(url, location.origin);
-        const endpoint = searchEndpointFor(u.searchParams.get('q'));
-
-        try {
-            const r = await origFetch(endpoint + '?' + searchParams(u).toString());
-            if (r.ok) {
-                const data = await r.json();
-                applyDisplayName(data.videos);
-                applyGroups(data.videos);
-                cacheVideoTags(data.videos);
-                return jsonResponse(data);
-            }
-        } catch (e) { /* フォールバックへ */ }
-
-        // フォールバック: 元の検索 + 表示名デコレート
+    // 検索そのもの (項目検索・品番でまとめる・件数) はサーバーの /api/videos と /api/videos/count が
+    // 拡張の search.js で行う。ここでは一覧の結果に、カードへ差し込む UI 用の手直しだけをする。
+    async function handleVideosFetch(input, init) {
         const r = await origFetch(input, init);
-        const clone = r.clone();
+        if (!r.ok) return r;
         try {
-            const data = await r.json();
-            if (data && Array.isArray(data.videos) && data.videos.length) {
-                try {
-                    const ids = data.videos.map(v => v.id);
-                    const map = await WL.api.bulkMeta(ids);
-                    data.videos.forEach(v => { const m = map[v.id]; if (m) { if (m.display_name) v.ext_display_name = m.display_name; v.ext_rating = m.rating; } });
-                } catch (e) { }
-                applyDisplayName(data.videos);
-                cacheVideoTags(data.videos);
-            }
+            const data = await r.clone().json();
+            applyDisplayName(data.videos);
+            applyGroups(data.videos);
+            cacheVideoTags(data.videos);
             return jsonResponse(data);
-        } catch (e) { return clone; }
+        } catch (e) { return r; }
     }
 
     async function handleSingleVideoFetch(id, input, init) {
@@ -380,8 +329,7 @@
             if (typeof input === 'string') {
                 const mt = url.match(/\/api\/video\/(\d+)\/tags(\?|$)/);
                 if (mt && init && /^(POST|DELETE)$/i.test(init.method || '') && grouping()) return handleGroupTagFetch(mt[1], url, input, init);
-                if (/\/api\/videos\/count(\?|$)/.test(url)) return handleVideoCountFetch(url, input, init);
-                if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(url, input, init);
+                if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(input, init);
                 const mv = url.match(/\/api\/video\/(\d+)(\?|$)/);
                 if (mv) return handleSingleVideoFetch(mv[1], input, init);
             }

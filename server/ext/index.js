@@ -10,7 +10,6 @@ const { initSchema } = require('./db');
 const cover = require('./routes/cover');
 const meta = require('./routes/meta');
 const search = require('./routes/search');
-const fullsearch = require('./routes/fullsearch');
 const tags = require('./routes/tags');
 const screenshots = require('./routes/screenshots');
 const related = require('./routes/related');
@@ -119,8 +118,6 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/meta/bulk', meta.bulk);
 
     // -- 拡張検索
-    app.get('/ext/api/search', search.search);
-    app.get('/ext/api/fullsearch', fullsearch.fullSearch);
     app.get('/ext/api/search/facets', search.facets);
     app.get('/ext/api/videos/brief', search.brief);
     app.get('/ext/api/video/:id/siblings', search.siblings);

@@ -1,15 +1,12 @@
 // =============================================================
-// 拡張全文検索
-// 元の videoService.getVideos と同じ検索仕様を保ちつつ、
-// 照合対象に ext_video_meta.display_name (表示動画名) を追加します。
-// 通常のキーワード検索はクライアントの fetch フックからここへ振り向けられます。
-// (元ファイルは一切変更しません)
-//
-// 条件の組み立ては keywordWhere() に切り出してあり、項目検索(search.js)からも
-// 使います。キーワードと項目トークンを混ぜた検索ができるのはこのためです。
+// キーワード検索の条件 (search.js が使う部品)
+// 本家 ver.260914 の videoService.buildSearchQuery と同じ検索仕様
+// (! - ~ > < OR と引用符) で、照合対象に ext_video_meta.display_name (表示動画名) を足したもの。
+// 本体の buildSearchQuery は LadyTube では削除し、検索は search.js に一本化した。
+// 本家が検索仕様を変えたら、ここへ移す (ladytube-upstream の 4.)。
 // =============================================================
 const path = require('path');
-const { db, SORT_MAP } = require('../db');
+const { SORT_MAP } = require('../db');
 
 // フォルダ絞り込み (本家 ver.260914 の buildSearchQuery と同じ条件)。
 // path=root は「すべて」の意味なので条件を付けない。
@@ -165,54 +162,3 @@ function orderByFor(sort, seed) {
     return { orderBy: 'seeded_random(?, f.id)', extraParams: [seedVal] };
 }
 exports.orderByFor = orderByFor;
-
-exports.fullSearch = (req, res) => {
-    const { q, page = 1, perPage = 20, sort = 'updated_desc', seed } = req.query;
-    const limit = parseInt(perPage, 10);
-    const offset = (parseInt(page, 10) - 1) * limit;
-
-    // ext_video_meta を LEFT JOIN して表示名/評価も扱う
-    let baseQuery = `
-        FROM files f
-        JOIN metadata m ON f.hash = m.hash
-        LEFT JOIN ext_video_meta e ON e.hash = f.hash
-    `;
-
-    let params = [];
-
-    try {
-        const kw = keywordWhere(q);
-        const pw = pathWhere(req.query.path);
-        params = [...kw.params, ...pw.params];
-        const conds = [kw.sql, pw.sql, sortWhere(sort)].filter(Boolean);
-        if (conds.length) baseQuery += " WHERE " + conds.map(c => '(' + c + ')').join(' AND ');
-    } catch (err) {
-        return res.status(err.badRequest ? 400 : 500).json({ error: err.message });
-    }
-
-    const { orderBy, extraParams } = orderByFor(sort, seed);
-    const dataParams = [...params, ...extraParams];
-
-    try {
-        const countSql = `SELECT count(*) as total ${baseQuery}`;
-        const countRes = db.prepare(countSql).get(...params);
-        const total = countRes ? countRes.total : 0;
-
-        const dataQuery = `
-            SELECT
-                f.id, f.path, f.filename, f.size,
-                m.hash, m.duration, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size,
-                m.tags, m.use_transcode, m.display_name, m.last_pos,
-                e.display_name AS ext_display_name, e.rating AS ext_rating
-            ${baseQuery}
-            ORDER BY ${orderBy}
-            LIMIT ? OFFSET ?
-        `;
-        const videos = db.prepare(dataQuery).all(...dataParams, limit, offset);
-
-        res.json({ videos, totalCount: total });
-    } catch (err) {
-        console.error("[ext fullsearch] エラー:", err);
-        res.status(500).json({ error: "検索に失敗しました" });
-    }
-};

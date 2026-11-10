@@ -6,6 +6,9 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 ## 仕組み
 - **読み込み**: 本体の `server/index.js` が express のアプリを作った直後に `require('./ext')(app)` で拡張を読み込みます。
   使用中ライブラリの DB は、本体の `server/db.js` が `server/ext/library.js` に聞いてから開きます。
+- **検索**: 本体の一覧 `/api/videos` と件数 `/api/videos/count` は、`server/ext/routes/search.js` が返します
+  (本体 `server/services/videoService.js` の `getVideos`/`getVideoCount` から呼ぶ)。項目検索・表示動画名の照合・
+  拡張のソート・品番でまとめる表示は、ここで扱います。
 - 追加データは `videos.db` の**新規テーブル**（`ext_*`）に保存。WomanLive から引き継いだテーブルの形は変えていません。
 - **ライブラリ**を作ると、ライブラリごとの DB ファイル（`libraries\<ID>\videos.db`）を本体に開かせます（後述の「ライブラリ」）。
 
@@ -184,8 +187,8 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - プレビュー中に出る本家のミュートボタンは、「N本」の下へずらします。ポスター表示では「N本」を左下
   (シークバーとファイル名の帯の上)に置きます。
 - 品番の無い動画はまとめません。
-- 実装: `server/ext/public/groupview.js`、`core.js`(fetch フック)、`routes/search.js` の `groupedSearch`
-  (`/ext/api/search?group=1`)。
+- 実装: `server/ext/public/groupview.js`、`routes/search.js` の `groupedVideos`。検索画面(`SearchPage.jsx`)が
+  一覧と件数の要求に `group=1` を付け、カードの名前からパート番号を外すのは `core.js` が行います。
 
 ## 検索結果のサイドメニュー（絞り込み）
 検索結果の左側に、今の結果をさらに絞り込むためのサイドメニューを出します。
@@ -364,8 +367,8 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 ## 本家 ver.260914 への対応
 本家の更新で変わった点に合わせています。
 - **検索結果の件数**: 一覧(`/api/videos`)が件数を返さなくなり、`/api/videos/count` で別に取る作りに
-  変わりました。一覧だけを拡張へ振り向けると「件数は本家の検索結果」になって食い違うため
-  (`@maker:"X"` は本家だとキーワード扱いで 0 件)、件数も同じ条件で数え直します。
+  変わりました。LadyTube では、本体の一覧と件数はどちらも `routes/search.js` の `videos`/`count` が返すので、
+  同じ条件で数えます(`@maker:"X"` も一覧と件数がそろう)。
 - **フォルダ絞り込み(カテゴリー)**: `path` パラメータを拡張の検索でも解釈します。`path=root` は「すべて」。
   絞り込みを足しても `path` は保ったままです。
 - **フォルダーツリーの廃止**: `/folder-tree` が無くなったので、メニューの項目を「カテゴリー」
@@ -392,8 +395,8 @@ server/ext/
     library.js          ライブラリ API・書き込みガード
     cover.js            カバー画像・拡張設定
     meta.js             動画の拡張メタデータ
-    search.js           拡張検索（評価/メーカー等）・絞り込み候補の集計・シリーズ/公開カレンダー集計
-    fullsearch.js       キーワード検索の拡張（表示動画名も照合）
+    search.js           検索（本体の /api/videos・/api/videos/count が使う。項目検索・品番でまとめる）・絞り込み候補の集計・シリーズ/公開カレンダー集計
+    fullsearch.js       キーワード検索の条件（本家互換。表示動画名も照合）
     tags.js             タグ集計・タグサムネイル（タグ一覧用）
     screenshots.js      スクリーンショット枚数の集計
     related.js          関連動画（メタデータ類似・事前計算）
@@ -411,7 +414,7 @@ server/ext/
   public/               ブラウザで動く拡張 UI（/ext/assets で配信）
     api.js              API クライアント・ライブラリの印付け（切り替え前の画面の検知）
     namekey.js          名前ソート用の共通ソートキー（サーバー/クライアント共用 UMD）
-    core.js             fetch フック・ルート検知・共通 UI（ダイアログ/チップ入力/クロッパ等）
+    core.js             fetch フック（一覧の表示名・まとめたカードの手直し、動画ページ）・ルート検知・共通 UI（ダイアログ/チップ入力/クロッパ等）
     nav.js              ナビゲーション統一（単色アイコン/共通ヘッダー/メニュー/テーマ）
     homelinks.js        ホーム画面への追加リンク
     cover.js            カバー画像表示

@@ -469,6 +469,12 @@ export default function SearchPage() {
     if (currentCategoryPath && currentCategoryPath !== 'root') {
       countParams.path = currentCategoryPath;
     }
+    // LadyTube: 同じ品番の動画を1枚にまとめる (表示形式ボタンの右のトグル。既定はまとめる。
+    // 切り替えは server/ext/public/groupview.js が localStorage に書いて library-updated を投げる)
+    if (localStorage.getItem('wlext_group_model') !== '0') {
+      listParams.group = '1';
+      countParams.group = '1';
+    }
 
     // 1. リスト取得（最優先）
     api.getVideos(listParams)
