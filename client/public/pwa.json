@@ -1,0 +1,15 @@
+{
+  "short_name": "WomanLive",
+  "name": "WomanLive",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#f3f3f3",
+  "background_color": "#ffffff"
+}
