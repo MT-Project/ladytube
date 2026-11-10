@@ -20,6 +20,16 @@ set "NODE_COMPILE_CACHE=%SYS_FOLDER%\.node-cache"
 
 echo LadyTubeを開始します。 
 
-node --require ./server/ext/preload.js server/index.js -browser
+rem ライブラリを切り替えるとサーバーは 75 で終わるので、起動し直す (server/ext/library.js)
+set "LADYTUBE_RESTART=1"
+set "OPEN_BROWSER=-browser"
+
+:RUN
+node server/index.js %OPEN_BROWSER%
+if %errorlevel% equ 75 (
+	set "OPEN_BROWSER="
+	echo ライブラリを切り替えて再起動します。 
+	goto :RUN
+)
 
 pause

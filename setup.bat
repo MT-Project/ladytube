@@ -81,11 +81,7 @@ if %errorlevel% neq 0 goto :ERROR
 echo セットアップが完了しました。 
 
 cd ..\
-echo LadyTubeを開始します。 
-
-node --require ./server/ext/preload.js server/index.js -browser
-
-pause
+call "%~dp0ladytube.bat"
 exit
 
 :ERROR_MKDIR

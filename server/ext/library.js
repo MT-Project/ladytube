@@ -1,13 +1,13 @@
 // =============================================================
-// WomanLive 拡張 - ライブラリ (DB ファイル単位の切り替え)
+// LadyTube - ライブラリ (DB ファイル単位の切り替え)
 //
-// ライブラリ1つ = WomanLive の DB ファイル1つ。
-//   既定ライブラリ : インストール先の videos.db (場所も中身も今までどおり。本体だけで起動してもこれが開く)
+// ライブラリ1つ = DB ファイル1つ。
+//   既定ライブラリ : インストール先の videos.db
 //   追加ライブラリ : libraries/<id>/videos.db  (一覧と使用中は libraries/libraries.json)
 //
-// 本体 server/db.js は videos.db を固定パスで起動時に1回だけ開くので、preload から
-// better-sqlite3 の生成を横取りして、使用中ライブラリのファイルを開かせる (本体は無改変)。
-// 切り替えはサーバーの再起動で行う (preload の監視役が子プロセスを起動し直す)。
+// 本体 server/db.js が起動時に bootPath() で開くファイルを決め、開いた直後に opened(db) を呼ぶ。
+// 切り替えはサーバーの再起動で行う: 使用中を書き換えて RESTART_CODE で終わり、起動用の
+// ladytube.bat がそれを見て起動し直す (bat は LADYTUBE_RESTART=1 を渡す。bat 以外から起動したときは手動)。
 //
 // 全ライブラリ共通のもの:
 //   ・出演者 (ext_performers) … 既定ライブラリの表を使う。追加ライブラリの接続には既定の
@@ -16,8 +16,8 @@
 //   ・メーカー情報 (ext_makers) … 出演者と同じ置き方 (v2.0.1 から)。一覧に出すメーカーは各ライブラリの動画から集める。
 //   ・SHARED_KEYS の設定 … 既定ライブラリの settings を正とし、起動時に写し、書き込みのたびに書き戻す。
 //
-// このファイルは preload から本体の DB より先に読まれる。先頭で ../db や ./db を require しないこと
-// (その時点で本体の DB が開いてしまう)。本体の DB が要る処理は関数の中で遅延 require する。
+// このファイルは本体の server/db.js から、DB を開く前に読まれる。先頭で ../db や ./db を require しないこと
+// (循環して本体の DB がまだ無い)。本体の DB が要る処理は関数の中で遅延 require する。
 // =============================================================
 const fs = require('fs');
 const path = require('path');
@@ -29,7 +29,8 @@ const REG_FILE = path.join(LIB_DIR, 'libraries.json');
 const TRASH_DIR = path.join(LIB_DIR, '_trash');
 const DEFAULT_ID = 'default';
 const DEFAULT_NAME = 'メイン';
-const RESTART_CODE = 75;   // 子プロセスがこのコードで終わったら、監視役が起動し直す
+const RESTART_CODE = 75;   // このコードで終わったら、ladytube.bat が起動し直す
+const canRestart = () => process.env.LADYTUBE_RESTART === '1';   // ladytube.bat から起動したか
 
 // 全ライブラリ共通の設定 (公開設定・プリセットタグ・FANZA API・出演者タグ)
 const SHARED_KEYS = [
@@ -41,8 +42,7 @@ const SHARED_KEYS = [
 const NOT_INHERITED = ['scan_folders', 'ext_cover_folder'];
 
 // 起動中のライブラリ
-const runtime = { id: DEFAULT_ID, path: DEFAULT_DB, hooked: false, shared: false, warning: '' };
-let RawDatabase = null;   // 横取りしていない better-sqlite3 (拡張が自分で DB を開くとき用)
+const runtime = { id: DEFAULT_ID, path: DEFAULT_DB, shared: false, warning: '' };
 
 /* ---------- 一覧 (libraries.json) ---------- */
 function readRegistry() {
@@ -74,43 +74,20 @@ function bootLibraryId() {
     return id;
 }
 
-function raw() {
-    if (!RawDatabase) RawDatabase = require(require.resolve('better-sqlite3', { paths: [path.join(__dirname, '..')] }));
-    return RawDatabase.__wlextRaw || RawDatabase;
-}
+const raw = () => require('better-sqlite3');   // 拡張が自分で別の DB ファイルを開くとき用
 
 function hasTable(conn, schema, name) {
     return !!conn.prepare(`SELECT 1 FROM ${schema}.sqlite_master WHERE type = 'table' AND name = ?`).get(name);
 }
 
-/* ---------- preload: 本体の DB を開くところを横取り ---------- */
-function installDbHook(serverDir) {
-    const modPath = require.resolve('better-sqlite3', { paths: [serverDir] });
-    const Database = require(modPath);
-    if (Database.__wlextRaw) return;
-    RawDatabase = Database;
-    const bootId = bootLibraryId();
-
-    const wrapped = new Proxy(Database, {
-        construct(target, args, newTarget) {
-            // 最初に videos.db を開く呼び出し = 本体の server/db.js。それ以外は素通し。
-            if (runtime.hooked || typeof args[0] !== 'string' || !samePath(args[0], DEFAULT_DB)) {
-                return Reflect.construct(target, args, newTarget);
-            }
-            runtime.hooked = true;
-            const file = dbPathOf(bootId);
-            const conn = Reflect.construct(target, [file, ...args.slice(1)], newTarget);
-            runtime.id = bootId;
-            runtime.path = file;
-            if (bootId !== DEFAULT_ID) attachShared(conn);
-            return conn;
-        },
-        get(target, prop, receiver) {
-            if (prop === '__wlextRaw') return target;
-            return Reflect.get(target, prop, receiver);
-        }
-    });
-    require.cache[modPath].exports = wrapped;
+/* ---------- 本体 server/db.js から: 開くファイルを決め、開いた直後に繋ぐ ---------- */
+function bootPath() {
+    runtime.id = bootLibraryId();
+    runtime.path = dbPathOf(runtime.id);
+    return runtime.path;
+}
+function opened(conn) {
+    if (runtime.id !== DEFAULT_ID) attachShared(conn);
 }
 
 // 追加ライブラリの接続に既定ライブラリを shared として繋ぎ、共通設定を写す。
@@ -480,7 +457,7 @@ function remove(id) {
     return { id, movedTo: moved };
 }
 
-// 切り替え: 一覧の使用中を書き換えて再起動する。監視役がいない起動方法なら再起動は手動。
+// 切り替え: 一覧の使用中を書き換えて再起動する。ladytube.bat 以外から起動したときは再起動は手動。
 function switchTo(db, id) {
     const reg = readRegistry();
     const l = findLib(reg, id);
@@ -497,7 +474,7 @@ function switchTo(db, id) {
     reg.active = id;
     writeRegistry(reg);
 
-    const restarting = process.env.WLEXT_CHILD === '1';
+    const restarting = canRestart();
     if (restarting) {
         setTimeout(() => {
             try { db.close(); } catch (e) { }
@@ -507,27 +484,14 @@ function switchTo(db, id) {
     return { id, name: l.name, restarting };
 }
 
-/* ---------- 起動後の確認 ---------- */
-// 横取りが効いたか (本体の DB の開き方が変わると効かない)。効いていなければ既定として扱う。
-function verify(db) {
-    const reg = readRegistry();
-    if (!runtime.hooked || !samePath(db.name, runtime.path)) {
-        runtime.id = DEFAULT_ID; runtime.path = db.name; runtime.shared = false;
-        if (reg.active !== DEFAULT_ID) {
-            runtime.warning = 'ライブラリの切り替えが効いていません（本体の DB の開き方が変わった可能性があります）。既定のライブラリを開いています。';
-            console.error('[WomanLive拡張] ' + runtime.warning);
-        }
-    }
-}
-
 function isLocal(req) {
     const a = (req.socket && req.socket.remoteAddress) || '';
     return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1';
 }
 
 module.exports = {
-    DEFAULT_ID, RESTART_CODE, SHARED_KEYS, runtime,
-    installDbHook, verify, beforeSchema, sharedSchema, syncSharedOut,
+    DEFAULT_ID, RESTART_CODE, SHARED_KEYS, runtime, canRestart,
+    bootPath, opened, beforeSchema, sharedSchema, syncSharedOut,
     performerIdsUsedElsewhere, removePerformersElsewhere,
     list, clientInfo, create, importDb, rename, remove, switchTo, isLocal, readRegistry,
     // 検証用

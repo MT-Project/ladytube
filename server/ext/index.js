@@ -1,6 +1,6 @@
 // =============================================================
-// WomanLive 拡張機能 エントリポイント
-// server/index.js から require('./ext')(app) で呼び出されます。
+// LadyTube 追加機能 エントリポイント
+// 本体 server/index.js が express のアプリを作った直後に require('./ext')(app) で呼び出します。
 // すべての追加機能はこのフォルダ配下で完結します。
 // =============================================================
 const path = require('path');
@@ -26,17 +26,15 @@ const replace = require('./routes/replace');
 const makers = require('./routes/makers');
 const file = require('./routes/file');
 const createInject = require('./inject');
-const library = require('./library');
 const libraryRoutes = require('./routes/library');
 
 module.exports = function setupExt(app) {
-    // 二重ロード防止 (index.js への追記 と preload の両方が有効でも一度だけ実行)
+    // 二重ロード防止
     if (app.__wlext_loaded) return;
     app.__wlext_loaded = true;
 
-    // 0. ライブラリ: 本体が開いた DB が使用中ライブラリのものか確かめてから、スキーマを作る。
-    //    書き込みのガード(切り替え前の画面からの書き込みを拒否)は本家のルートより先に登録する。
-    library.verify(require('./db').db);
+    // 0. ライブラリ: 書き込みのガード(切り替え前の画面からの書き込みを拒否)は本家のルートより先に登録する。
+    //    使用中ライブラリの DB は本体 server/db.js が library.bootPath() で開いている。
     app.use(libraryRoutes.middleware);
 
     // 1. 追加テーブルを用意

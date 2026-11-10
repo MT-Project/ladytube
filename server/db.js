@@ -1,8 +1,11 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 const logger = require('./logger');
-const dbPath = path.join(__dirname, '..', 'videos.db');
+// LadyTube: 使用中ライブラリの DB を開く (既定は videos.db、追加ライブラリは libraries/<id>/videos.db)
+const library = require('./ext/library');
+const dbPath = library.bootPath();
 const db = new Database(dbPath, { timeout: 5000 });
+library.opened(db);
 try {
   db.pragma('journal_mode = WAL');
   db.pragma('synchronous = NORMAL');

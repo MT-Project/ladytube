@@ -46,7 +46,7 @@ exports.list = (req, res) => {
         res.json({
             current: library.runtime.id,
             local: library.isLocal(req),
-            canRestart: process.env.WLEXT_CHILD === '1',
+            canRestart: library.canRestart(),
             warning: library.runtime.warning || '',
             libraries: library.list(db),
         });

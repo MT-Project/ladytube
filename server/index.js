@@ -6,6 +6,7 @@ const routes = require('./routes');
 const db = require('./db');
 const logger = require('./logger');
 const app = express();
+require('./ext')(app);   // LadyTube: 追加機能 (本体のルートより先に登録する)
 const port = 19190;
 
 app.use(cors());
