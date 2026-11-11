@@ -175,8 +175,10 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - **ジャンル**: タグの行の先頭に、動画ページのジャンルと同じ見た目で並べ、タグとの間を「│」で区切ります。
   行に収まらないときはタグの側(末尾)から削って「…」を付け、マウスを乗せるとジャンルとタグを全部表示します。
 - シリーズ名・監督・ジャンルを押すとその条件で検索します(`@series:"…"` / `@director:"…"` / `@genre:"…"`)。出演者を押すと出演者ページを開きます。
-- 値は一覧のメタデータと一緒にまとめて取ります(`/ext/api/meta/bulk` が `series` / `directors` / `genres` も返す)。
-- 実装: `server/ext/public/cardenh.js`。
+- 値は一覧 API (`/api/videos`) が一緒に返します(`routes/search.js` の `withCardFields`。メーカー・シリーズ・ジャンル・監督・出演者)。
+- 実装: `client/src/components/ExtCardParts.jsx`(検索画面のカードだけに出す。サムネのメーカー名とフォルダ名、評価の行も同じファイル)。
+  見た目は `womanlive-ext.css` のクラス(`.wlext-maker-ov` / `.wlext-folder-ov` / `.wlext-card-meta` ほか)。
+  評価の行には、スクショ数(`screenshots.js`)とブックマーク(`bookmark.js`)が拡張側から入ります。
 
 ## 同じ品番の動画をまとめて表示
 検索画面で、品番(拡張メタデータ)が同じ動画を1枚のカードにまとめます。パート分割された作品向けです。
@@ -428,7 +430,6 @@ server/ext/
     videometa.js        動画ページの拡張メタ表示/編集・DMM検索/タグ編集/詳細情報編集の FAB
     searchfacets.js     検索結果のサイドメニュー（ジャンル/タグ/メーカー/出演者/シリーズで絞り込み）
     screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
-    cardenh.js          検索カードのメーカー/評価/フォルダ名/出演者の表示拡張
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
     standard.js         動画ページの標準モード（右の情報欄）

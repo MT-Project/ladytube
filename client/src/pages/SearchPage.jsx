@@ -830,6 +830,7 @@ export default function SearchPage() {
               viewMode={viewMode}
               onVideoUpdate={handleVideoUpdate}
               showThumbnailButton={showThumbnailButton}
+              extMeta
             />
           )}
         </div>

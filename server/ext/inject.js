@@ -35,7 +35,6 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/bookmark.js',
     '/ext/assets/bookmarklist.js',
     '/ext/assets/screenshots.js',
-    '/ext/assets/cardenh.js',
     '/ext/assets/covermode.js',
     '/ext/assets/groupview.js',
     '/ext/assets/watchdate.js',

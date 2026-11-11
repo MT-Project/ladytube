@@ -92,7 +92,6 @@
         // 動画メタ
         getMeta: (id) => req('/ext/api/video/' + id + '/meta'),
         saveMeta: (id, m) => req('/ext/api/video/' + id + '/meta', jsonOpts('PUT', m)),
-        bulkMeta: (ids) => req('/ext/api/meta/bulk?ids=' + ids.join(',')),
         videosBrief: (ids) => req('/ext/api/videos/brief?ids=' + ids.join(',')),
         videoSiblings: (id) => req('/ext/api/video/' + id + '/siblings'),
         thumbUrl: (v) => '/api/video/' + v.id + '/thumbnail?s=' + (v.thumbnail_size || 0),

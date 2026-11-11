@@ -115,7 +115,6 @@ module.exports = function setupExt(app) {
     // -- 動画の拡張メタデータ
     app.get('/ext/api/video/:id/meta', meta.getMeta);
     app.put('/ext/api/video/:id/meta', meta.putMeta);
-    app.get('/ext/api/meta/bulk', meta.bulk);
 
     // -- 拡張検索
     app.get('/ext/api/search/facets', search.facets);

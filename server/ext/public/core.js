@@ -54,22 +54,10 @@
         return 'hsl(' + (n % 360) + ', 42%, 40%)';
     };
 
-    // 検索カード内のフォルダ名要素。プロパティ名ベースの属性セレクタ(folderName_*)を優先し、
-    // 本体の構造変化時は nowrap+ellipsis のテキスト div にフォールバック(拡張の注入要素は除外)。
-    WL.findFolderName = function (card) {
-        const byProp = card.querySelector('[class*="folderName_"]');
-        if (byProp) return byProp;
-        for (const d of card.querySelectorAll('div')) {
-            if (d.className.indexOf('wlext-') !== -1) continue; // 自身の注入要素(folder-ov等)は対象外
-            const s = getComputedStyle(d);
-            if (s.whiteSpace === 'nowrap' && s.textOverflow === 'ellipsis' && d.textContent.trim()) return d;
-        }
-        return null;
-    };
-
-    // 検索カードの評価/スクショ数/ブックマークをまとめる行。表示形式(グリッド/リスト/ポスター)に
+    // カードの評価/スクショ数/ブックマークをまとめる行。表示形式(グリッド/リスト/ポスター)に
     // 応じて適切な位置(通常はタイトル直下、ポスターはサムネ上のオーバーレイ)へ配置する。
-    // cardenh/bookmark/screenshots の3箇所から呼ばれ、何度呼んでも同じ行を返す(冪等)。
+    // bookmark/screenshots から呼ばれ、何度呼んでも同じ行を返す(冪等)。検索画面では本体の画面
+    // (client/src/components/ExtCardParts.jsx) が評価入りの行を先に置くので、それを見つけて返す。
     WL.cardMetaRow = function (card) {
         const isPoster = !!card.closest('.poster');
         const parent = isPoster
@@ -209,14 +197,6 @@
         try { return localStorage.getItem('wlext_use_display_name') !== '0'; } catch (e) { return true; }
     };
 
-    // 検索結果の全タグ(m.tags)を id でキャッシュ (リスト表示のタグ幅フィットで参照)
-    WL._videoTags = WL._videoTags || {};
-    function cacheVideoTags(list) {
-        if (!Array.isArray(list)) return;
-        list.forEach(v => { if (v && v.id != null && v.tags != null) WL._videoTags[v.id] = v.tags; });
-    }
-    WL.cacheVideoTags = cacheVideoTags;
-
     // 検索画面で同じ品番の動画を1枚のカードにまとめるか (既定はON)。トグルは本体の検索画面
     // (client/src/pages/SearchPage.jsx) にあり、同じキーに書く。ここは拡張の UI (一括操作・絞り込み) が読むためのもの
     WL.groupByModel = () => {
@@ -239,14 +219,13 @@
     }
 
     // 検索そのもの (項目検索・品番でまとめる・件数) はサーバーの /api/videos と /api/videos/count が
-    // 拡張の search.js で行う。ここでは一覧の結果に、カードへ差し込む UI 用の手直しだけをする。
+    // 拡張の search.js で行う。ここでは一覧の結果に、まとめたカードの手直しだけをする。
     async function handleVideosFetch(input, init) {
         const r = await origFetch(input, init);
         if (!r.ok) return r;
         try {
             const data = await r.clone().json();
             applyGroups(data.videos);
-            cacheVideoTags(data.videos);
             return jsonResponse(data);
         } catch (e) { return r; }
     }

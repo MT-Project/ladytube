@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { MoreVertical, Check, Volume2, VolumeX, Music, Layers } from 'lucide-react';
+import { ExtThumbOverlays, ExtCardMeta, ExtPerformers, ExtTagRow } from './ExtCardParts';
 import { Link } from 'react-router-dom';
 import { css } from '@linaria/core';
 import { useUI } from '../contexts/UIContext';
@@ -473,7 +474,8 @@ function VideoCard({
     setActiveMenuId = () => { },
     isPreviewMuted = true,
     setIsPreviewMuted = () => { },
-    volume = 1
+    volume = 1,
+    extMeta = false   // LadyTube: 検索画面のカードだけメーカー・評価・出演者などを足す (ExtCardParts.jsx)
 }) {
     const { showToast, showExtension, showDisplayName } = useUI();
     const [isHovered, setIsHovered] = useState(false);
@@ -841,6 +843,10 @@ function VideoCard({
                     <div className={styles.nextBadge}>NEXT</div>
                 )}
                 {!isHovered && <div className={styles.hoverOverlay} style={{ opacity: isHovered ? 0 : 1 }} />}
+                {extMeta && (
+                    <ExtThumbOverlays video={video} folder={viewMode === 'grid-poster' ? '' : getFolderName(video.path)} durationClass={styles.durationBadge} />
+                )}
+                {extMeta && viewMode === 'grid-poster' && <ExtCardMeta video={video} poster />}
                 {(isHovered && isThumbnailHovered) && (
                     <>
                         {showThumbnailButton && hasVideo && (
@@ -878,7 +884,10 @@ function VideoCard({
                 <div title={`${video.path}${video.display_name ? ' ' + video.display_name : ''}`} className={styles.infoContainer}>
                     <div className={css`overflow: hidden;`}>
                         <div className={styles.filename}>{filenameToDisplay}{video.display_name ? ` ${video.display_name}` : ''}</div>
-                        <div className={styles.folderName}>{getFolderName(video.path)}</div>
+                        {/* LadyTube: 検索画面ではフォルダ名をサムネ左下へ移し、ここには評価の行と出演者の行を置く */}
+                        {!extMeta && <div className={styles.folderName}>{getFolderName(video.path)}</div>}
+                        {extMeta && viewMode !== 'grid-poster' && <ExtCardMeta video={video} list={viewMode === 'list'} />}
+                        {extMeta && viewMode === 'list' && <ExtPerformers video={video} />}
                     </div>
                     <div
                         className={styles.menuBtnWrapper}
@@ -893,7 +902,10 @@ function VideoCard({
                         </div>
                         {renderTagMenu()}
                     </div>
-                    {tags.length > 0 && (
+                    {tags.length > 0 && extMeta && viewMode === 'list' && (
+                        <ExtTagRow genres={video.ext_genres || []} tags={tags} className={styles.tagBadgeContainer} badgeClass={styles.tagBadge} />
+                    )}
+                    {tags.length > 0 && !(extMeta && viewMode === 'list') && (
                         <div className={styles.tagBadgeContainer}>
                             {tags.slice(0, 5).map((tag, i) => (
                                 <span key={i} className={styles.tagBadge}>{tag}</span>
@@ -907,7 +919,7 @@ function VideoCard({
     );
 }
 
-export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate }) {
+export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false }) {
     const { showThumbnailButton } = useUI();
     const [lastPreviewedId, setLastPreviewedId] = useState(null);
     const [allTags, setAllTags] = useState([]);
@@ -950,7 +962,7 @@ export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highli
             )}
             {
                 videos.map((video) => (
-                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} />
+                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} extMeta={extMeta} />
                 ))
             }
         </div >

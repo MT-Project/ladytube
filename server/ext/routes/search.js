@@ -16,8 +16,28 @@ const VIDEO_FIELDS = `
     LENGTH(m.thumbnail) AS thumbnail_size,
     m.tags, m.use_transcode, m.display_name, m.last_pos,
     e.display_name AS ext_display_name,
-    e.rating AS ext_rating
+    e.rating AS ext_rating,
+    e.maker AS ext_maker, e.series AS ext_series,
+    e.genres AS ext_genres, e.directors AS ext_directors, e.performers AS ext_performers
 `;
+
+// 検索画面のカードに出す項目 (client/src/components/ExtCardParts.jsx) を画面で使う形にする。
+// ジャンル・監督は配列、出演者は [{id, name}] (出演者マスタに無い id は出さない)。名前はまとめて1回で引く
+function withCardFields(videos) {
+    const idsOf = (s) => splitList(s).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+    const all = [...new Set(videos.flatMap(v => idsOf(v.ext_performers)))];
+    const names = new Map();
+    if (all.length) {
+        db.prepare(`SELECT id, name FROM ext_performers WHERE id IN (${all.map(() => '?').join(',')})`)
+            .all(...all).forEach(p => names.set(p.id, p.name));
+    }
+    videos.forEach(v => {
+        v.ext_genres = splitList(v.ext_genres);
+        v.ext_directors = splitList(v.ext_directors);
+        v.ext_performers = idsOf(v.ext_performers).map(id => ({ id, name: names.get(id) || '' })).filter(p => p.name);
+    });
+    return videos;
+}
 
 // 検索文字列を「項目トークン」と「キーワード」に分ける。
 //   '@maker:"X" rating:>=4 温泉' -> tokens=[maker,rating] keyword='温泉'
@@ -195,7 +215,7 @@ function respond(req, res, countOnly) {
                 ORDER BY ${orderBy}
                 LIMIT ? OFFSET ?
             `).all(...params, ...extraParams, limit, offset);
-        res.json({ videos });
+        res.json({ videos: withCardFields(videos) });
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search]', e);
