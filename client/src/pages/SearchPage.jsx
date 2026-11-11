@@ -634,15 +634,20 @@ export default function SearchPage() {
     window.scrollTo(0, 0);
   };
 
+  // LadyTube: keys の2つを持つ項目 (表示名・評価・スクショ数) は、押すたびに向きを切り替える (最初は keys[0])。
+  // 並べ替えはサーバー (server/ext/db.js の SORT_MAP) が行う
   const sortOptions = [
     { key: 'updated_desc', label: '新しい' },
     { key: 'updated_asc', label: '古い' },
     { key: 'name_asc', label: '名前' },
+    { keys: ['ext_displayname_asc', 'ext_displayname_desc'], label: '表示名' },
     { key: 'duration_desc', label: '長さ' },
     { key: 'created_desc', label: '新着' },
     { key: 'history_desc', label: '再生履歴' },
     { key: 'play_count_desc', label: '再生数' },
     { key: 'random', label: 'ランダム' },
+    { keys: ['ext_rating_desc', 'ext_rating_asc'], label: '評価' },
+    { keys: ['ext_screenshots_desc', 'ext_screenshots_asc'], label: 'スクショ数' },
   ];
 
   const getPageNumbers = () => {
@@ -773,15 +778,20 @@ export default function SearchPage() {
 
         {/* Sort Links */}
         <div className={styles.sortContainer}>
-          {sortOptions.map(opt => (
-            <div
-              key={opt.key}
-              onClick={() => handleSort(opt.key)}
-              className={`${styles.sortButton} ${sortBy === opt.key ? 'active' : ''}`}
-            >
-              {opt.label}
-            </div>
-          ))}
+          {sortOptions.map(opt => {
+            const keys = opt.keys || [opt.key];
+            const active = keys.includes(sortBy);
+            const arrow = opt.keys && active ? (sortBy.endsWith('_asc') ? ' ↑' : ' ↓') : '';
+            return (
+              <div
+                key={keys[0]}
+                onClick={() => handleSort(sortBy === keys[0] && keys[1] ? keys[1] : keys[0])}
+                className={`${styles.sortButton} ${active ? 'active' : ''}`}
+              >
+                {opt.label}{arrow}
+              </div>
+            );
+          })}
         </div>
 
         {/* Video List */}
