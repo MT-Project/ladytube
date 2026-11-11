@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { css } from '@linaria/core';
 import VideoList from '../components/VideoList';
 import ExtSelectionFabs from '../components/ExtSelection';
+import ExtFacets from '../components/ExtFacets';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -378,6 +379,7 @@ export default function SearchPage() {
   const itemsPerPage = parseInt(searchParams.get('perPage')) || 20;
   const seed = searchParams.get('seed') || '';
   const categoryPath = searchParams.get('path') || '';
+  const contentRef = useRef(null);   // LadyTube: 絞り込みを開いたときに左の余白を広げる (ExtFacets.jsx)
 
   // カテゴリー機能の状態
   const [subFolders, setSubFolders] = useState([]);
@@ -702,7 +704,7 @@ export default function SearchPage() {
     <div className={styles.page}>
       <Navbar />
 
-      <div className={styles.content}>
+      <div className={styles.content} ref={contentRef}>
 
         {/* カテゴリーパネル */}
         {isCategoryMode && (() => {
@@ -751,8 +753,8 @@ export default function SearchPage() {
           );
         })()}
 
-        {/* Status Bar */}
-        <div className={styles.statusBar}>
+        {/* Status Bar (LadyTube: 左上の「絞り込み」ボタンに被らないよう 92px 空ける) */}
+        <div className={styles.statusBar} style={{ paddingLeft: '92px' }}>
           <div className={styles.statusRow}>
             <div className={styles.countDisplay}>
               <span className={styles.countNumber}>{totalCount}</span>
@@ -899,6 +901,10 @@ export default function SearchPage() {
           </div>
         )}
       </div>
+      {/* LadyTube: 絞り込み (左のサイドメニュー)。開いているぶん一覧 (contentRef) を右へ寄せる。
+          一覧の ref が付いてから実測するよう、一覧より後ろに置く (表示は body の末尾) */}
+      <ExtFacets q={q.trim()} path={categoryPath} sort={searchParams.get('sort') || ''} group={groupByModel}
+        onApply={(nextQ) => updateParams({ q: nextQ, page: '1' })} contentRef={contentRef} />
     </div>
   );
 }

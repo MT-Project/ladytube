@@ -219,9 +219,9 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
   絞り込みを全部外すと、`@` の付かない元のキーワード検索に戻ります。
 - **本家のフォルダ絞り込み(カテゴリー)と再生履歴ソートも候補の集計に効かせます**。一覧と同じ母集団を
   数えるため、`path` と `sort` も同じ条件で扱います。
-- 一覧を右へ寄せる量は実測して決めます(本家の結果一覧は左端が画面外から始まることがあり、
-  固定値だと並び替えボタンがパネルの下に隠れるため)。
-- 実装: `server/ext/public/searchfacets.js`、`routes/search.js` の `facets`、
+- 一覧を右へ寄せる量は「パネルの右端 + 16px」になるよう実測して決めます(狭い画面では 22px で、パネルは一覧に重ねます)。
+- 押すと検索画面の中で条件を変えます(ページ全体は読み直しません)。
+- 実装: `client/src/components/ExtFacets.jsx`(検索画面 `SearchPage.jsx` が置く)、`routes/search.js` の `facets`、
   API `GET /ext/api/search/facets?q=...`。キーワードの条件組み立ては `routes/fullsearch.js` の
   `keywordWhere` を項目検索側と共用しています。
 
@@ -428,7 +428,6 @@ server/ext/
     framestep.js        コマ送り（, / . キー・Shift+ホイール・タッチ端末のボタン）
     mobileact.js        動画ページのモバイル操作（端末に保存 / アプリで開く）
     videometa.js        動画ページの拡張メタ表示/編集・DMM検索/タグ編集/詳細情報編集の FAB
-    searchfacets.js     検索結果のサイドメニュー（ジャンル/タグ/メーカー/出演者/シリーズで絞り込み）
     screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow

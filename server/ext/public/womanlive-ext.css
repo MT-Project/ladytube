@@ -858,10 +858,7 @@
     border-right: 1px solid var(--border-primary, #e4e4e4);
 }
 body.wlext-facets-open .wlext-facets { display: flex; }
-/* 本家の結果一覧を、開いているぶんだけ右へ寄せる */
-body.wlext-facets-on.wlext-facets-open #root [class*="content_"] { padding-left: var(--wlext-facet-pad, 258px) !important; }
-/* ボタンぶんの余白 (閉じているときも一覧の先頭に被らないように) */
-body.wlext-facets-on #root [class*="statusBar_"] { padding-left: 92px; }
+/* 結果一覧の左の余白 (開いているぶん右へ寄せる) と、ボタンぶんの余白は検索画面 (client/src/components/ExtFacets.jsx・SearchPage.jsx) が付ける */
 .wlext-facets-body { flex: 1; overflow-y: auto; padding: 0.4rem 0 1rem; }
 .wlext-facets-msg { padding: 0.8rem; font-size: 0.8rem; color: var(--text-secondary, #888); }
 .wlext-facet-section { padding: 0.5rem 0.5rem 0.7rem; border-bottom: 1px solid var(--border-primary, #ececec); }
@@ -913,7 +910,6 @@ body.wlext-facets-on #root [class*="statusBar_"] { padding-left: 92px; }
 .wlext-facet-more:hover { text-decoration: underline; }
 /* 狭い画面では一覧を押し出さず、上に重ねて出す */
 @media (max-width: 900px) {
-    body.wlext-facets-on.wlext-facets-open #root [class*="content_"] { padding-left: 22px !important; }
     body.wlext-facets-open .wlext-facets-backdrop { display: block; }
     .wlext-facets { width: min(280px, 82vw); box-shadow: 0 0 24px rgba(0, 0, 0, 0.35); }
 }
