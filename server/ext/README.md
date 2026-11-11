@@ -190,8 +190,9 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - プレビュー中に出る本家のミュートボタンは、「N本」の下へずらします。ポスター表示では「N本」を左下
   (シークバーとファイル名の帯の上)に置きます。
 - 品番の無い動画はまとめません。
-- 実装: `server/ext/public/groupview.js`、`routes/search.js` の `groupedVideos`。検索画面(`SearchPage.jsx`)が
-  一覧と件数の要求に `group=1` を付け、カードの名前からパート番号を外すのは `core.js` が行います。
+- 実装: まとめるのは `routes/search.js` の `groupedVideos`。トグルは検索画面(`SearchPage.jsx`)にあり、一覧と件数の要求に
+  `group=1` を付けます。「N本」はカード(`VideoList.jsx`)が `ext_group_count` から出し、押したときの一覧は
+  `server/ext/public/groupview.js` の `WL.openGroupMembers` です。カードの名前からパート番号を外すのは `core.js` が行います。
 
 ## 検索結果のサイドメニュー（絞り込み）
 検索結果の左側に、今の結果をさらに絞り込むためのサイドメニューを出します。
@@ -429,7 +430,7 @@ server/ext/
     screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
     cardenh.js          検索カードのメーカー/評価/フォルダ名/出演者の表示拡張
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）
-    groupview.js        同じ品番の動画をまとめて表示（切替・「N本」バッジ・パート一覧）
+    groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
     standard.js         動画ページの標準モード（右の情報欄）
     watchdate.js        動画ページの公開日表示・更新日の移動
     bulkselect.js       検索結果の選択モード・一括操作

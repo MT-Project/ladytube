@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
-import { MoreVertical, Check, Volume2, VolumeX, Music } from 'lucide-react';
+import { MoreVertical, Check, Volume2, VolumeX, Music, Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { css } from '@linaria/core';
 import { useUI } from '../contexts/UIContext';
@@ -863,6 +863,15 @@ function VideoCard({
                             </div>
                         </div>
                     </>
+                )}
+                {/* LadyTube: 品番でまとめたカードの「N本」(サーバーが group=1 のときだけ ext_group_count を返す)。
+                    押すとまとめた動画の一覧を出す (server/ext/public/groupview.js)。見た目は womanlive-ext.css の .wlext-group-badge */}
+                {video.ext_group_count > 1 && (
+                    <div className="wlext-group-badge" title="まとめた動画を一覧で表示"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openGroupMembers?.(video.id); }}
+                    >
+                        <Layers size={12} /><span>{video.ext_group_count}本</span>
+                    </div>
                 )}
             </div>
             {

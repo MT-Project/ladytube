@@ -217,13 +217,10 @@
     }
     WL.cacheVideoTags = cacheVideoTags;
 
-    // 検索画面で同じ品番の動画を1枚のカードにまとめるか (表示形式ボタンの右のトグル。既定はON)
-    const GROUP_KEY = 'wlext_group_model';
+    // 検索画面で同じ品番の動画を1枚のカードにまとめるか (既定はON)。トグルは本体の検索画面
+    // (client/src/pages/SearchPage.jsx) にあり、同じキーに書く。ここは拡張の UI (一括操作・絞り込み) が読むためのもの
     WL.groupByModel = () => {
-        try { return localStorage.getItem(GROUP_KEY) !== '0'; } catch (e) { return true; }
-    };
-    WL.setGroupByModel = (on) => {
-        try { localStorage.setItem(GROUP_KEY, on ? '1' : '0'); } catch (e) { }
+        try { return localStorage.getItem('wlext_group_model') !== '0'; } catch (e) { return true; }
     };
     const grouping = () => location.pathname === '/search' && WL.groupByModel();
 

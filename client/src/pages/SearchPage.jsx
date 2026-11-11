@@ -6,7 +6,7 @@ import VideoList from '../components/VideoList';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { LayoutGrid, Grid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder } from 'lucide-react';
+import { LayoutGrid, Grid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder, Layers } from 'lucide-react';
 import { theme } from '../theme';
 import { removeExtension } from '../utils/formatters';
 
@@ -368,6 +368,9 @@ export default function SearchPage() {
   const [showDelayedLoading, setShowDelayedLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // LadyTube: 同じ品番の動画を1枚にまとめる (既定はまとめる。キーは v2.x の拡張機能から引き継いだもの)
+  const [groupByModel, setGroupByModel] = useState(() => localStorage.getItem('wlext_group_model') !== '0');
+
   const q = searchParams.get('q') || '';
   const sortBy = searchParams.get('sort') || 'updated_desc';
   const currentPage = parseInt(searchParams.get('page')) || 1;
@@ -469,8 +472,8 @@ export default function SearchPage() {
     if (currentCategoryPath && currentCategoryPath !== 'root') {
       countParams.path = currentCategoryPath;
     }
-    // LadyTube: 同じ品番の動画を1枚にまとめる (表示形式ボタンの右のトグル。既定はまとめる。
-    // 切り替えは server/ext/public/groupview.js が localStorage に書いて library-updated を投げる)
+    // LadyTube: 同じ品番の動画を1枚にまとめる (表示形式ボタンの右のトグル。toggleGroupByModel が
+    // localStorage に書いてからここを呼ぶので、state ではなく localStorage を読む)
     if (localStorage.getItem('wlext_group_model') !== '0') {
       listParams.group = '1';
       countParams.group = '1';
@@ -622,6 +625,13 @@ export default function SearchPage() {
     updateParams(updates);
   };
 
+  const toggleGroupByModel = () => {
+    const next = !groupByModel;
+    localStorage.setItem('wlext_group_model', next ? '1' : '0');
+    setGroupByModel(next);
+    fetchVideosRef.current();   // 一覧と件数を取り直す
+  };
+
   const handlePerPage = (cnt) => {
     const val = cnt.toString();
     localStorage.setItem('search_perPage', val);
@@ -749,6 +759,18 @@ export default function SearchPage() {
                     <Icon size={20} strokeWidth={2} />
                   </div>
                 ))}
+              </div>
+
+              {/* LadyTube: 同じ品番の動画をまとめて表示。サムネイル切替 (server/ext/public/covermode.js) は
+                  表示形式ボタンの枠の直後に入るので、並びは 表示形式 / サムネイル切替 / これ になる */}
+              <div className={`${styles.controlGroup} wlext-groupmode`}>
+                <div
+                  onClick={toggleGroupByModel}
+                  className={`${styles.viewModeButton} ${groupByModel ? 'active' : ''}`}
+                  title={groupByModel ? '同じ品番の動画をまとめて表示中（押すと1本ずつ表示）' : '同じ品番の動画をまとめて表示'}
+                >
+                  <Layers size={20} strokeWidth={2} />
+                </div>
               </div>
 
               {/* Per Page */}
