@@ -5,7 +5,7 @@ import { css } from '@linaria/core';
 import { useUI } from '../contexts/UIContext';
 import { api } from '../services/api';
 import { theme } from '../theme';
-import { getFolderName, removeExtension } from '../utils/formatters';
+import { getFolderName, videoName } from '../utils/formatters';
 import { useMsePlayback } from './Player/useMsePlayback';
 import LoadingDots from './LoadingDots';
 
@@ -475,7 +475,7 @@ function VideoCard({
     setIsPreviewMuted = () => { },
     volume = 1
 }) {
-    const { showToast, showExtension } = useUI();
+    const { showToast, showExtension, showDisplayName } = useUI();
     const [isHovered, setIsHovered] = useState(false);
     const [isThumbnailHovered, setIsThumbnailHovered] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -715,7 +715,7 @@ function VideoCard({
 
     const tags = video.tags ? video.tags.split('\n').map(t => t.trim()).filter(t => t.length > 0) : [];
     const src = isNative ? `/api/stream/${video.id}` : (mseUrl || null);
-    const filenameToDisplay = showExtension ? video.filename : removeExtension(video.filename);
+    const filenameToDisplay = videoName(video, showExtension, showDisplayName);
 
     const renderTagMenu = () => {
         if (!showTagMenu) return null;
@@ -797,7 +797,7 @@ function VideoCard({
                                 {(!video.has_thumbnail || imageError) ? (
                                     <div className={styles.noImage}>NO IMAGE</div>
                                 ) : (
-                                    video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={video.filename} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
+                                    video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
                                 )}
                                 {viewMode !== 'grid-poster' && (
                                     <div className={styles.durationBadge} style={{ fontSize: '11px', lineHeight: 1 }}>{formatDuration(video.duration)}</div>
@@ -808,7 +808,7 @@ function VideoCard({
                                     </div>
                                 )}
                                 {viewMode === 'grid-poster' && (
-                                    <div className={styles.posterTitle} title={video.filename}>
+                                    <div className={styles.posterTitle} title={videoName(video, true, showDisplayName)}>
                                         {filenameToDisplay}{video.display_name ? ` ${video.display_name}` : ''}
                                     </div>
                                 )}
@@ -820,7 +820,7 @@ function VideoCard({
                         {(!video.has_thumbnail || imageError) ? (
                             <div className={styles.noImage} style={{ fontSize: '0.75rem' }}>NO IMAGE</div>
                         ) : (
-                            video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={video.filename} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
+                            video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
                         )}
                         {viewMode !== 'grid-poster' && (
                             <div className={styles.durationBadge} style={{ fontSize: '11px', lineHeight: 1 }}>{formatDuration(video.duration)}</div>
@@ -831,7 +831,7 @@ function VideoCard({
                             </div>
                         )}
                         {viewMode === 'grid-poster' && (
-                            <div className={styles.posterTitle} title={video.filename}>
+                            <div className={styles.posterTitle} title={videoName(video, true, showDisplayName)}>
                                 {filenameToDisplay}{video.display_name ? ` ${video.display_name}` : ''}
                             </div>
                         )}

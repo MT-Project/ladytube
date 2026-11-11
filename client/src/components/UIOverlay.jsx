@@ -192,7 +192,9 @@ export default function UIOverlay({
     showExtension,
     showThumbnailButton,
     toggleExtension,
-    toggleThumbnailButton
+    toggleThumbnailButton,
+    showDisplayName,
+    toggleDisplayName
 }) {
     return (
         <div className={styles.overlayContainer}>
@@ -270,6 +272,16 @@ export default function UIOverlay({
                                     onClick={toggleThumbnailButton}
                                 >
                                     <div className={`${styles.switchThumb} ${showThumbnailButton ? 'active' : ''}`} />
+                                </div>
+                            </div>
+
+                            <div className={styles.settingsRow}>
+                                <span className={styles.settingsLabel}>動画表示名で表示する</span>
+                                <div
+                                    className={`${styles.switchTrack} ${showDisplayName ? 'active' : ''}`}
+                                    onClick={toggleDisplayName}
+                                >
+                                    <div className={`${styles.switchThumb} ${showDisplayName ? 'active' : ''}`} />
                                 </div>
                             </div>
                         </div>

@@ -64,3 +64,13 @@ export function removeExtension(filename) {
     if (lastDot === -1) return filename;
     return filename.substring(0, lastDot);
 }
+
+// LadyTube: 画面に出す動画名。表示動画名 (ext_display_name) があり、表示設定で使うときはファイル名の代わりに出す。
+// 拡張子を表示する設定なら、表示動画名にも元のファイルの拡張子を付ける。
+// (本家の表示名 display_name は、これまでどおり呼び出し側で後ろに足す)
+export function videoName(video, showExtension, showDisplayName) {
+    const filename = (video && video.filename) || '';
+    const disp = showDisplayName && video && video.ext_display_name;
+    if (!disp) return showExtension ? filename : removeExtension(filename);
+    return showExtension ? disp + filename.slice(removeExtension(filename).length) : disp;
+}

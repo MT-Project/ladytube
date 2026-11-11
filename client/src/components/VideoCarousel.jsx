@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { css } from '@linaria/core';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { removeExtension } from '../utils/formatters';
+import { videoName } from '../utils/formatters';
+import { useUI } from '../contexts/UIContext';
 
 const styles = {
     section: css`
@@ -67,6 +68,7 @@ const styles = {
 };
 
 export default function VideoCarousel({ videos = [], showExtension = true }) {
+    const { showDisplayName } = useUI();
     const [carouselIndex, setCarouselIndex] = useState(0);
     const [isTransitioning, setIsTransitioning] = useState(true);
     const intervalRef = useRef(null);
@@ -159,7 +161,7 @@ export default function VideoCarousel({ videos = [], showExtension = true }) {
                     onTransitionEnd={handleTransitionEnd}
                 >
                     {duplicatedCarouselVideos.map((video, index) => {
-                        const filenameToDisplay = showExtension ? video.filename : removeExtension(video.filename);
+                        const filenameToDisplay = videoName(video, showExtension, showDisplayName);
                         const fullTitle = `${filenameToDisplay}${video.display_name ? ` ${video.display_name}` : ''}`;
                         return (
                             <div key={`${video.id}-${index}`} className={styles.carouselSlide}>

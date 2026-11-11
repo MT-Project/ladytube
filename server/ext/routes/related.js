@@ -116,8 +116,10 @@ function resolveFiles(hashes, excludeHash) {
     const stmt = db.prepare(`
         SELECT f.id, f.path, f.filename,
                (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) AS thumbnail_size,
-               m.duration, m.tags, m.display_name, m.last_pos, m.use_transcode
+               m.duration, m.tags, m.display_name, m.last_pos, m.use_transcode,
+               e.display_name AS ext_display_name
         FROM files f JOIN metadata m ON m.hash = f.hash
+        LEFT JOIN ext_video_meta e ON e.hash = f.hash
         WHERE f.hash = ?
         ORDER BY (m.thumbnail IS NOT NULL) DESC, f.id ASC LIMIT 1
     `);

@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import { css } from '@linaria/core';
 import { api } from '../../services/api';
 import { useUI } from '../../contexts/UIContext';
-import { removeExtension } from '../../utils/formatters';
+import { videoName } from '../../utils/formatters';
 import { theme } from '../../theme';
 
 const styles = {
@@ -126,7 +126,7 @@ const VideoRecommendation = ({ currentVideo, nextVideoId, onVideoSelect }) => {
     const [recommendations, setRecommendations] = useState([]);
     const [isWide, setIsWide] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { showExtension } = useUI();
+    const { showExtension, showDisplayName } = useUI();
 
     // 画面幅を監視
     useEffect(() => {
@@ -211,7 +211,7 @@ const VideoRecommendation = ({ currentVideo, nextVideoId, onVideoSelect }) => {
     if (recommendations.length === 0) return null;
 
     const displayTitle = (video) => {
-        const filename = showExtension ? video.filename : removeExtension(video.filename);
+        const filename = videoName(video, showExtension, showDisplayName);
         return video.display_name ? `${filename} ${video.display_name}` : filename;
     };
 

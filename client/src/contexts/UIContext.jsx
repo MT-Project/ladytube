@@ -48,7 +48,21 @@ export const UIProvider = ({ children }) => {
         return true;
     });
 
+    // LadyTube: 表示動画名で表示する (既定はON。キーは v2.x の拡張機能から引き継いだもの)
+    const [showDisplayName, setShowDisplayName] = useState(() => {
+        if (typeof window !== 'undefined') return localStorage.getItem('wlext_use_display_name') !== '0';
+        return true;
+    });
+
     const [isDisplaySettingsOpen, setIsDisplaySettingsOpen] = useState(false);
+
+    const toggleDisplayName = useCallback(() => {
+        setShowDisplayName(prev => {
+            const next = !prev;
+            localStorage.setItem('wlext_use_display_name', next ? '1' : '0');
+            return next;
+        });
+    }, []);
 
     const toggleExtension = useCallback(() => {
         setShowExtension(prev => {
@@ -150,6 +164,7 @@ export const UIProvider = ({ children }) => {
         <UIContext.Provider value={{
             showToast, confirm, alert, isDarkMode, toggleTheme,
             showExtension, showThumbnailButton, toggleExtension, toggleThumbnailButton,
+            showDisplayName, toggleDisplayName,
             isDisplaySettingsOpen, setIsDisplaySettingsOpen
         }}>
             {children}
@@ -164,6 +179,8 @@ export const UIProvider = ({ children }) => {
                 showThumbnailButton={showThumbnailButton}
                 toggleExtension={toggleExtension}
                 toggleThumbnailButton={toggleThumbnailButton}
+                showDisplayName={showDisplayName}
+                toggleDisplayName={toggleDisplayName}
             />
         </UIContext.Provider>
     );

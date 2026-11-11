@@ -9,7 +9,7 @@ import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
 
-import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, removeExtension } from '../utils/formatters';
+import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName } from '../utils/formatters';
 import { api } from '../services/api';
 import { theme } from '../theme';
 
@@ -467,7 +467,7 @@ export default function WatchPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const startTime = parseFloat(searchParams.get('t')) || undefined;
-    const { showToast, confirm, showExtension, showThumbnailButton } = useUI();
+    const { showToast, confirm, showExtension, showThumbnailButton, showDisplayName } = useUI();
     const [video, setVideo] = useState(null);
     const [knownTags, setKnownTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState('');
@@ -663,10 +663,10 @@ export default function WatchPage() {
 
     useEffect(() => {
         if (video && video.filename) {
-            const filenameToDisplay = showExtension ? video.filename : removeExtension(video.filename);
+            const filenameToDisplay = videoName(video, showExtension, showDisplayName);
             document.title = `${filenameToDisplay} - LadyTube`;
         }
-    }, [video, showExtension]);
+    }, [video, showExtension, showDisplayName]);
 
     useEffect(() => {
         api.getVideo(id)
@@ -1168,7 +1168,7 @@ export default function WatchPage() {
                 {/* Title & Tags (Full width) */}
                 <div style={{ marginBottom: '1.5rem' }}>
                     <h1 className={styles.videoInfoTitle}>
-                        {showExtension ? video.filename : removeExtension(video.filename)}{video.display_name ? ` ${video.display_name}` : ''}
+                        {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
                     </h1>
 
                     <div className={styles.videoInfoFolder}>

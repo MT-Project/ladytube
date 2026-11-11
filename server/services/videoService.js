@@ -24,18 +24,22 @@ class VideoService {
             const video = db.prepare(`
                 SELECT 
                     f.id, f.path, f.filename, f.size, f.updated_at,
-                    m.hash, m.duration, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size, m.play_count, m.tags, m.last_played_at, m.created_at, m.use_transcode, m.display_name, m.last_pos
+                    m.hash, m.duration, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size, m.play_count, m.tags, m.last_played_at, m.created_at, m.use_transcode, m.display_name, m.last_pos,
+                    e.display_name AS ext_display_name
                 FROM files f
                 JOIN metadata m ON f.hash = m.hash
+                LEFT JOIN ext_video_meta e ON e.hash = f.hash   -- LadyTube: 表示動画名 (画面が ext_display_name で出す)
                 WHERE f.id = ?
             `).get(id);
 
             if (!video) return res.status(404).json({ error: '動画が見つかりません' });
 
             const neigborsTable = `
-                SELECT f.id, f.path, f.filename, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size, m.duration, m.tags, m.display_name, m.last_pos, m.use_transcode
+                SELECT f.id, f.path, f.filename, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size, m.duration, m.tags, m.display_name, m.last_pos, m.use_transcode,
+                    e.display_name AS ext_display_name
                 FROM files f
                 JOIN metadata m ON f.hash = m.hash
+                LEFT JOIN ext_video_meta e ON e.hash = f.hash   -- LadyTube: 表示動画名
             `;
 
             const neighborsBefore = db.prepare(neigborsTable + `

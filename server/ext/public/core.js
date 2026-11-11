@@ -1,6 +1,6 @@
 /* =============================================================
    WomanLive 拡張 - コア
-   ・fetch フック (表示動画名の置換 / 品番でまとめたカードの手直し / 関連動画の差し替え)
+   ・fetch フック (品番でまとめたカードの手直し / 関連動画の差し替え)
    ・SPA ルート検知
    ・DOM 監視 (React 再描画後の再注入)
    ・共通 UI (ライトボックス / トースト / チップ入力 など)
@@ -202,31 +202,12 @@
     function jsonResponse(data) {
         return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-    // 表示動画名を使うかどうか (検索画面の「表示設定」のトグル。既定はON)
-    const DISPLAY_NAME_KEY = 'wlext_use_display_name';
+    // 表示動画名を使うかどうか (表示設定の「動画表示名で表示する」。既定はON)。
+    // 一覧と動画ページの名前は本体の画面 (client/src/utils/formatters.js の videoName) が出す。
+    // ここは拡張の UI (品番でまとめたパートの一覧など) が同じ設定を読むためのもの。
     WL.useDisplayName = () => {
-        try { return localStorage.getItem(DISPLAY_NAME_KEY) !== '0'; } catch (e) { return true; }
+        try { return localStorage.getItem('wlext_use_display_name') !== '0'; } catch (e) { return true; }
     };
-    WL.setUseDisplayName = (on) => {
-        try { localStorage.setItem(DISPLAY_NAME_KEY, on ? '1' : '0'); } catch (e) { }
-    };
-
-    // 本家は filename を「拡張子付きのファイル名」として扱い、表示時に最後のドット以降を
-    // 落とす(設定「拡張子を表示する」がOFFのとき)。表示動画名をそのまま filename に入れると
-    // 名前の中のドット以降まで消えるので(例:「…vol.3_1」→「…vol」)、元ファイルの拡張子を
-    // 付けて渡し、「差し替えるのは拡張子より前の部分」という本家の形にそろえる。
-    const FILE_EXT_RE = /\.[^.\\/]+$/;
-    function asFilename(displayName, origFilename) {
-        const m = FILE_EXT_RE.exec(String(origFilename == null ? '' : origFilename));
-        return m ? displayName + m[0] : displayName;
-    }
-    WL.asFilename = asFilename;
-
-    function applyDisplayName(list) {
-        if (!Array.isArray(list) || !WL.useDisplayName()) return;
-        list.forEach(v => { if (v && v.ext_display_name) { v._orig_filename = v.filename; v.filename = asFilename(v.ext_display_name, v.filename); } });
-    }
-    WL.applyDisplayName = applyDisplayName;
 
     // 検索結果の全タグ(m.tags)を id でキャッシュ (リスト表示のタグ幅フィットで参照)
     WL._videoTags = WL._videoTags || {};
@@ -254,8 +235,9 @@
         list.forEach(v => {
             if (!v || !(v.ext_group_count > 1)) return;
             WL._groupIds[v.id] = String(v.ext_group_ids || '').split(',').map(Number).filter(n => n > 0);
-            // カードの名前はパート番号を外す (「…vol.5_1.mp4」→「…vol.5.mp4」)
+            // カードの名前はパート番号を外す (「…vol.5_1.mp4」→「…vol.5.mp4」、表示動画名「…_1」→「…」)
             v.filename = String(v.filename).replace(/_\d+(\.[^.\\/]+)?$/, '$1');
+            if (v.ext_display_name) v.ext_display_name = String(v.ext_display_name).replace(/_\d+$/, '');
         });
     }
 
@@ -266,7 +248,6 @@
         if (!r.ok) return r;
         try {
             const data = await r.clone().json();
-            applyDisplayName(data.videos);
             applyGroups(data.videos);
             cacheVideoTags(data.videos);
             return jsonResponse(data);
@@ -278,28 +259,12 @@
         const clone = r.clone();
         try {
             const data = await r.json();
-            if (data && data.video) {
-                try {
-                    const meta = await WL.api.getMeta(id);
-                    if (meta && meta.display_name) {
-                        data.video.ext_display_name = meta.display_name;
-                        if (WL.useDisplayName()) { data.video._orig_filename = data.video.filename; data.video.filename = asFilename(meta.display_name, data.video.filename); }
-                    }
-                } catch (e) { }
-            }
             // 拡張: 関連動画をメタデータ類似度で差し替え (空なら本体のパス近傍を維持)
+            // (表示動画名 ext_display_name は、本体の /api/video/:id も関連動画 API も返す)
             try {
                 const rel = await WL.api.relatedVideos(id);
                 if (rel && Array.isArray(rel.videos) && rel.videos.length) data.relatedVideos = rel.videos;
             } catch (e) { }
-            if (data && Array.isArray(data.relatedVideos) && data.relatedVideos.length) {
-                try {
-                    const ids = data.relatedVideos.map(v => v.id);
-                    const map = await WL.api.bulkMeta(ids);
-                    const useDisp = WL.useDisplayName();
-                    data.relatedVideos.forEach(v => { const m = map[v.id]; if (m && m.display_name) { v.ext_display_name = m.display_name; if (useDisp) v.filename = asFilename(m.display_name, v.filename); } });
-                } catch (e) { }
-            }
             // 動画ページの拡張 (更新日の表示・標準モードの関連動画) が使う
             if (data && data.video) {
                 WL._watch = {
