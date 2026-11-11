@@ -475,7 +475,8 @@ function VideoCard({
     isPreviewMuted = true,
     setIsPreviewMuted = () => { },
     volume = 1,
-    extMeta = false   // LadyTube: 検索画面のカードだけメーカー・評価・出演者などを足す (ExtCardParts.jsx)
+    extMeta = false,   // LadyTube: 検索画面のカードだけメーカー・評価・出演者などを足す (ExtCardParts.jsx)
+    selectionMode = false, selected = false, onToggleSelect   // LadyTube: 選択モード (ExtSelection.jsx)
 }) {
     const { showToast, showExtension, showDisplayName } = useUI();
     const [isHovered, setIsHovered] = useState(false);
@@ -751,7 +752,11 @@ function VideoCard({
     return (
         <Link to={`/watch/${video.id}`} draggable="false" onDragStart={(e) => e.preventDefault()}
             ref={cardRef}
-            className={`${styles.cardGrid} ${isHighlighted ? 'highlighted' : ''}`}
+            className={`${styles.cardGrid} ${isHighlighted ? 'highlighted' : ''}${selectionMode && selected ? ' wlext-sel-on' : ''}`}
+            onClickCapture={selectionMode ? (e) => {
+                // LadyTube: 選択モード中は、カードの中のどこを押しても (リンク・ボタンも) 選択の切り替えにする
+                e.preventDefault(); e.stopPropagation(); onToggleSelect(video.id);
+            } : undefined}
             onClick={(e) => {
                 if (isInteractingWithSeekBar.current) { e.preventDefault(); e.stopPropagation(); return; }
                 if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); onClick(video); }
@@ -892,6 +897,12 @@ function VideoCard({
                     <div
                         className={styles.menuBtnWrapper}
                         onClick={e => e.preventDefault()}
+                        onClickCapture={extMeta && viewMode === 'list' ? (e) => {
+                            // LadyTube: 検索画面のリスト表示では「⋮」を動画単体の操作メニューにする (server/ext/public/bulkselect.js)
+                            if (!window.WLExt?.openVideoMenu) return;
+                            e.preventDefault(); e.stopPropagation();
+                            window.WLExt.openVideoMenu(video.id, e.currentTarget.firstElementChild || e.currentTarget);
+                        } : undefined}
                     >
                         <div
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setActiveMenuId(showTagMenu ? null : video.id); }}
@@ -915,11 +926,12 @@ function VideoCard({
                     )}
                 </div>
             }
+            {selectionMode && <div className={'wlext-sel-badge' + (selected ? ' on' : '')}>{selected ? '✓' : ''}</div>}
         </Link >
     );
 }
 
-export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false }) {
+export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false, selectionMode = false, selectedIds, onToggleSelect }) {
     const { showThumbnailButton } = useUI();
     const [lastPreviewedId, setLastPreviewedId] = useState(null);
     const [allTags, setAllTags] = useState([]);
@@ -962,7 +974,8 @@ export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highli
             )}
             {
                 videos.map((video) => (
-                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} extMeta={extMeta} />
+                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} extMeta={extMeta}
+                        selectionMode={selectionMode} selected={!!selectedIds && selectedIds.has(video.id)} onToggleSelect={onToggleSelect} />
                 ))
             }
         </div >

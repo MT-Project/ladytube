@@ -1,131 +1,27 @@
 /* =============================================================
-   WomanLive 拡張 - 検索結果の一括操作 (選択モード)
-   ・選択モードFAB(下) → 全選択/全選択解除(上) → メニュー(さらに上)
-   ・選択した複数動画へ タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除
+   WomanLive 拡張 - 検索結果の一括操作 (メニューとダイアログ)
+   選択モードの丸ボタン・カードのチェック・リスト表示の「⋮」は本体の画面
+   (client/src/components/ExtSelection.jsx・components/VideoList.jsx) が出し、ここを呼ぶ:
+   ・WL.toggleBulkMenu(ids, done): 一括操作メニュー (右下)。開いていれば閉じる。done は操作が終わったら呼ぶ (選択の解除)
+   ・WL.openVideoMenu(id, anchor): 動画単体の操作メニュー (「⋮」の近く)
+   ・WL.closeBulkMenu(): メニューを閉じる
+   操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。品番でまとめたカードは中の動画すべてが対象。
    ============================================================= */
 (function () {
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
-    let selectionMode = false;
-    const selected = new Set();   // 動画id(number)
-
-    /* ---------- 対象カード ---------- */
-    function getCards() {
-        const root = document.getElementById('root');
-        return root ? root.querySelectorAll('a[href^="/watch/"]') : [];
-    }
-    function cardId(card) {
-        const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/);
-        return m ? Number(m[1]) : null;
-    }
-
-    /* ---------- 選択の見た目 ---------- */
-    function applyVisuals() {
-        getCards().forEach(card => {
-            const id = cardId(card); if (id == null) return;
-            let badge = card.querySelector(':scope > .wlext-sel-badge');
-            if (selectionMode) {
-                if (getComputedStyle(card).position === 'static') card.style.position = 'relative';
-                if (!badge) { badge = h('div', { class: 'wlext-sel-badge' }); card.appendChild(badge); }
-                const on = selected.has(id);
-                badge.classList.toggle('on', on);
-                badge.textContent = on ? '✓' : '';
-                card.classList.toggle('wlext-sel-on', on);
-            } else {
-                if (badge) badge.remove();
-                card.classList.remove('wlext-sel-on');
-            }
-        });
-    }
-
-    function toggleSelect(id) {
-        if (selected.has(id)) selected.delete(id); else selected.add(id);
-        applyVisuals(); updateFabs();
-    }
-    function selectAllVisible() {
-        getCards().forEach(card => { const id = cardId(card); if (id != null) selected.add(id); });
-        applyVisuals(); updateFabs();
-    }
-    function deselectAll() { selected.clear(); applyVisuals(); updateFabs(); }
-    function setSelectionMode(on) {
-        selectionMode = on;
-        if (!on) selected.clear();
-        closeMenu();
-        applyVisuals(); updateFabs();
-    }
-
-    // 選択モード中はカードのクリックを選択トグルに変える (キャプチャ段階でReact遷移を抑止)
-    document.addEventListener('click', (e) => {
-        if (!selectionMode) return;
-        const t = e.target;
-        const card = t && t.closest ? t.closest('a[href^="/watch/"]') : null;
-        if (!card) return;
-        const root = document.getElementById('root');
-        if (!root || !root.contains(card)) return;
-        e.preventDefault(); e.stopPropagation();
-        const id = cardId(card); if (id != null) toggleSelect(id);
-    }, true);
-
-    // リスト表示の「⋮」(本家タグ付けメニュー menuBtnWrapper_*) を、動画単体の操作メニューに差し替える。
-    // グリッド/リストは同じ⋮ボタンを共有するため、祖先コンテナの素クラス.listでリストのみに限定する
-    // (グリッド表示は従来どおり本家のタグメニューのまま)。
-    // 本家の onClick(タグメニュー開閉)へ届く前にキャプチャ段階で横取りする。
-    document.addEventListener('click', (e) => {
-        if (selectionMode) return;
-        const t = e.target;
-        const wrapper = t && t.closest ? t.closest('[class*="menuBtnWrapper_"]') : null;
-        if (!wrapper) return;
-        const card = wrapper.closest('a[href^="/watch/"]');
-        if (!card || !card.closest('.list')) return;   // グリッド表示は対象外
-        const root = document.getElementById('root');
-        if (!root || !root.contains(card)) return;
-        const id = cardId(card); if (id == null) return;
-        e.preventDefault(); e.stopPropagation();
-        openVideoMenu(id, wrapper.querySelector('[class*="menuBtn_"]') || wrapper);
-    }, true);
-
-    /* ---------- FAB ---------- */
-    let fabs = null, btnMenu, btnAll, btnNone, btnMode;
-    function svg(p, fill) {
-        return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="' + (fill || 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
-    }
-    const ICON_MODE = svg('<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>');
-    const ICON_ALL = svg('<polyline points="20 6 9 17 4 12"></polyline>');
-    const ICON_NONE = svg('<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>');
-    const ICON_MENU = svg('<circle cx="12" cy="5" r="1.6" fill="currentColor"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor"></circle>');
-
-    function buildFabs() {
-        btnMenu = h('button', { class: 'wlext-sel-fab wlext-sel-menu-btn', title: '一括操作メニュー', html: ICON_MENU, onClick: (e) => { e.stopPropagation(); toggleMenu(); } });
-        btnAll = h('button', { class: 'wlext-sel-fab', title: '表示中をすべて選択', html: ICON_ALL, onClick: (e) => { e.stopPropagation(); selectAllVisible(); } });
-        btnNone = h('button', { class: 'wlext-sel-fab', title: '選択をすべて解除', html: ICON_NONE, onClick: (e) => { e.stopPropagation(); deselectAll(); } });
-        btnMode = h('button', { class: 'wlext-sel-fab wlext-sel-mode-btn', title: '選択モード', html: ICON_MODE, onClick: (e) => { e.stopPropagation(); setSelectionMode(!selectionMode); } });
-        fabs = h('div', { class: 'wlext-sel-fabs' }, [btnMenu, btnAll, btnNone, btnMode]);
-        document.body.appendChild(fabs);
-        updateFabs();
-    }
-    function updateFabs() {
-        if (!fabs) return;
-        btnMode.classList.toggle('active', selectionMode);
-        btnAll.style.display = selectionMode ? '' : 'none';
-        btnNone.style.display = selectionMode ? '' : 'none';
-        btnMenu.style.display = (selectionMode && selected.size > 0) ? '' : 'none';
-        btnMenu.setAttribute('data-count', selected.size);
-        btnMenu.title = '一括操作 (' + selected.size + '件選択中)';
-    }
-    function removeFabs() { if (fabs) { fabs.remove(); fabs = null; } closeMenu(); }
-
     /* ---------- メニュー ---------- */
     let menuEl = null, menuBackdrop = null;
     function closeMenu() { if (menuEl) menuEl.remove(); if (menuBackdrop) menuBackdrop.remove(); menuEl = menuBackdrop = null; }
-    function toggleMenu() { if (menuEl) { closeMenu(); return; } openMenu(); }
+    WL.closeBulkMenu = closeMenu;
     // 一括操作/動画単体で共通のメニュー項目 (対象 ids だけが異なる)
-    function menuItems(ids) {
+    function menuItems(ids, done) {
         return [
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags(ids); } }, [WL.icon('tag', 15), h('span', null, 'タグ追加')]),
-            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta(ids); } }, '✎ 詳細情報編集'),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags(ids, done); } }, [WL.icon('tag', 15), h('span', null, 'タグ追加')]),
+            h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta(ids, done); } }, '✎ 詳細情報編集'),
             h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark(ids); } }, [WL.icon('bookmark-add', 15), h('span', null, 'ブックマーク追加')]),
-            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids); } }, '🗑 動画の削除'),
+            h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids, done); } }, '🗑 動画の削除'),
         ];
     }
     // 品番でまとめたカードは、中の動画すべてを対象にする
@@ -133,26 +29,27 @@
         if (!WL.groupByModel()) return ids;
         return [...new Set(ids.flatMap(id => WL.groupMembers(id)))];
     }
-    function openMenu() {
-        const ids = expand([...selected]);
+    WL.toggleBulkMenu = (selectedIds, done) => {
+        if (menuEl) { closeMenu(); return; }
+        const ids = expand(selectedIds);
         if (!ids.length) return;
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-sel-menu' }, [
             h('div', { class: 'wlext-sel-menu-head' }, ids.length + '件を一括操作'),
-            ...menuItems(ids),
+            ...menuItems(ids, done),
         ]);
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
-    }
+    };
 
     // 動画単体の操作メニュー (リスト表示の「⋮」から開く・ボタン近くにアンカー)
-    function openVideoMenu(id, anchor) {
+    WL.openVideoMenu = (id, anchor) => {
         closeMenu();
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         const ids = expand([id]);
         menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, [
             ids.length > 1 ? h('div', { class: 'wlext-sel-menu-head' }, 'まとめた ' + ids.length + '本を操作') : null,
-            ...menuItems(ids),
+            ...menuItems(ids, null),
         ]);
         document.body.appendChild(menuBackdrop);
         document.body.appendChild(menuEl);
@@ -164,15 +61,16 @@
         if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
         menuEl.style.left = left + 'px';
         menuEl.style.top = top + 'px';
-    }
+    };
 
-    function afterAction(refresh) {
-        deselectAll();
-        if (refresh !== false) window.dispatchEvent(new Event('library-updated'));
+    // 操作のあと: 選択を解いて (done)、一覧を取り直させる
+    function afterAction(done) {
+        if (done) done();
+        window.dispatchEvent(new Event('library-updated'));
     }
 
     /* ---------- タグ追加 ---------- */
-    function doTags(ids) {
+    function doTags(ids, done) {
         WL.presetTagDialog({
             title: 'タグを追加（' + ids.length + '件）',
             current: [],
@@ -181,14 +79,14 @@
             savePresets: (arr) => WL.saveVideoTagPresets(arr),
             onSave: async (tags) => {
                 if (!tags.length) { WL.toast('追加するタグを選んでください', 'error'); return; }
-                try { const r = await WL.api.bulkTags(ids, tags); WL.toast(r.count + '件にタグを追加しました', 'success'); afterAction(); }
+                try { const r = await WL.api.bulkTags(ids, tags); WL.toast(r.count + '件にタグを追加しました', 'success'); afterAction(done); }
                 catch (e) { WL.toast('失敗: ' + e.message, 'error'); }
             }
         });
     }
 
     /* ---------- 詳細情報編集 (表示動画名なし) ---------- */
-    function doMeta(ids) {
+    function doMeta(ids, done) {
         const temp = { rating: 0 };
         const ratingHost = h('div');
         ratingHost.appendChild(WL.starsEl(0, (n) => { temp.rating = n; }));
@@ -227,7 +125,7 @@
                     genres: genresInput.getValues(),
                     performers: performersInput.getValues().map(p => p.id),
                 };
-                try { const r = await WL.api.bulkEditMeta(ids, meta); WL.toast(r.count + '件を更新しました', 'success'); close(); afterAction(); }
+                try { const r = await WL.api.bulkEditMeta(ids, meta); WL.toast(r.count + '件を更新しました', 'success'); close(); afterAction(done); }
                 catch (e) { WL.toast('失敗: ' + e.message, 'error'); }
             }
         });
@@ -282,7 +180,7 @@
     }
 
     /* ---------- 削除 ---------- */
-    function doDelete(ids) {
+    function doDelete(ids, done) {
         const body = h('div', { style: { fontSize: '0.9rem', lineHeight: '1.7' } }, [
             h('div', { style: { color: 'var(--status-error,#e51400)', fontWeight: 'bold', marginBottom: '0.4rem' } }, '⚠ 選択した ' + ids.length + '件の動画を削除します'),
             h('div', null, '元の動画ファイルが削除され、関連するスクリーンショット・カバー画像・追加情報・ブックマークも削除されます。'),
@@ -294,18 +192,9 @@
                 try {
                     const r = await WL.api.bulkDelete(ids);
                     WL.toast(r.deleted + '件を削除しました' + (r.fileErrors ? '（ファイル削除に失敗 ' + r.fileErrors + '件）' : ''), 'success');
-                    close(); afterAction();
+                    close(); afterAction(done);
                 } catch (e) { WL.toast('削除に失敗: ' + e.message, 'error'); }
             }
         });
     }
-
-    /* ---------- ensure ---------- */
-    function ensure() {
-        if (location.pathname !== '/search') { if (fabs) { setSelectionMode(false); removeFabs(); } return; }
-        if (!fabs) buildFabs();
-        if (selectionMode) applyVisuals();
-    }
-    WL.onEnsure(ensure);
-    WL.onRoute(() => { if (location.pathname !== '/search') { setSelectionMode(false); removeFabs(); } });
 })();

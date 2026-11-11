@@ -3,6 +3,7 @@ import { useUI } from '../contexts/UIContext';
 import { api } from '../services/api';
 import { css } from '@linaria/core';
 import VideoList from '../components/VideoList';
+import ExtSelectionFabs from '../components/ExtSelection';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -586,6 +587,23 @@ export default function SearchPage() {
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const currentVideos = videos;
 
+  // LadyTube: 選択モード (一括操作)。選んだ動画はページを移っても残す。メニューとダイアログは server/ext/public/bulkselect.js
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const toggleSelectionMode = () => {
+    window.WLExt?.closeBulkMenu?.();
+    if (selectionMode) setSelectedIds(new Set());
+    setSelectionMode(!selectionMode);
+  };
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const selectAllVisible = () => setSelectedIds(prev => new Set([...prev, ...currentVideos.map(v => v.id)]));
+  const deselectAll = () => setSelectedIds(new Set());
+  useEffect(() => () => window.WLExt?.closeBulkMenu?.(), []);   // 検索画面を離れたらメニューも閉じる
+
   const updateParams = (updates) => {
     const newParams = {
       q,
@@ -831,9 +849,14 @@ export default function SearchPage() {
               onVideoUpdate={handleVideoUpdate}
               showThumbnailButton={showThumbnailButton}
               extMeta
+              selectionMode={selectionMode}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
             />
           )}
         </div>
+        <ExtSelectionFabs selectionMode={selectionMode} selectedIds={selectedIds}
+          onToggleMode={toggleSelectionMode} onSelectAll={selectAllVisible} onDeselectAll={deselectAll} />
 
         {/* Pagination */}
         {totalPages > 1 && (
