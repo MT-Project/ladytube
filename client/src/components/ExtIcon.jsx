@@ -12,6 +12,8 @@ const ICONS = {
     play: '<path d="m6 3 14 9-14 9z"/>',
     'step-forward': '<line x1="18" x2="18" y1="4" y2="20"/><path d="m6 4 10 8-10 8z"/>',
     'step-back': '<line x1="6" x2="6" y1="4" y2="20"/><path d="m18 4-10 8 10 8z"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    'zoom-out': '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/>',
 };
 export function Icon({ name, size }) {
     return (

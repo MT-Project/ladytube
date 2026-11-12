@@ -100,3 +100,15 @@ export function formatYmAgo(s) {
     if (y === 0) return (m <= 0 ? '今月' : m + 'ヶ月前');
     return y + '年' + (m > 0 ? m + 'ヶ月' : '') + '前';
 }
+// LadyTube: 誕生日から基準日 (公開日。無ければ今日) までの年齢を「24歳3ヶ月」の形に
+export function formatAgeYm(birthday, ref) {
+    const b = parseYmd(birthday);
+    if (!b) return '';
+    const r = parseYmd(ref) || new Date();
+    let years = r.getFullYear() - b.getFullYear();
+    let months = r.getMonth() - b.getMonth();
+    if (r.getDate() < b.getDate()) months--;
+    if (months < 0) { years--; months += 12; }
+    if (years < 0) return '';
+    return years + '歳' + months + 'ヶ月';
+}

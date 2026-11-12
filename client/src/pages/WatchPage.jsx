@@ -7,9 +7,10 @@ import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import { CoverCard, MobileActions, ScreenshotSizeSlider } from '../components/ExtWatchParts';
+import { ExtRating, ExtMetaBlock, ExtWatchFabs } from '../components/ExtWatchMeta';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
-import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
+import { ChevronLeft, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
 
 import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName, formatYmd, formatYmAgo } from '../utils/formatters';
 import { api } from '../services/api';
@@ -479,12 +480,25 @@ export default function WatchPage() {
         try { localStorage.setItem('wlext_watch_layout', stdMode ? 'theater' : 'standard'); } catch { /* 覚えられなくても切り替えはする */ }
         setStdMode(!stdMode);
     };
-    // LadyTube: 公開日。最初は API の ext_release_date、詳細情報を保存したら拡張 (videometa.js) が知らせる値
-    const [releaseOverride, setReleaseOverride] = useState(null);   // { id, date }
+    // LadyTube: 拡張メタデータ (評価・ジャンル・出演者・品番・公開日など。表示は ExtWatchMeta.jsx)。
+    // 読み込みと保存は拡張 (videometa.js)。動画を開くたびに WL.loadMeta で読み直し、保存したら拡張が wlext-meta-updated で知らせる
+    const [extMeta, setExtMeta] = useState(null);   // { id, meta }
+    const extMetaVideoId = video ? String(video.id) : null;
+    useEffect(() => {
+        if (!extMetaVideoId) return;
+        let alive = true;
+        const load = () => window.WLExt.loadMeta(extMetaVideoId).then(meta => { if (alive) setExtMeta({ id: extMetaVideoId, meta }); }, () => { });
+        if (window.WLExt && window.WLExt.loadMeta) load();
+        else window.addEventListener('DOMContentLoaded', load, { once: true });   // 拡張は defer で読むので、まだなら読み終わってから
+        return () => { alive = false; window.removeEventListener('DOMContentLoaded', load); };
+    }, [extMetaVideoId]);
     useEffect(() => {
         const onMeta = (e) => {
             const d = e.detail || {};
-            setReleaseOverride({ id: String(d.id), date: (d.meta && d.meta.release_date) || '' });
+            if (!d.meta) return;
+            setExtMeta({ id: String(d.id), meta: d.meta });
+            // タイトルの表示動画名 (以前は拡張が h1 の文字を直に書き換えていた)
+            setVideo(v => (v && String(v.id) === String(d.id) ? { ...v, ext_display_name: d.meta.display_name || null } : v));
         };
         window.addEventListener('wlext-meta-updated', onMeta);
         return () => window.removeEventListener('wlext-meta-updated', onMeta);
@@ -711,10 +725,6 @@ export default function WatchPage() {
 
     const [selectedScreenshot, setSelectedScreenshot] = useState(null);
     const [isEditingTags, setIsEditingTags] = useState(false);
-
-    const handleOpenEditDialog = () => {
-        setIsEditingTags(true);
-    };
 
     const [isProbeDialogOpen, setIsProbeDialogOpen] = useState(false);
 
@@ -970,7 +980,8 @@ export default function WatchPage() {
     }
 
     const currentTags = video.tags ? video.tags.split('\n').filter(t => t.trim()) : [];
-    const releaseDate = releaseOverride && releaseOverride.id === String(video.id) ? releaseOverride.date : video.ext_release_date;
+    const meta = extMeta && extMeta.id === String(video.id) ? extMeta.meta : null;
+    const releaseDate = meta ? meta.release_date : video.ext_release_date;
 
     return (
         <div className={styles.page} data-wlext-std="page">
@@ -1198,6 +1209,8 @@ export default function WatchPage() {
                     <h1 className={styles.videoInfoTitle}>
                         {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
                     </h1>
+                    {/* LadyTube: 評価 (★)。保存し直したら作り直す */}
+                    {meta && <ExtRating key={video.id + ':' + (meta.rating || 0)} videoId={video.id} value={meta.rating} />}
 
                     <div className={styles.videoInfoFolder}>
                         {getFolderName(video.path)}
@@ -1222,16 +1235,16 @@ export default function WatchPage() {
                         <LayoutGrid size={16} />
                     </button>
 
-                    {/* FAB: Floating Edit Button */}
-                    <button onClick={handleOpenEditDialog} className={styles.fab} title="タグ編集">
-                        <Pencil size={20} />
-                    </button>
+                    {/* LadyTube: 本体のタグ編集ボタン (FAB) の代わりに、動画情報を検索 / タグを編集 (グループ対応) / 詳細情報を編集 の丸ボタン */}
+                    <ExtWatchFabs videoId={video.id} />
                 </div>
 
                 {/* Information, Transcode, Folder & Next Video Row */}
                 <div className={styles.infoLayoutContainer} data-wlext-std="info">
                     {/* Left: Info details */}
                     <div className={styles.infoLeftColumn}>
+                        {/* LadyTube: ジャンル・出演者・品番などの拡張メタデータ */}
+                        {meta && <ExtMetaBlock meta={meta} />}
                         {/* Additional Info Section */}
                         <div className={styles.infoBox} style={{ marginTop: 0 }}>
                             <div className={styles.detailGrid}>

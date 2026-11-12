@@ -40,6 +40,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
   ON のまま「拡張子を表示する」も ON にすると、表示動画名の後ろに元のファイルの拡張子を付けます。
 - 実装: 一覧と動画ページの API が表示動画名を `ext_display_name` で返し、本体の画面が
   `client/src/utils/formatters.js` の `videoName` で名前を組み立てます。トグルは本体の表示設定(`UIOverlay.jsx`)にあります。
+- 実装(動画ページ): 評価・ジャンル・出演者・品番などの表示と右下の丸ボタンは `client/src/components/ExtWatchMeta.jsx`(`WatchPage.jsx` が置く。本体のタグ編集ボタンの代わり)。詳細情報の読み込みと保存、編集・タグ編集・DMM 検索のダイアログは `videometa.js`。保存すると `videometa.js` が `wlext-meta-updated` で知らせ、動画ページが表示とタイトルを描き直します。
 
 ## 関連動画（メタデータ類似・事前計算）
 動画ページの「関連動画」を、拡張メタデータの一致度で選出します。
@@ -431,7 +432,7 @@ server/ext/
     core.js             fetch フック（まとめたカードの手直し・関連動画の差し替え）・ルート検知・共通 UI（ダイアログ/チップ入力/クロッパ等）
     nav.js              ナビゲーション統一（単色アイコン/共通ヘッダー/メニュー/テーマ）
     homelinks.js        ホーム画面への追加リンク
-    videometa.js        動画ページの拡張メタ表示/編集・DMM検索/タグ編集/詳細情報編集の FAB
+    videometa.js        動画ページの拡張メタの読み込み/保存・編集/DMM検索/タグ編集のダイアログ
     screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow

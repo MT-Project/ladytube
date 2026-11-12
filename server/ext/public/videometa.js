@@ -1,23 +1,20 @@
 /* =============================================================
-   WomanLive 拡張 - 動画ページの拡張メタデータ表示/編集
+   LadyTube 拡張 - 動画ページの拡張メタデータの読み込み・保存・編集
    (評価 / 出演者 / 型番・シリーズ・メーカー・レーベル・監督 / 公開日 / ジャンル)
+   表示 (評価の★・ジャンルや出演者の表・右下の丸ボタン) は本体の動画ページ
+   (client/src/components/ExtWatchMeta.jsx。v3.1.13 まではここで DOM に差し込んでいた)。
+   本体が使うもの: WL.loadMeta / WL.saveRating / WL.openMetaSearch / WL.openTagEditor / WL.openMetaEdit、
+   保存したら window に wlext-meta-updated ({ id, meta }) を投げる。
+   private が使うもの: WL._meta (読み込んだ詳細情報)、WL.metaSearch / WL.showMetaPreview (差し込み口)
    ============================================================= */
 (function () {
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
     WL._meta = WL._meta || {};
-    const loading = {};
 
-    function getMeta(vid) {
-        if (WL._meta[vid]) return WL._meta[vid];
-        if (!loading[vid]) {
-            loading[vid] = true;
-            WL.api.getMeta(vid).then(m => { WL._meta[vid] = m; loading[vid] = false; WL.requestEnsure(); })
-                .catch(() => { loading[vid] = false; });
-        }
-        return null;
-    }
+    // 動画ページを開くたびに読み直す (以前も動画が変わるたびにキャッシュを捨てていた)
+    WL.loadMeta = (vid) => WL.api.getMeta(vid).then(m => { WL._meta[vid] = m; return m; });
 
     function metaToPayload(meta) {
         return {
@@ -43,137 +40,18 @@
         return fresh;
     }
 
+    // 本体の動画ページ (WatchPage.jsx) に知らせる。評価・表・タイトル・公開日を描き直す
     function rerender(vid) {
-        const root = document.getElementById('root');
-        if (root) root.querySelectorAll('.wlext-rating-host, .wlext-meta-block').forEach(e => e.remove());
-        // タイトル(h1)を表示動画名で更新
-        const meta = WL._meta[vid];
-        if (meta) {
-            const h1 = findTitle();
-            if (h1) h1.textContent = meta.display_name || meta.file_name || h1.textContent;
-        }
-        // 本体の動画ページ (公開日の行) に知らせる
-        window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta } }));
+        window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta: WL._meta[vid] } }));
         WL.requestEnsure();
     }
 
-    /* ---------- アンカー探索 ---------- */
-    function findTitle() {
-        const root = document.getElementById('root'); if (!root) return null;
-        return root.querySelector('h1');
-    }
-    function findInfoBox() {
-        const root = document.getElementById('root'); if (!root) return null;
-        const divs = root.querySelectorAll('div');
-        for (const d of divs) {
-            if (d.childElementCount === 0 && d.textContent.trim() === '長さ:') {
-                const grid = d.parentElement;
-                if (grid && grid.parentElement) return grid.parentElement;
-            }
-        }
-        return null;
-    }
-
-    /* ---------- 各セクション描画 ---------- */
-    function buildRating(vid, meta) {
-        const host = h('div', { class: 'wlext-rating-host' });
-        const stars = WL.starsEl(meta.rating || 0, async (n) => {
-            try { const p = metaToPayload(meta); p.rating = n; meta.rating = n; await saveMeta(vid, p); WL.toast('評価を保存しました', 'success'); }
-            catch (e) { WL.toast('評価の保存に失敗: ' + e.message, 'error'); }
-        });
-        host.appendChild(stars);
-        return host;
-    }
-
-    function buildMetaBlock(vid, meta) {
-        const block = h('div', { class: 'wlext-meta-block' });
-
-        // --- ジャンル (タグの下) ---
-        if (meta.genres && meta.genres.length) {
-            const g = h('div', { class: 'wlext-genres' });
-            meta.genres.forEach(name => {
-                g.appendChild(h('span', { class: 'wlext-genre-chip', title: '「' + name + '」で検索', 'data-wlext-href': WL.searchHref('@genre:"' + name + '"'), onClick: () => WL.searchBy('@genre:"' + name + '"') }, [
-                    h('span', null, name),
-                    excludeIcon('@notgenre:"' + name + '"', name)
-                ]));
-            });
-            block.appendChild(g);
-        }
-
-        // --- 出演者 (型番等の上) ---
-        if (meta.performers && meta.performers.length) {
-            const ref = meta.release_date || meta.video_date;
-            const row = h('div', { class: 'wlext-performers' });
-            meta.performers.forEach(p => {
-                const imgHost = h('div', { class: 'wlext-performer-img', title: '出演者ページを開く', 'data-wlext-href': '/performer/' + p.id, onClick: () => WL.openPerformer(p.id) });
-                if (p.has_image) {
-                    const im = h('img', { alt: p.name });
-                    im.onerror = () => { imgHost.textContent = '👤'; };
-                    im.src = WL.api.performerImageUrl(p.id);
-                    imgHost.appendChild(im);
-                } else { imgHost.textContent = '👤'; }
-
-                const age = WL.ageYM(p.birthday, ref);
-                const nameRow = h('div', { class: 'wlext-performer-name-row' }, [
-                    h('span', { class: 'wlext-performer-name', title: '「' + p.name + '」で検索', 'data-wlext-href': WL.searchHref('@performer:' + p.id), onClick: () => WL.searchBy('@performer:' + p.id) }, p.name),
-                    excludeIcon('@notperformer:' + p.id, p.name)
-                ]);
-                const card = h('div', { class: 'wlext-performer-card' }, [
-                    imgHost, nameRow,
-                    age ? h('div', { class: 'wlext-performer-age' }, age) : null
-                ]);
-                row.appendChild(card);
-            });
-            block.appendChild(row);
-        }
-
-        // --- 拡張情報 (型番/シリーズ/メーカー/レーベル/監督/公開日) ---
-        const info = h('div', { class: 'wlext-infobox' });
-        const grid = h('div', { class: 'wlext-detail-grid' });
-
-        function addRow(key, valNode) {
-            grid.appendChild(h('div', { class: 'wlext-key' }, key + ':'));
-            grid.appendChild(h('div', { class: 'wlext-val' }, valNode));
-        }
-        function linkVal(text, token) { return h('span', { class: 'wlext-link', title: '「' + text + '」で検索', 'data-wlext-href': WL.searchHref(token), onClick: () => WL.searchBy(token) }, text); }
-        // 包含リンク + 除外ボタン(虫メガネ+マイナス) を並べる
-        function valEx(text, incToken, excToken) { return h('span', { class: 'wlext-val-pair' }, [linkVal(text, incToken), excludeIcon(excToken, text)]); }
-
-        if (meta.release_date) {
-            addRow('公開日', [WL.fmtDate(meta.release_date), h('span', { class: 'wlext-release-ago' }, WL.ymAgo(meta.release_date))]);
-        }
-        if (meta.file_name) addRow('動画ファイル名', meta.file_name);
-        if (meta.model_no) addRow('品番', linkVal(meta.model_no, '@model:"' + meta.model_no + '"'));
-        if (meta.series) addRow('シリーズ名', valEx(meta.series, '@series:"' + meta.series + '"', '@notseries:"' + meta.series + '"'));
-        if (meta.maker) addRow('メーカー', valEx(meta.maker, '@maker:"' + meta.maker + '"', '@notmaker:"' + meta.maker + '"'));
-        if (meta.label) addRow('レーベル', valEx(meta.label, '@label:"' + meta.label + '"', '@notlabel:"' + meta.label + '"'));
-        if (meta.directors && meta.directors.length) {
-            const multi = h('span', { class: 'wlext-multi' });
-            meta.directors.forEach(d => multi.appendChild(valEx(d, '@director:"' + d + '"', '@notdirector:"' + d + '"')));
-            addRow('作品監督', multi);
-        }
-
-        if (grid.childElementCount === 0) {
-            info.appendChild(h('div', { style: { color: 'var(--text-secondary,#888)' } }, '詳細情報は未設定です。右下の「詳細情報を編集」ボタン（鉛筆）から登録できます。'));
-        } else {
-            info.appendChild(grid);
-        }
-        block.appendChild(info);
-        return block;
-    }
-
-    function searchIcon() {
-        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
-    }
-    // 除外検索ボタン: 虫メガネ＋マイナス(zoom-out)。包含検索(accent色)と区別するため赤系で表示。
-    function excludeIcon(token, label) {
-        return h('span', {
-            class: 'wlext-exclude-btn', title: '「' + label + '」を除外して検索',
-            'data-wlext-href': WL.searchHref(token),
-            html: WL.iconSvg('zoom-out', 14),
-            onClick: (e) => { e.stopPropagation(); WL.searchBy(token); }
-        });
-    }
+    // 評価 (★) を押したとき
+    WL.saveRating = async (vid, n) => {
+        const meta = WL._meta[vid]; if (!meta) return;
+        try { const p = metaToPayload(meta); p.rating = n; meta.rating = n; await saveMeta(vid, p); WL.toast('評価を保存しました', 'success'); }
+        catch (e) { WL.toast('評価の保存に失敗: ' + e.message, 'error'); }
+    };
 
     /* ---------- 編集ダイアログ ---------- */
     function openEditDialog(vid, meta) {
@@ -231,62 +109,19 @@
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
-    /* ---------- DMM(FANZA) 商品検索フロー ---------- */
-    function searchFabSvg() {
-        return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>';
-    }
-    function ensureSearchFab(vid) {
-        if (document.querySelector('.wlext-search-fab')) return;
-        const btn = h('button', {
-            class: 'wlext-search-fab',
-            title: '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）',
-            html: searchFabSvg(),
-            // 差し込み口: WL.metaSearch が登録されていれば、それに検索を任せる (複数の情報ソースを並べる個人用モジュールなど)。
-            // 無ければ従来どおり FANZA を品番で検索する。
-            onClick: () => (WL.metaSearch ? WL.metaSearch(vid) : runDmmSearch(vid))
-        });
-        document.body.appendChild(btn);
-    }
+    /* ---------- 右下の丸ボタン (ExtWatchMeta.jsx の ExtWatchFabs) が呼ぶ ---------- */
+    // 動画情報を検索。差し込み口: WL.metaSearch が登録されていれば、それに検索を任せる
+    // (複数の情報ソースを並べる個人用モジュールなど)。無ければ FANZA を品番で検索する。
+    WL.openMetaSearch = (vid) => (WL.metaSearch ? WL.metaSearch(vid) : runDmmSearch(vid));
+    // タグ編集 (本体のタグ編集の代わり。グループ対応のダイアログ)
+    WL.openTagEditor = (vid) => openTagEditor(vid);
+    // 詳細情報を編集
+    WL.openMetaEdit = (vid) => {
+        const meta = WL._meta[vid];
+        if (!meta) { WL.toast('詳細情報を読み込み中です'); return; }
+        openEditDialog(vid, meta);
+    };
 
-    /* ---------- タグ編集 (本家のタグ編集を ext のグループ対応ダイアログで統一) ---------- */
-    // 本家のタグ編集FAB(右下 bottom:2rem の単色ボタン)を隠し、ext のFABに置き換える。
-    function hideNativeTagFab() {
-        document.querySelectorAll('button').forEach(b => {
-            if (b.className && String(b.className).indexOf('wlext') >= 0) return;
-            const cs = getComputedStyle(b);
-            if (cs.position !== 'fixed') return;
-            const right = parseFloat(cs.right), bottom = parseFloat(cs.bottom);
-            if (Math.abs(right - 32) <= 8 && Math.abs(bottom - 32) <= 8) {
-                b.style.display = 'none';
-                b.setAttribute('data-wlext-tagfab-hidden', '1');
-            }
-        });
-    }
-    function ensureTagFab(vid) {
-        hideNativeTagFab();
-        if (document.querySelector('.wlext-tag-fab')) return;
-        const btn = h('button', {
-            class: 'wlext-tag-fab',
-            title: 'タグを編集',
-            html: WL.iconSvg('tag', 22),
-            onClick: () => openTagEditor(vid)
-        });
-        document.body.appendChild(btn);
-    }
-    // 詳細情報の編集も同じ FAB にする (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集)
-    function ensureEditFab(vid) {
-        if (document.querySelector('.wlext-edit-fab')) return;
-        document.body.appendChild(h('button', {
-            class: 'wlext-tag-fab wlext-edit-fab',
-            title: '詳細情報を編集',
-            html: WL.iconSvg('pencil', 22),
-            onClick: () => {
-                const meta = WL._meta[vid];
-                if (!meta) { WL.toast('詳細情報を読み込み中です'); return; }
-                openEditDialog(vid, meta);
-            }
-        }));
-    }
     async function openTagEditor(vid) {
         let current = [];
         try { const r = await WL.api.getVideoTags(vid); current = r.tags || []; } catch (e) { }
@@ -445,42 +280,4 @@
         } catch (e) { WL.toast('設定に失敗: ' + e.message, 'error'); }
     }
 
-    /* ---------- ensure ---------- */
-    function ensure() {
-        const vid = WL.matchWatch();
-        if (!vid) return;
-        ensureSearchFab(vid);
-        ensureTagFab(vid);
-        ensureEditFab(vid);
-        const meta = getMeta(vid);
-        if (!meta) return;
-
-        // 評価 (タイトル直下)
-        const root = document.getElementById('root');
-        if (root && !root.querySelector('.wlext-rating-host')) {
-            const title = findTitle();
-            if (title && title.parentElement) {
-                title.parentElement.insertBefore(buildRating(vid, meta), title.nextSibling);
-            }
-        }
-        // メタブロック (既存情報の上)
-        if (root && !root.querySelector('.wlext-meta-block')) {
-            const infoBox = findInfoBox();
-            if (infoBox && infoBox.parentElement) {
-                infoBox.parentElement.insertBefore(buildMetaBlock(vid, meta), infoBox);
-            }
-        }
-    }
-
-    WL.onEnsure(ensure);
-
-    // 動画が切り替わったら、古い注入ノードを除去し最新を取り直す
-    WL.onRoute(() => {
-        const root = document.getElementById('root');
-        if (root) root.querySelectorAll('.wlext-rating-host, .wlext-meta-block').forEach(e => e.remove());
-        // 視聴ページ以外では追加FAB(検索/タグ編集)を除去
-        if (!WL.matchWatch()) document.querySelectorAll('.wlext-search-fab, .wlext-tag-fab, .wlext-edit-fab').forEach(e => e.remove());
-        const vid = WL.matchWatch();
-        if (vid) { delete WL._meta[vid]; }
-    });
 })();
