@@ -52,6 +52,8 @@
             const h1 = findTitle();
             if (h1) h1.textContent = meta.display_name || meta.file_name || h1.textContent;
         }
+        // 本体の動画ページ (公開日の行) に知らせる
+        window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta } }));
         WL.requestEnsure();
     }
 

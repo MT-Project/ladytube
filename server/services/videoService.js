@@ -25,10 +25,10 @@ class VideoService {
                 SELECT 
                     f.id, f.path, f.filename, f.size, f.updated_at,
                     m.hash, m.duration, (m.thumbnail IS NOT NULL) AS has_thumbnail, LENGTH(m.thumbnail) as thumbnail_size, m.play_count, m.tags, m.last_played_at, m.created_at, m.use_transcode, m.display_name, m.last_pos,
-                    e.display_name AS ext_display_name
+                    e.display_name AS ext_display_name, e.release_date AS ext_release_date
                 FROM files f
                 JOIN metadata m ON f.hash = m.hash
-                LEFT JOIN ext_video_meta e ON e.hash = f.hash   -- LadyTube: 表示動画名 (画面が ext_display_name で出す)
+                LEFT JOIN ext_video_meta e ON e.hash = f.hash   -- LadyTube: 表示動画名と公開日 (画面が ext_display_name / ext_release_date で出す)
                 WHERE f.id = ?
             `).get(id);
 

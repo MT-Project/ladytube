@@ -10,7 +10,7 @@ import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
 
-import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName } from '../utils/formatters';
+import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName, formatYmd, formatYmAgo } from '../utils/formatters';
 import { api } from '../services/api';
 import { theme } from '../theme';
 
@@ -476,6 +476,16 @@ export default function WatchPage() {
         try { localStorage.setItem('wlext_watch_layout', stdMode ? 'theater' : 'standard'); } catch { /* 覚えられなくても切り替えはする */ }
         setStdMode(!stdMode);
     };
+    // LadyTube: 公開日。最初は API の ext_release_date、詳細情報を保存したら拡張 (videometa.js) が知らせる値
+    const [releaseOverride, setReleaseOverride] = useState(null);   // { id, date }
+    useEffect(() => {
+        const onMeta = (e) => {
+            const d = e.detail || {};
+            setReleaseOverride({ id: String(d.id), date: (d.meta && d.meta.release_date) || '' });
+        };
+        window.addEventListener('wlext-meta-updated', onMeta);
+        return () => window.removeEventListener('wlext-meta-updated', onMeta);
+    }, []);
     const [knownTags, setKnownTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState('');
     const [screenshots, setScreenshots] = useState([]);
@@ -957,6 +967,7 @@ export default function WatchPage() {
     }
 
     const currentTags = video.tags ? video.tags.split('\n').filter(t => t.trim()) : [];
+    const releaseDate = releaseOverride && releaseOverride.id === String(video.id) ? releaseOverride.date : video.ext_release_date;
 
     return (
         <div className={styles.page} data-wlext-std="page">
@@ -1186,8 +1197,9 @@ export default function WatchPage() {
                         {getFolderName(video.path)}
                     </div>
 
+                    {/* LadyTube: ファイルの更新日時の代わりに公開日 (更新日は詳細欄の「前回再生:」の下) */}
                     <div className={styles.videoInfoMeta}>
-                        {video.play_count || 0} 回再生 &nbsp; {formatDateTime(video.updated_at)}
+                        {(video.play_count || 0) + ' 回再生' + (releaseDate ? '   公開日 ' + formatYmd(releaseDate) + '（' + formatYmAgo(releaseDate) + '）' : '')}
                     </div>
 
                     {/* Tags */}
@@ -1225,6 +1237,10 @@ export default function WatchPage() {
 
                                 <div>前回再生:</div>
                                 <div>{video.last_played_at ? formatDateTime(video.last_played_at) : '未再生'}</div>
+
+                                {/* LadyTube: ファイルの更新日時 (本家はタイトルの下に出していた) */}
+                                <div>更新日:</div>
+                                <div>{formatDateTime(video.updated_at)}</div>
 
                                 <div>登録日:</div>
                                 <div>{video.created_at ? formatDateTime(video.created_at) : '-'}</div>

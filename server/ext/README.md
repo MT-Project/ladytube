@@ -111,7 +111,8 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 動画ページの「N 回再生」の横に、**公開日**と何年何ヶ月前か(例: `公開日 2016/12/22（9年10ヶ月前）`)を出します。
   1ヶ月未満は「今月」、未来の日付は「発売前」です。公開日が無いときは再生回数だけです。
 - ここにあった本家の日時(ファイルの更新日時)は、詳細欄の「前回再生:」の下へ「更新日:」として移します。
-- 実装: `server/ext/public/watchdate.js`。
+- 実装: 動画ページ(`client/src/pages/WatchPage.jsx`)。公開日は動画の API が `ext_release_date` で返し、詳細情報を保存したときは
+  `videometa.js` が `wlext-meta-updated` で知らせます。
 
 ## DMM(FANZA) 商品検索によるメタデータ自動設定
 各動画ページの右下「🔍」ボタンから、品番で FANZA 商品情報を検索しメタデータへ自動設定します。
@@ -436,7 +437,6 @@ server/ext/
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
     standard.js         動画ページの標準モードの右欄の一覧（同じシリーズ・関連動画。切替と見出しは ExtStandard.jsx）
-    watchdate.js        動画ページの公開日表示・更新日の移動
     bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx）
     listselect.js       一覧ページの選択モード・一括削除
     performer.js        出演者ページ

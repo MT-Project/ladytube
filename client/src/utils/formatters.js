@@ -74,3 +74,29 @@ export function videoName(video, showExtension, showDisplayName) {
     if (!disp) return showExtension ? filename : removeExtension(filename);
     return showExtension ? disp + filename.slice(removeExtension(filename).length) : disp;
 }
+
+// LadyTube: 公開日 (拡張メタデータの release_date。'YYYY-MM-DD' を端末の日付として読む) を「2024/03/15」に
+function parseYmd(s) {
+    const m = String(s || '').trim().replace(/[./]/g, '-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (!m) return null;
+    const d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    return isNaN(d.getTime()) ? null : d;
+}
+export function formatYmd(s) {
+    const d = parseYmd(s);
+    if (!d) return s || '';
+    return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
+}
+// LadyTube: 公開日から今日までを「2年7ヶ月前」「今月」「発売前」の形に
+export function formatYmAgo(s) {
+    const d = parseYmd(s);
+    if (!d) return '';
+    const now = new Date();
+    let y = now.getFullYear() - d.getFullYear();
+    let m = now.getMonth() - d.getMonth();
+    if (now.getDate() < d.getDate()) m--;
+    if (m < 0) { y--; m += 12; }
+    if (y < 0) return '発売前';
+    if (y === 0) return (m <= 0 ? '今月' : m + 'ヶ月前');
+    return y + '年' + (m > 0 ? m + 'ヶ月' : '') + '前';
+}
