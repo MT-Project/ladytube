@@ -68,7 +68,7 @@ function bootLibraryId() {
     const reg = readRegistry();
     const id = reg.active;
     if (id !== DEFAULT_ID && (!findLib(reg, id) || !fs.existsSync(dbPathOf(id)))) {
-        console.error('[WomanLive拡張] ライブラリ "' + id + '" が見つからないため、既定のライブラリで起動します');
+        console.error('[LadyTube] ライブラリ "' + id + '" が見つからないため、既定のライブラリで起動します');
         return DEFAULT_ID;
     }
     return id;
@@ -99,7 +99,7 @@ function attachShared(conn) {
         copySharedIn(conn);
     } catch (e) {
         runtime.warning = '既定のライブラリに接続できませんでした（' + e.message + '）。出演者と共通設定が使えません。';
-        console.error('[WomanLive拡張] ' + runtime.warning);
+        console.error('[LadyTube] ' + runtime.warning);
     }
 }
 
@@ -226,9 +226,9 @@ function mergeMakersIntoShared(conn) {
 function beforeSchema(db) {
     if (runtime.shared && hasTable(db, 'main', 'ext_performers')) {
         const r = mergePerformersIntoShared(db);
-        console.log(`[WomanLive拡張] 出演者 ${r.merged}件を共通の出演者へまとめました (新規 ${r.added}件)`);
+        console.log(`[LadyTube] 出演者 ${r.merged}件を共通の出演者へまとめました (新規 ${r.added}件)`);
     }
-    const logMakers = (r, name) => console.log(`[WomanLive拡張] ${name} のメーカー情報 ${r.merged}件を共通のメーカー情報へまとめました (新規 ${r.added}件)`);
+    const logMakers = (r, name) => console.log(`[LadyTube] ${name} のメーカー情報 ${r.merged}件を共通のメーカー情報へまとめました (新規 ${r.added}件)`);
     const reg = readRegistry();
     if (runtime.shared && hasTable(db, 'main', 'ext_makers')) logMakers(mergeMakersIntoShared(db), (findLib(reg, runtime.id) || {}).name);
     // 使用中でないライブラリに残っているメーカー情報も今寄せる (切り替えを待つと、その間の編集と食い違う)
@@ -242,7 +242,7 @@ function beforeSchema(db) {
                 conn.prepare('ATTACH DATABASE ? AS shared').run(DEFAULT_DB);
                 logMakers(mergeMakersIntoShared(conn), l.name);
             } finally { conn.close(); }
-        } catch (e) { console.error('[WomanLive拡張] ' + l.name + ' のメーカー情報をまとめられませんでした: ' + e.message); }
+        } catch (e) { console.error('[LadyTube] ' + l.name + ' のメーカー情報をまとめられませんでした: ' + e.message); }
     });
 }
 // 共通の表 (出演者・メーカー) を作る先。追加ライブラリでは既定ライブラリ側 (shared)

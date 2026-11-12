@@ -232,7 +232,8 @@ const PlayerControls = ({
     playbackSpeed,
     bufferedRanges = [],
     hasVideo = true,
-    screenshots = []
+    screenshots = [],
+    renderExtraControls   // LadyTube: 「プレイヤー設定」の右に足すボタン (標準モードの切替。ExtStandard.jsx)
 }) => {
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const [hasImageError, setHasImageError] = useState(false);
@@ -413,6 +414,7 @@ const PlayerControls = ({
                     >
                         <Settings size={20} />
                     </button>
+                    {renderExtraControls && renderExtraControls(styles.controlButton)}
                     <button onClick={handleFullScreen} className={styles.controlButton} title="フルスクリーン">
                         <Maximize size={20} />
                     </button>

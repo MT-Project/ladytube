@@ -706,5 +706,5 @@
         titleEl = body.closest('.wlext-dialog').querySelector('.wlext-dialog-title');
     };
 
-    console.log('[WomanLive拡張] core 初期化完了');
+    console.log('[LadyTube] core 初期化完了');
 })();

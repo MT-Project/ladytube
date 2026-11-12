@@ -5,6 +5,7 @@ import Player from '../components/Player';
 import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
+import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -469,6 +470,12 @@ export default function WatchPage() {
     const startTime = parseFloat(searchParams.get('t')) || undefined;
     const { showToast, confirm, showExtension, showThumbnailButton, showDisplayName } = useUI();
     const [video, setVideo] = useState(null);
+    // LadyTube: 標準モード (動画の右に情報欄。ExtStandard.jsx)。端末に保存し、既定はシアターモード
+    const [stdMode, setStdMode] = useState(() => { try { return localStorage.getItem('wlext_watch_layout') === 'standard'; } catch { return false; } });
+    const toggleStdMode = () => {
+        try { localStorage.setItem('wlext_watch_layout', stdMode ? 'theater' : 'standard'); } catch { /* 覚えられなくても切り替えはする */ }
+        setStdMode(!stdMode);
+    };
     const [knownTags, setKnownTags] = useState([]);
     const [selectedTag, setSelectedTag] = useState('');
     const [screenshots, setScreenshots] = useState([]);
@@ -952,7 +959,7 @@ export default function WatchPage() {
     const currentTags = video.tags ? video.tags.split('\n').filter(t => t.trim()) : [];
 
     return (
-        <div className={styles.page}>
+        <div className={styles.page} data-wlext-std="page">
             <Navbar />
 
             {/* Screenshot Menu Overlay */}
@@ -1011,9 +1018,10 @@ export default function WatchPage() {
             )}
 
             {/* Video Player Section */}
-            <div className={styles.playerSection}>
+            <div className={styles.playerSection} data-wlext-std="player">
                 <div
                     className={styles.playerWrapper}
+                    data-wlext-std="player-wrapper"
                     style={{ '--aspect-ratio': playerAspectRatio }}
                 >
                     <Player
@@ -1028,13 +1036,14 @@ export default function WatchPage() {
                         onVideoUpdate={(updatedVideo) => setVideo(updatedVideo)}
                         onVideoSelect={(selectedVideo) => navigate(`/watch/${selectedVideo.id}`)}
                         screenshots={screenshots}
+                        renderExtraControls={(className) => <ExtLayoutButton className={className} standard={stdMode} onToggle={toggleStdMode} />}
                     />
                 </div>
             </div>
 
             {showImageList && (
                 isLoadingImageList ? (
-                    <div className={styles.imageListLoading}>
+                    <div className={styles.imageListLoading} data-wlext-std="imagelist-loading">
                         <div className={styles.imageListLoadingRow}>
                             <span>画像を生成中... {imageListProgress}%</span>
                             <button
@@ -1047,7 +1056,7 @@ export default function WatchPage() {
                     </div>
                 ) : (
                     <>
-                        <div className={styles.imageListContainer} style={{ marginBottom: 0 }}>
+                        <div className={styles.imageListContainer} data-wlext-std="imagelist" style={{ marginBottom: 0 }}>
                             {imageList.map((img, i) => (
                                 <div
                                     key={i}
@@ -1065,7 +1074,7 @@ export default function WatchPage() {
                                 </div>
                             ))}
                         </div>
-                        <div className={styles.imageListControls}>
+                        <div className={styles.imageListControls} data-wlext-std="imagelist-controls">
                             <label style={{ marginRight: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', userSelect: 'none', fontSize: '0.8rem', color: theme.colors.text.secondary }}>
                                 <span>大きく表示</span>
                                 <div style={{ position: 'relative', width: '36px', height: '20px' }}>
@@ -1129,11 +1138,11 @@ export default function WatchPage() {
                 )
             )}
 
-            <div className={styles.pageContentContainer}>
+            <div className={styles.pageContentContainer} data-wlext-std="content">
 
                 {/* Screenshots Section (Full width) */}
-                <div className={styles.screenshotsSection}>
-                    <div className={styles.screenshotsGrid}>
+                <div className={styles.screenshotsSection} data-wlext-std="screenshots">
+                    <div className={styles.screenshotsGrid} data-wlext-std="screenshots-grid">
                         {screenshots.length > 0 ? screenshots.map((shot, i) => (
                             <div
                                 key={i}
@@ -1147,12 +1156,14 @@ export default function WatchPage() {
                                     }
                                 }}
                                 className={styles.screenshotCard}
+                                data-wlext-std="screenshot-card"
                             >
-                                <div className={styles.screenshotImageWrapper}>
+                                <div className={styles.screenshotImageWrapper} data-wlext-std="screenshot-wrapper">
                                     <img
                                         src={`/api/screenshot/${shot.id}/image`}
                                         alt={`Screenshot at ${shot.timestamp}`}
                                         className={styles.screenshotImage}
+                                        data-wlext-std="screenshot-image"
                                     />
                                     <div className={styles.screenshotTimestamp}>
                                         {formatDuration(shot.timestamp)}
@@ -1160,13 +1171,13 @@ export default function WatchPage() {
                                 </div>
                             </div>
                         )) : (
-                            <div className={styles.noScreenshots}>スクリーンショットはありません</div>
+                            <div className={styles.noScreenshots} data-wlext-std="no-screenshots">スクリーンショットはありません</div>
                         )}
                     </div>
                 </div>
 
                 {/* Title & Tags (Full width) */}
-                <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ marginBottom: '1.5rem' }} data-wlext-std="title">
                     <h1 className={styles.videoInfoTitle}>
                         {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
                     </h1>
@@ -1189,7 +1200,7 @@ export default function WatchPage() {
                     </div>
 
                     {/* FAB: Floating Image List Toggle Button */}
-                    <button onClick={toggleImageList} className={styles.imageListFab} title="イメージリスト">
+                    <button onClick={toggleImageList} className={styles.imageListFab} data-wlext-std="imagelist-fab" title="イメージリスト">
                         <LayoutGrid size={16} />
                     </button>
 
@@ -1200,7 +1211,7 @@ export default function WatchPage() {
                 </div>
 
                 {/* Information, Transcode, Folder & Next Video Row */}
-                <div className={styles.infoLayoutContainer}>
+                <div className={styles.infoLayoutContainer} data-wlext-std="info">
                     {/* Left: Info details */}
                     <div className={styles.infoLeftColumn}>
                         {/* Additional Info Section */}
@@ -1313,7 +1324,7 @@ export default function WatchPage() {
                 </div>
 
                 {/* Related Videos Section (Full width) */}
-                <div style={{ marginTop: '1rem' }}>
+                <div style={{ marginTop: '1rem' }} data-wlext-std="related">
                     <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '1rem', color: theme.colors.text.secondary }}>関連動画</h3>
                     <VideoList
                         videos={relatedVideos}
@@ -1330,6 +1341,9 @@ export default function WatchPage() {
                 </div>
 
             </div>
+            {/* LadyTube: 標準モードの右欄の見出しと一覧 (表示は body の末尾)。動画 id は読み込めた動画のもの */}
+            <ExtStandard vid={String(video.id)} standard={stdMode} imageListOpen={showImageList}
+                relatedIds={relatedVideos.map(v => v.id)} nextVideoId={nextVideoId} />
         </div>
     );
 }

@@ -122,7 +122,7 @@ function initSchema() {
     });
 
     initialized = true;
-    console.log('[WomanLive拡張] スキーマを初期化しました');
+    console.log('[LadyTube] スキーマを初期化しました');
 }
 
 // --- 汎用ヘルパ ---

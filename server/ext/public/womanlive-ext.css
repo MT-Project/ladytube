@@ -1371,16 +1371,16 @@ a:has(> .wlext-sel-badge) .wlext-group-badge { left: 34px; }
 /* ---- 動画ページの標準モード (standard.js) ---- */
 /* 本家の要素は動かさず、右欄の位置へ重ねる。右欄に出すのは選んでいる項目(data-wlext-tab)の1つだけ */
 body.wlext-std { --wlext-std-w: clamp(320px, 27vw, 460px); --wlext-std-head: 44px; }
-body.wlext-std [class*="playerSection_"],
-body.wlext-std [class*="pageContentContainer_"] { margin-right: var(--wlext-std-w); }
-body.wlext-std [class*="playerSection_"] { width: auto; }   /* 本家は幅を直に指定している */
-body.wlext-std [class*="page_"]:has(> [class*="playerSection_"]) { padding-bottom: 0; }   /* 1画面に収めるので下の余白は要らない */
-body.wlext-std [class*="playerWrapper_"] { max-height: var(--wlext-std-player-h, 60vh); }
+body.wlext-std [data-wlext-std="player"],
+body.wlext-std [data-wlext-std="content"] { margin-right: var(--wlext-std-w); }
+body.wlext-std [data-wlext-std="player"] { width: auto; }   /* 本家は幅を直に指定している */
+body.wlext-std [data-wlext-std="page"] { padding-bottom: 0; }   /* 1画面に収めるので下の余白は要らない */
+body.wlext-std [data-wlext-std="player-wrapper"] { max-height: var(--wlext-std-player-h, 60vh); }
 body.wlext-std [data-wlext-std="related"] { display: none !important; }
 
-body.wlext-std [class*="screenshotsSection_"],
-body.wlext-std [class*="infoLayoutContainer_"],
-body.wlext-std [class*="imageListContainer_"],
+body.wlext-std [data-wlext-std="screenshots"],
+body.wlext-std [data-wlext-std="info"],
+body.wlext-std [data-wlext-std="imagelist"],
 body.wlext-std .wlext-std-pane {
     position: fixed !important;   /* スクショの大きさ変更(ssresize.js)が relative を直書きするので上書き */
     top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head)); right: 0; bottom: 0;
@@ -1388,19 +1388,19 @@ body.wlext-std .wlext-std-pane {
     box-sizing: border-box; overflow-y: auto; background: var(--bg-primary, #111); z-index: 15;
 }
 /* イメージリスト: 操作行(大きく表示・間隔・再作成)と生成中の行は上に固定し、画像はその下でスクロール */
-body.wlext-std [class*="imageListControls_"],
-body.wlext-std [class*="imageListLoading_"] {
+body.wlext-std [data-wlext-std="imagelist-controls"],
+body.wlext-std [data-wlext-std="imagelist-loading"] {
     position: fixed !important; top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head)); right: 0;
     width: var(--wlext-std-w); margin: 0 !important; box-sizing: border-box;
     background: var(--bg-primary, #111); z-index: 16;
 }
-body.wlext-std [class*="imageListContainer_"] { top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head) + 44px); align-content: flex-start; }
+body.wlext-std [data-wlext-std="imagelist"] { top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head) + 44px); align-content: flex-start; }
 
-body.wlext-std:not([data-wlext-tab="media"]) [class*="screenshotsSection_"],
-body.wlext-std:not([data-wlext-tab="info"]) [class*="infoLayoutContainer_"],
-body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListContainer_"],
-body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListControls_"],
-body.wlext-std:not([data-wlext-tab="images"]) [class*="imageListLoading_"] { display: none !important; }
+body.wlext-std:not([data-wlext-tab="media"]) [data-wlext-std="screenshots"],
+body.wlext-std:not([data-wlext-tab="info"]) [data-wlext-std="info"],
+body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist"],
+body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist-controls"],
+body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist-loading"] { display: none !important; }
 .wlext-std-pane { display: none; }
 .fullscreen .wlext-layout-btn { display: none !important; }   /* フルスクリーン中は切り替えない */
 body.wlext-std[data-wlext-tab="series"] .wlext-std-pane[data-pane="series"],
@@ -1419,10 +1419,10 @@ body.wlext-std .wlext-std-head {
     display: flex; align-items: center; justify-content: center; color: var(--text-primary, #eee);
 }
 .wlext-std-arrow:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.15)); }
-.wlext-std-chips { flex: 1; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.wlext-std-chips { flex: 1; min-width: 0; display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
 .wlext-std-chips::-webkit-scrollbar { display: none; }
 .wlext-std-chip {
-    flex: 0 0 auto; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+    flex: 0 0 auto; padding: 5px 7px; border-radius: 8px; cursor: pointer; white-space: nowrap;   /* 項目名が右欄に収まるよう余白は詰めてある */
     font-size: 0.8rem; font-weight: bold; color: var(--text-primary, #eee); background: var(--bg-tertiary, rgba(127, 127, 127, 0.18));
 }
 .wlext-std-chip:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.25)); }
@@ -1442,17 +1442,17 @@ body.wlext-std .wlext-edit-fab { right: 1rem; }
 body.wlext-std .wlext-tag-fab:not(.wlext-edit-fab) { right: 4.5rem; }
 body.wlext-std .wlext-search-fab { right: 8rem; }
 body.wlext-std .wlext-bm-fab { right: 11.5rem; }
-body.wlext-std [class*="imageListFab_"] { right: 15rem; bottom: calc(1rem + 6px); }
+body.wlext-std [data-wlext-std="imagelist-fab"] { right: 15rem; bottom: calc(1rem + 6px); }
 /* カバーとサムネイル: カバーは右欄の幅いっぱい。スクリーンショットは大きさ変更の幅を最小にして列に詰め、余りは広げて埋める */
-body.wlext-std [class*="screenshotsSection_"] { display: flex; flex-direction: column; gap: 6px; }
+body.wlext-std [data-wlext-std="screenshots"] { display: flex; flex-direction: column; gap: 6px; }
 body.wlext-std .wlext-ss-resize { position: static; order: -1; align-self: flex-end; }   /* 重ねるとカバーが隠れるので上の行へ */
-body.wlext-std [class*="screenshotsGrid_"] {
+body.wlext-std [data-wlext-std="screenshots-grid"] {
     display: grid !important; gap: 8px;
     grid-template-columns: repeat(auto-fill, minmax(min(var(--wlext-ss-w, 160px), 100%), 1fr));
 }
-body.wlext-std [class*="screenshotsSection_"] .wlext-cover-card,
-body.wlext-std [class*="noScreenshots_"] { grid-column: 1 / -1; }
-body.wlext-std [class*="screenshotsSection_"] [class*="screenshotCard_"],
-body.wlext-std [class*="screenshotsSection_"] [class*="screenshotImageWrapper_"],
-body.wlext-std [class*="screenshotsSection_"] [class*="screenshotImage_"],
-body.wlext-std [class*="screenshotsSection_"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card,
+body.wlext-std [data-wlext-std="no-screenshots"] { grid-column: 1 / -1; }
+body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-card"],
+body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-wrapper"],
+body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-image"],
+body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }

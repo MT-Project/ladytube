@@ -97,7 +97,7 @@ const styles = {
 };
 
 
-const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCapturing = false, initialTime, onLoadedMetadata, onLoadedData, onCanPlay, onVideoUpdate, onVideoSelect, screenshots: propScreenshots }, ref) => {
+const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCapturing = false, initialTime, onLoadedMetadata, onLoadedData, onCanPlay, onVideoUpdate, onVideoSelect, screenshots: propScreenshots, renderExtraControls }, ref) => {
     // Settings State
     const [quality, setQuality] = useState(() => {
         const saved = localStorage.getItem('player_quality');
@@ -1165,6 +1165,7 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     bufferedRanges={bufferedRanges}
                     hasVideo={hasVideo}
                     screenshots={screenshots}
+                    renderExtraControls={renderExtraControls}
                 />
 
                 {showRecommendation && (

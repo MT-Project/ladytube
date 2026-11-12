@@ -46,7 +46,7 @@ module.exports = function setupExt(app) {
         if (require('fs').existsSync(path.join(__dirname, '..', 'private', 'index.js'))) {
             require('../private')(app);
         }
-    } catch (e) { console.error('[WomanLive private] ロードに失敗しました', e); }
+    } catch (e) { console.error('[LadyTube private] ロードに失敗しました', e); }
 
     // 1.7 本家の「クリーンアップ」に便乗して ext_* の孤立行も掃除する。
     //     本家 routes.js の cleanupMetadata は screenshots と metadata しか消さないため、
@@ -61,7 +61,7 @@ module.exports = function setupExt(app) {
                 if (res.statusCode < 300 && body && body.success) {
                     const r = maintenance.purgeOrphans();
                     body.ext = r;
-                    if (r.total) console.log(`[WomanLive拡張] 参照されていない拡張データ ${r.total}件を削除しました`);
+                    if (r.total) console.log(`[LadyTube] 参照されていない拡張データ ${r.total}件を削除しました`);
                 }
             } catch (e) { console.error('[ext maintenance hook]', e); }
             return orig(body);
@@ -196,5 +196,5 @@ module.exports = function setupExt(app) {
     // 5. ページ HTML への拡張スクリプト注入 (静的配信より前に登録)
     app.use(createInject());
 
-    console.log('[WomanLive拡張] 拡張機能を読み込みました (/ext)');
+    console.log('[LadyTube] 拡張機能を読み込みました (/ext)');
 };
