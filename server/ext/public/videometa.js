@@ -440,7 +440,7 @@
             delete WL._meta[vid];
             try { WL._meta[vid] = await WL.api.getMeta(vid); } catch (e) { }
             rerender(vid);
-            if (WL.refreshCover) WL.refreshCover(vid);
+            window.dispatchEvent(new CustomEvent('wlext-cover-refresh', { detail: { id: vid } }));   // 本体の動画ページのカバーを取り直す
             WL.toast('メタデータを設定しました' + (r.coverSet ? '（カバー画像も取得）' : ''), 'success');
         } catch (e) { WL.toast('設定に失敗: ' + e.message, 'error'); }
     }

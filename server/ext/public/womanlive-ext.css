@@ -1454,5 +1454,7 @@ body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card,
 body.wlext-std [data-wlext-std="no-screenshots"] { grid-column: 1 / -1; }
 body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-card"],
 body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-wrapper"],
-body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-image"],
-body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-image"] { width: 100% !important; height: auto !important; aspect-ratio: 16 / 9; }
+/* カバーは画像の縦横比のまま (DMM のカバーは 800×538 で 16:9 より縦長。16:9 の枠に収めると左右が空く) */
+body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: auto; }
+body.wlext-std .wlext-cover-card img { height: auto; }

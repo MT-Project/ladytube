@@ -1,8 +1,11 @@
 // LadyTube: 動画ページに足す拡張の部品。
+// カバー画像 (v3.1.10 までの server/ext/public/cover.js): スクリーンショットの欄の先頭に置き、押すと拡大する。
+// 画像は /ext/api/video/:id/cover (フォルダの同名画像 → DB の順)。無ければカードごと消す。
+// DMM の情報を反映したあとは videometa.js が window に wlext-cover-refresh ({ id }) を投げるので、取り直す。
 // スクリーンショットの表示サイズ (v3.1.9 までの server/ext/public/ssresize.js): 見た目の幅だけを変え、画像は変えない。
 // スクリーンショットの欄の末尾に置くと、欄 (親) に --wlext-ss-w / --wlext-ss-h を付け、womanlive-ext.css がカード・カバーに当てる。
 // 標準モードでは右欄の列幅の最小値になる。スクリーンショットが無い動画では出さない (欄の幅も既定に戻る)。
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './ExtIcon';
 
 const SS_KEY = 'wlext_ss_size';
@@ -35,6 +38,32 @@ export function ScreenshotSizeSlider() {
             <Icon name="image" size={14} />
             <input type="range" min={SS_MIN} max={SS_MAX} step="10" value={width} className="wlext-ss-resize-input" onChange={change} />
             <span className="wlext-ss-resize-val">{width}px</span>
+        </div>
+    );
+}
+
+const noCover = new Set();   // カバーの無かった動画。開き直しても取りに行かない (取り直しの知らせで消す)
+
+export function CoverCard({ videoId }) {
+    const id = String(videoId);
+    const [missing, setMissing] = useState(() => noCover.has(id));
+    const [gen, setGen] = useState(0);   // 取り直すたびに増やして img を作り直す
+    useEffect(() => {
+        const onRefresh = (e) => {
+            if (String(e.detail && e.detail.id) !== id) return;
+            noCover.delete(id);
+            setMissing(false);
+            setGen(g => g + 1);
+        };
+        window.addEventListener('wlext-cover-refresh', onRefresh);
+        return () => window.removeEventListener('wlext-cover-refresh', onRefresh);
+    }, [id]);
+    if (missing) return null;
+    const url = '/ext/api/video/' + id + '/cover';
+    return (
+        <div key={gen} className="wlext-cover-card" title="カバー画像 (クリックで拡大)" onClick={() => window.WLExt.lightbox(url)}>
+            <img alt="カバー画像" src={url} onError={() => { noCover.add(id); setMissing(true); }} />
+            <div className="wlext-cover-badge">カバー</div>
         </div>
     );
 }

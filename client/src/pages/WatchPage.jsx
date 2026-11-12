@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
-import { ScreenshotSizeSlider } from '../components/ExtWatchParts';
+import { CoverCard, ScreenshotSizeSlider } from '../components/ExtWatchParts';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -1155,6 +1155,8 @@ export default function WatchPage() {
                 {/* Screenshots Section (Full width) */}
                 <div className={styles.screenshotsSection} data-wlext-std="screenshots">
                     <div className={styles.screenshotsGrid} data-wlext-std="screenshots-grid">
+                        {/* LadyTube: カバー画像 (URL の id ではなく読み込んだ動画の id。切り替えの最初の描画で前の動画の欄に出さない) */}
+                        <CoverCard key={video.id} videoId={video.id} />
                         {screenshots.length > 0 ? screenshots.map((shot, i) => (
                             <div
                                 key={i}

@@ -19,7 +19,6 @@ const EARLY_SCRIPTS = [
 ];
 const FEATURE_SCRIPTS = [
     '/ext/assets/nav.js',
-    '/ext/assets/cover.js',
     '/ext/assets/framestep.js',
     '/ext/assets/mobileact.js',
     '/ext/assets/videometa.js',
