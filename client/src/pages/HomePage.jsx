@@ -211,8 +211,15 @@ export default function HomePage() {
     const [scanFolders, setScanFolders] = useState([]);
     const [allowPublic, setAllowPublic] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
-    const [showQR, setShowQR] = useState(false);
+    // LadyTube: 拡張のメニューの「QRコードでアクセス」(nav.js) からも開く。ホームでは wlext-open-qr、ほかのページからは /?qr=1 で来る
+    const [showQR, setShowQR] = useState(() => new URLSearchParams(window.location.search).has('qr'));
     const [serverInfo, setServerInfo] = useState(null);
+    useEffect(() => {
+        if (new URLSearchParams(window.location.search).has('qr')) navigate('/', { replace: true });   // 読み直しで開き直さない
+        const open = () => setShowQR(true);
+        window.addEventListener('wlext-open-qr', open);
+        return () => window.removeEventListener('wlext-open-qr', open);
+    }, [navigate]);
 
     // ページタイトル設定
     useEffect(() => {

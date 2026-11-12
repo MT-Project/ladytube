@@ -85,8 +85,8 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 配信は `GET /ext/api/video/:id/file`(`?dl=1` でダウンロード)。本家の `/api/stream/:id` は設定に
   よって変換したストリームを返すので、こちらは**常に元ファイル**をそのまま返します。外部プレイヤーが
   シークできるよう Range に対応しています。
-- localhost をタッチ端末で見たときは、本家の2ボタンを枠ごと隠して置き換えます。
-- 実装: `server/ext/public/mobileact.js`、`server/ext/routes/file.js`。
+- localhost をタッチ端末で見たときは、本家の2ボタンの代わりに出します。
+- 実装: ボタンは `client/src/components/ExtWatchParts.jsx` の `MobileActions`(動画ページ `WatchPage.jsx` がタッチ端末のときだけ「コーデック情報」の箱の後ろに置く)、配信は `server/ext/routes/file.js`。
 
 ## 動画ページの標準モード
 動画ページに、プレイヤーの右に情報欄を置く **標準モード** を追加します。今までの配置は **シアターモード** です。
@@ -431,7 +431,6 @@ server/ext/
     nav.js              ナビゲーション統一（単色アイコン/共通ヘッダー/メニュー/テーマ）
     homelinks.js        ホーム画面への追加リンク
     framestep.js        コマ送り（, / . キー・Shift+ホイール・タッチ端末のボタン）
-    mobileact.js        動画ページのモバイル操作（端末に保存 / アプリで開く）
     videometa.js        動画ページの拡張メタ表示/編集・DMM検索/タグ編集/詳細情報編集の FAB
     screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
     covermode.js        検索結果のサムネイル切替（スクリーンショット／ジャケット）

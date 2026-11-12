@@ -5,6 +5,9 @@
 // スクリーンショットの表示サイズ (v3.1.9 までの server/ext/public/ssresize.js): 見た目の幅だけを変え、画像は変えない。
 // スクリーンショットの欄の末尾に置くと、欄 (親) に --wlext-ss-w / --wlext-ss-h を付け、womanlive-ext.css がカード・カバーに当てる。
 // 標準モードでは右欄の列幅の最小値になる。スクリーンショットが無い動画では出さない (欄の幅も既定に戻る)。
+// モバイルの操作 (v3.1.11 までの server/ext/public/mobileact.js): 本体の「フォルダーを開く」「アプリで再生」はサーバー機で
+// 開くものなので、タッチ端末では代わりに「端末に保存」(ブラウザのダウンロード) と「アプリで開く」(Android は intent:、
+// ほかは別タブ) を出す。置くかどうかは WatchPage が決める。class の wlext-mobileact は private の metacheck.js も目印にする。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './ExtIcon';
 
@@ -64,6 +67,32 @@ export function CoverCard({ videoId }) {
         <div key={gen} className="wlext-cover-card" title="カバー画像 (クリックで拡大)" onClick={() => window.WLExt.lightbox(url)}>
             <img alt="カバー画像" src={url} onError={() => { noCover.add(id); setMissing(true); }} />
             <div className="wlext-cover-badge">カバー</div>
+        </div>
+    );
+}
+
+// Android は intent: でアプリ選択に渡せる。開けなければ元の URL へ戻る (browser_fallback_url)。
+// iOS などは別タブで開く (標準プレイヤーで再生し、共有メニューから他アプリへ渡せる)。
+function openInApp(url) {
+    if (/Android/i.test(navigator.userAgent)) {
+        const scheme = location.protocol.replace(':', '');
+        location.href = 'intent://' + url.replace(/^https?:\/\//, '') +
+            '#Intent;scheme=' + scheme +
+            ';action=android.intent.action.VIEW;type=video/*' +
+            ';S.browser_fallback_url=' + encodeURIComponent(url) + ';end';
+        return;
+    }
+    window.open(url, '_blank', 'noopener');
+}
+
+export function MobileActions({ videoId, boxClassName, buttonClassName }) {
+    const url = location.origin + '/ext/api/video/' + videoId + '/file';   // 常に元ファイル (routes/file.js)
+    return (
+        <div className={boxClassName + ' wlext-mobileact'}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <a className={buttonClassName} href={url + '?dl=1'} download="" style={{ textDecoration: 'none', display: 'inline-block' }}>端末に保存</a>
+                <button className={buttonClassName} onClick={() => openInApp(url)}>アプリで開く</button>
+            </div>
         </div>
     );
 }

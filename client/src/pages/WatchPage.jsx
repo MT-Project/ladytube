@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
-import { CoverCard, ScreenshotSizeSlider } from '../components/ExtWatchParts';
+import { CoverCard, MobileActions, ScreenshotSizeSlider } from '../components/ExtWatchParts';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -16,6 +16,8 @@ import { api } from '../services/api';
 import { theme } from '../theme';
 
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+// LadyTube: タッチ端末では、サーバー機で開く「フォルダーを開く」「アプリで再生」の代わりに MobileActions を出す
+const isTouch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 
 // Linaria styles
 // Linaria styles
@@ -1309,8 +1311,11 @@ export default function WatchPage() {
                             </div>
                         </div>
 
+                        {/* LadyTube: 端末に保存 / アプリで開く (タッチ端末のみ) */}
+                        {isTouch && <MobileActions videoId={video.id} boxClassName={styles.infoBox} buttonClassName={styles.normalButton} />}
+
                         {/* Local execution commands (localhost only) */}
-                        {isLocalhost && (
+                        {isLocalhost && !isTouch && (
                             <div className={styles.infoBox}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <button

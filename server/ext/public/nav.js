@@ -100,28 +100,10 @@
     ];
     const SETTINGS_ITEM = { href: '/settings', icon: 'settings', label: '設定' };
 
-    /* ---------- QR (本家ホームのダイアログを再利用) ---------- */
-    function findHomeQRSpan() {
-        const root = document.getElementById('root'); if (!root) return null;
-        const spans = root.querySelectorAll('span');
-        for (const sp of spans) { if (sp.textContent.trim() === 'QRコードでアクセス') return sp; }
-        return null;
-    }
+    /* ---------- QR (本体のホームのダイアログを開く。HomePage.jsx が受ける) ---------- */
     function openQR() {
-        if (location.pathname === '/') {
-            const span = findHomeQRSpan();
-            if (span) { span.click(); return; }
-        }
-        try { sessionStorage.setItem('wlext_open_qr', '1'); } catch (e) { }
-        WL.navigate('/');
-    }
-    // ホームへ遷移してきた時にフラグがあれば QR ダイアログを開く
-    function maybeOpenQR() {
-        if (location.pathname !== '/') return;
-        let flag; try { flag = sessionStorage.getItem('wlext_open_qr'); } catch (e) { }
-        if (!flag) return;
-        const span = findHomeQRSpan();
-        if (span) { try { sessionStorage.removeItem('wlext_open_qr'); } catch (e) { } span.click(); }
+        if (location.pathname === '/') window.dispatchEvent(new Event('wlext-open-qr'));
+        else WL.navigate('/?qr=1');
     }
 
     /* ---------- ドロップダウンメニュー ---------- */
@@ -374,7 +356,7 @@
         }
     }
 
-    WL.onEnsure(() => { patchReactHeader(); patchSearchHelp(); maybeOpenQR(); patchCalendarLinks(); });
+    WL.onEnsure(() => { patchReactHeader(); patchSearchHelp(); patchCalendarLinks(); });
 
     /* ---------- ページ見出し (アイコン + テキスト) ---------- */
     WL.pageTitle = function (iconName, text) {
