@@ -5,6 +5,7 @@ import { css } from '@linaria/core';
 import VideoList from '../components/VideoList';
 import ExtSelectionFabs from '../components/ExtSelection';
 import ExtFacets from '../components/ExtFacets';
+import { Icon as ExtIcon } from '../components/ExtIcon';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
@@ -66,6 +67,7 @@ const styles = {
         display: flex;
         align-items: center;
         gap: 0.75rem;
+        flex-wrap: wrap;   /* LadyTube: サムネイル切替などを足したので、狭い画面では折り返す (表示件数ボタンがはみ出さないように) */
     `,
   controlGroup: css`
         display: flex;
@@ -372,6 +374,8 @@ export default function SearchPage() {
 
   // LadyTube: 同じ品番の動画を1枚にまとめる (既定はまとめる。キーは v2.x の拡張機能から引き継いだもの)
   const [groupByModel, setGroupByModel] = useState(() => localStorage.getItem('wlext_group_model') !== '0');
+  // LadyTube: サムネイルの代わりにジャケット画像 (カバー) を出す (v3.1.15 までの server/ext/public/covermode.js)
+  const [coverThumbs, setCoverThumbs] = useState(() => { try { return localStorage.getItem('wlext_thumb_mode') === 'cover'; } catch { return false; } });
 
   const q = searchParams.get('q') || '';
   const sortBy = searchParams.get('sort') || 'updated_desc';
@@ -645,6 +649,11 @@ export default function SearchPage() {
     updateParams(updates);
   };
 
+  const setThumbMode = (cover) => {
+    try { localStorage.setItem('wlext_thumb_mode', cover ? 'cover' : 'ss'); } catch { /* 覚えられなくても切り替える */ }
+    setCoverThumbs(cover);
+  };
+
   const toggleGroupByModel = () => {
     const next = !groupByModel;
     localStorage.setItem('wlext_group_model', next ? '1' : '0');
@@ -781,8 +790,17 @@ export default function SearchPage() {
                 ))}
               </div>
 
-              {/* LadyTube: 同じ品番の動画をまとめて表示。サムネイル切替 (server/ext/public/covermode.js) は
-                  表示形式ボタンの枠の直後に入るので、並びは 表示形式 / サムネイル切替 / これ になる */}
+              {/* LadyTube: サムネイル切替 (スクリーンショット / ジャケット画像) */}
+              <div className={`${styles.controlGroup} wlext-thumbmode`} title="サムネイル">
+                {[['ss', 'camera', 'スクリーンショット'], ['cover', 'image', 'ジャケット画像']].map(([mode, icon, title]) => (
+                  <div key={mode} data-mode={mode} title={title} onClick={() => setThumbMode(mode === 'cover')}
+                    className={styles.viewModeButton + ((mode === 'cover') === coverThumbs ? ' active' : '')}>
+                    <ExtIcon name={icon} size={20} />
+                  </div>
+                ))}
+              </div>
+
+              {/* LadyTube: 同じ品番の動画をまとめて表示 */}
               <div className={`${styles.controlGroup} wlext-groupmode`}>
                 <div
                   onClick={toggleGroupByModel}
@@ -851,6 +869,7 @@ export default function SearchPage() {
               onVideoUpdate={handleVideoUpdate}
               showThumbnailButton={showThumbnailButton}
               extMeta
+              coverThumbs={coverThumbs}
               selectionMode={selectionMode}
               selectedIds={selectedIds}
               onToggleSelect={toggleSelect}

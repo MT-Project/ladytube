@@ -460,6 +460,30 @@ const VideoPreview = forwardRef(({ src, isNative, playing, muted, volume, ...pro
 });
 
 
+// LadyTube: 検索画面の「ジャケット画像」表示 (v3.1.15 までの server/ext/public/covermode.js)。
+// カバーがある動画はサムネイルの代わりにカバーを出す。無い動画はサムネイルのまま。
+// 先に読み込んで確かめてから差し替える (カバーが無い=404 のときに空白を挟まない)。結果はページを読み直すまで覚える
+const coverOk = {};     // id -> true / false
+const coverWait = {};   // id -> Promise<boolean> (確かめ中)
+const coverUrl = (id) => '/ext/api/video/' + id + '/cover';
+function useCoverThumb(id, on) {
+    const [, setTick] = useState(0);
+    const known = coverOk[id];
+    useEffect(() => {
+        if (!on || id == null || known !== undefined) return;
+        let alive = true;
+        coverWait[id] = coverWait[id] || new Promise(res => {
+            const img = new Image();
+            img.onload = () => res(true);
+            img.onerror = () => res(false);
+            img.src = coverUrl(id);
+        });
+        coverWait[id].then(ok => { coverOk[id] = ok; if (alive && ok) setTick(t => t + 1); });
+        return () => { alive = false; };
+    }, [id, on, known]);
+    return on && known === true ? coverUrl(id) : null;
+}
+
 function VideoCard({
     video,
     onClick,
@@ -476,9 +500,11 @@ function VideoCard({
     setIsPreviewMuted = () => { },
     volume = 1,
     extMeta = false,   // LadyTube: 検索画面のカードだけメーカー・評価・出演者などを足す (ExtCardParts.jsx)
-    selectionMode = false, selected = false, onToggleSelect   // LadyTube: 選択モード (ExtSelection.jsx)
+    selectionMode = false, selected = false, onToggleSelect,   // LadyTube: 選択モード (ExtSelection.jsx)
+    coverThumbs = false   // LadyTube: サムネイルの代わりにカバーを出す (検索画面の切り替え)
 }) {
     const { showToast, showExtension, showDisplayName } = useUI();
+    const coverSrc = useCoverThumb(video.id, coverThumbs);
     const [isHovered, setIsHovered] = useState(false);
     const [isThumbnailHovered, setIsThumbnailHovered] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -804,7 +830,7 @@ function VideoCard({
                                 {(!video.has_thumbnail || imageError) ? (
                                     <div className={styles.noImage}>NO IMAGE</div>
                                 ) : (
-                                    video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
+                                    video.id && (<img src={coverSrc || `/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg + (coverSrc ? ' wlext-thumb-cover' : '')} onError={() => setImageError(true)} />)
                                 )}
                                 {viewMode !== 'grid-poster' && (
                                     <div className={styles.durationBadge} style={{ fontSize: '11px', lineHeight: 1 }}>{formatDuration(video.duration)}</div>
@@ -827,7 +853,7 @@ function VideoCard({
                         {(!video.has_thumbnail || imageError) ? (
                             <div className={styles.noImage} style={{ fontSize: '0.75rem' }}>NO IMAGE</div>
                         ) : (
-                            video.id && (<img src={`/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg} onError={() => setImageError(true)} />)
+                            video.id && (<img src={coverSrc || `/api/video/${video.id}/thumbnail?s=${video.thumbnail_size || 0}${thumbnailBuster ? `&t=${thumbnailBuster}` : ''}`} alt={videoName(video, true, showDisplayName)} loading="lazy" className={styles.thumbnailImg + (coverSrc ? ' wlext-thumb-cover' : '')} onError={() => setImageError(true)} />)
                         )}
                         {viewMode !== 'grid-poster' && (
                             <div className={styles.durationBadge} style={{ fontSize: '11px', lineHeight: 1 }}>{formatDuration(video.duration)}</div>
@@ -931,7 +957,7 @@ function VideoCard({
     );
 }
 
-export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false, selectionMode = false, selectedIds, onToggleSelect }) {
+export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false, selectionMode = false, selectedIds, onToggleSelect, coverThumbs = false }) {
     const { showThumbnailButton } = useUI();
     const [lastPreviewedId, setLastPreviewedId] = useState(null);
     const [allTags, setAllTags] = useState([]);
@@ -974,7 +1000,7 @@ export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highli
             )}
             {
                 videos.map((video) => (
-                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} extMeta={extMeta}
+                    <VideoCard key={video.id} video={video} onClick={onPlay} viewMode={viewMode} isHighlighted={highlightedId && video.id.toString() === highlightedId.toString()} onUpdate={onVideoUpdate} showThumbnailButton={showThumbnailButton} isLastPreviewed={lastPreviewedId === video.id} setLastPreviewedId={setLastPreviewedId} allTags={allTags} activeMenuId={activeMenuId} setActiveMenuId={setActiveMenuId} isPreviewMuted={isPreviewMuted} setIsPreviewMuted={setIsPreviewMuted} volume={volume} extMeta={extMeta} coverThumbs={coverThumbs}
                         selectionMode={selectionMode} selected={!!selectedIds && selectedIds.has(video.id)} onToggleSelect={onToggleSelect} />
                 ))
             }

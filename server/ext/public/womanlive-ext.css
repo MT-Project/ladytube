@@ -1260,9 +1260,6 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-help-desc { flex: 1; color: var(--text-secondary, #555); }
 .wlext-help-note { font-size: 0.76rem; color: var(--text-secondary, #888); margin: 0.2rem 0; }
 
-/* サムネイル切替(covermode.js)を足すと狭い画面で表示件数ボタンがはみ出すので、表示設定の行を折り返す */
-[class*="statusBar_"] [class*="controlsRow_"] { flex-wrap: wrap; }
-
 /* ---- ライブラリ (library.js) ---- */
 /* ヘッダー: ロゴの右のライブラリ名 */
 .wlext-libpill {
