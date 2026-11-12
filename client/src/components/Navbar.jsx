@@ -1,11 +1,12 @@
 
-import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { Settings, Search, X, Moon, Sun, Home } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { css } from '@linaria/core';
 import { api } from '../services/api';
 import { theme } from '../theme';
 import { useUI } from '../contexts/UIContext';
+import { ExtHelpButton, ExtMenuButton } from './ExtNavParts';
 
 // Linaria styles
 const styles = {
@@ -216,6 +217,8 @@ export default function Navbar() {
 
     const [searchParams, setSearchParams] = useSearchParams();
     const navigate = useNavigate();
+    // LadyTube: 管理画面だけは本体の歯車 (管理) のまま。ほかのページでは拡張のメニューに置き換える
+    const onSettings = useLocation().pathname === '/settings';
 
     const initialQuery = searchParams.get('q') || '';
     const [localInput, setLocalInput] = useState(initialQuery);
@@ -359,9 +362,12 @@ export default function Navbar() {
                     >
                         <Search size={20} strokeWidth={2} />
                     </div>
+                    {/* LadyTube: 検索のヘルプ (？) */}
+                    <ExtHelpButton />
                 </div>
 
-                <div className={styles.rightActions}>
+                {/* LadyTube: メニューを置くときは、狭い画面でも操作欄を出す (womanlive-ext.css の .wlext-actions-force) */}
+                <div className={styles.rightActions + (onSettings ? '' : ' wlext-actions-force')}>
                     <button
                         onClick={toggleTheme}
                         className={styles.actionIcon}
@@ -369,9 +375,11 @@ export default function Navbar() {
                     >
                         {isDarkMode ? <Moon fill="currentColor" size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
                     </button>
-                    <Link to="/settings" className={styles.settingsLink} title="管理">
-                        <Settings size={20} strokeWidth={1.5} />
-                    </Link>
+                    {onSettings ? (
+                        <Link to="/settings" className={styles.settingsLink} title="管理">
+                            <Settings size={20} strokeWidth={1.5} />
+                        </Link>
+                    ) : <ExtMenuButton />}
                 </div>
             </nav>
         </>

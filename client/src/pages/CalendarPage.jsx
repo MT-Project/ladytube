@@ -110,19 +110,23 @@ export default function CalendarPage() {
 
     const years = Object.keys(groupedByYear).sort((a, b) => b - a);
 
-    const handleMonthClick = (year, month) => {
+    // LadyTube: 押したときと中クリックで同じ URL を使うため、URL の組み立てを分けた
+    const monthUrl = (year, month) => {
         // Calculate the last day of the month
         const nextMonth = new Date(parseInt(year), parseInt(month), 1);
         const lastDay = new Date(nextMonth - 1).getDate();
 
         const q = `>${year}/${month}/01 <${year}/${month}/${lastDay}`;
-        navigate(`/search?q=${encodeURIComponent(q)}`);
+        return `/search?q=${encodeURIComponent(q)}`;
     };
-
-    const handleYearClick = (year) => {
-        const q = `>${year}/01/01 <${year}/12/31`;
-        navigate(`/search?q=${encodeURIComponent(q)}`);
-    };
+    const yearUrl = (year) => `/search?q=${encodeURIComponent(`>${year}/01/01 <${year}/12/31`)}`;
+    const handleMonthClick = (year, month) => navigate(monthUrl(year, month));
+    const handleYearClick = (year) => navigate(yearUrl(year));
+    // LadyTube: 年と月は <a> ではないので、中クリックで新しいタブに開けるようにする (v3.1.15 までの nav.js の patchCalendarLinks)
+    const midClick = (url) => ({
+        onMouseDown: (e) => { if (e.button === 1) e.preventDefault(); },
+        onAuxClick: (e) => { if (e.button !== 1) return; e.preventDefault(); window.open(url, '_blank'); },
+    });
 
     return (
         <div className={styles.page}>
@@ -141,6 +145,7 @@ export default function CalendarPage() {
                                 <h2
                                     className={styles.yearTitle}
                                     onClick={() => handleYearClick(year)}
+                                    {...midClick(yearUrl(year))}
                                     title={`${year}年の動画を検索`}
                                 >
                                     {year}年 ({groupedByYear[year].total})
@@ -151,6 +156,7 @@ export default function CalendarPage() {
                                             key={item.month}
                                             className={styles.monthItem}
                                             onClick={() => handleMonthClick(year, item.month)}
+                                            {...midClick(monthUrl(year, item.month))}
                                         >
                                             <span className={styles.monthText}>{parseInt(item.month)}月</span>
                                             <span className={styles.countText}>({item.count})</span>

@@ -3,7 +3,7 @@
    ・モノクロ(lucide風)アイコン (本家ホーム/ヘッダーと同系統)
    ・拡張ページ共通ヘッダー (本家ヘッダーと同じ構成: ロゴ/検索/操作)
    ・ヘッダーのメニュー(ハンバーガー)とドロップダウン
-   ・本家ヘッダーの「設定(⚙)」リンクをメニューへ差し替え
+   ・本体のヘッダーの「？」とメニューは本体 (client/src/components/ExtNavParts.jsx) が描き、ここの WL.help* / WL.toggleNavMenu を呼ぶ
    ・テーマ(ダーク/ライト)切替を本家と同じ仕組みで再現
    ============================================================= */
 (function () {
@@ -139,6 +139,8 @@
         window.addEventListener('resize', closeMenu);
     }
     function toggleMenu(anchor) { if (menuEl) closeMenu(); else openMenu(anchor); }
+    // 本体のヘッダー (client/src/components/ExtNavParts.jsx の ExtMenuButton) も押されたらこれを呼ぶ
+    WL.toggleNavMenu = toggleMenu;
 
     function makeMenuBtn() {
         const btn = h('button', { class: 'wlext-action wlext-menu-btn', type: 'button', title: 'メニュー' });
@@ -227,18 +229,21 @@
     }
     function hideHelp() { if (helpPop) helpPop.style.display = 'none'; helpPinned = false; }
 
+    // ボタンの動き。本体のヘッダー (ExtNavParts.jsx の ExtHelpButton) も同じものを呼ぶ
+    WL.helpEnter = (btn) => { clearTimeout(helpTimer); showHelp(btn); };
+    WL.helpLeave = () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); };
+    WL.helpClick = (btn) => {
+        const open = helpPop && helpPop.style.display === 'block';
+        if (helpPinned && open) hideHelp();
+        else { helpPinned = true; showHelp(btn); }
+    };
     function makeHelpBtn(spec) {
         const btn = h('button', { class: 'wlext-action wlext-help-btn', type: 'button', title: (spec && spec.tooltip) || '検索のヘルプ' });
         if (spec) btn._wlHelp = spec;
         btn.innerHTML = iconSvg('help', 20, 2);
-        btn.addEventListener('mouseenter', () => { clearTimeout(helpTimer); showHelp(btn); });
-        btn.addEventListener('mouseleave', () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); });
-        btn.addEventListener('click', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            const open = helpPop && helpPop.style.display === 'block';
-            if (helpPinned && open) hideHelp();
-            else { helpPinned = true; showHelp(btn); }
-        });
+        btn.addEventListener('mouseenter', () => WL.helpEnter(btn));
+        btn.addEventListener('mouseleave', () => WL.helpLeave());
+        btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); WL.helpClick(btn); });
         return btn;
     }
     WL.makeHelpBtn = makeHelpBtn;
@@ -249,51 +254,6 @@
             !helpPop.contains(e.target) && !(e.target.closest && e.target.closest('.wlext-help-btn'))) hideHelp();
     });
     window.addEventListener('resize', () => { if (helpPop && helpPop.style.display === 'block') positionHelp(); });
-
-    // 本家ヘッダーの検索(虫めがね)ボタンの右に ? を差し込む (拡張ヘッダーは pageHeader 側で配置)
-    function patchSearchHelp() {
-        document.querySelectorAll('nav').forEach(nav => {
-            if (nav.classList.contains('wlext-nav')) return;
-            const searchBtn = nav.querySelector('div[title="検索"]');
-            if (!searchBtn || !searchBtn.parentElement) return;
-            if (searchBtn.parentElement.querySelector('.wlext-help-btn')) return;
-            searchBtn.insertAdjacentElement('afterend', makeHelpBtn());
-        });
-    }
-
-    /* ---------- 本家カレンダー(/calendar)の中クリック対応 ---------- */
-    // 月/年は <a href> ではない div/h2 のクリックハンドラで遷移するため、そのままでは
-    // 中クリック(新規タブ)が効かない。本体無改変のまま、本体と同じ URL 計算で
-    // auxclick(中クリック)だけをフックして新規タブを開けるようにする。
-    function calendarMonthUrl(year, month) {
-        const lastDay = new Date(new Date(parseInt(year, 10), parseInt(month, 10), 1) - 1).getDate();
-        return '/search?q=' + encodeURIComponent(`>${year}/${month}/01 <${year}/${month}/${lastDay}`);
-    }
-    function calendarYearUrl(year) {
-        return '/search?q=' + encodeURIComponent(`>${year}/01/01 <${year}/12/31`);
-    }
-    function attachMiddleClick(el, urlFn) {
-        el.dataset.wlextMid = '1';
-        el.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
-        el.addEventListener('auxclick', (e) => { if (e.button !== 1) return; e.preventDefault(); window.open(urlFn(), '_blank'); });
-    }
-    function patchCalendarLinks() {
-        if (location.pathname !== '/calendar') return;
-        const root = document.getElementById('root'); if (!root) return;
-        root.querySelectorAll('[class*="yearSection_"]').forEach(sec => {
-            const yearEl = sec.querySelector('[class*="yearTitle_"]');
-            const ym = yearEl && yearEl.textContent.match(/^(\d+)年/);
-            if (!ym) return;
-            const year = ym[1];
-            if (!yearEl.dataset.wlextMid) attachMiddleClick(yearEl, () => calendarYearUrl(year));
-            sec.querySelectorAll('[class*="monthItem_"]').forEach(monthEl => {
-                if (monthEl.dataset.wlextMid) return;
-                const mm = monthEl.textContent.match(/^(\d+)月/);
-                if (!mm) return;
-                attachMiddleClick(monthEl, () => calendarMonthUrl(year, mm[1]));
-            });
-        });
-    }
 
     /* ---------- 拡張ページ共通ヘッダー (本家ヘッダーと同じ構成) ---------- */
     function themeBtn() {
@@ -332,31 +292,7 @@
         return h('nav', { class: 'wlext-nav' }, [logo, search, actions]);
     };
 
-    /* ---------- 本家ヘッダーへの差し込み (設定⚙ → メニュー) ---------- */
-    function patchReactHeader() {
-        const gear = document.querySelector('nav a[href="/settings"]');
-        if (!gear) return;
-        const nav = gear.closest('nav'); if (!nav) return;
-        const actions = gear.parentElement;
-        const mbtn = (actions || nav).querySelector('.wlext-menu-btn');
-
-        // 設定ページは現状維持 (⚙のまま / メニュー無し)
-        if (location.pathname === '/settings') {
-            gear.style.display = '';
-            if (actions) actions.classList.remove('wlext-actions-force');
-            if (mbtn) mbtn.remove();
-            return;
-        }
-        gear.style.display = 'none';
-        if (actions) {
-            actions.classList.add('wlext-actions-force');
-            if (!mbtn) actions.appendChild(makeMenuBtn());
-        } else if (!mbtn) {
-            nav.appendChild(makeMenuBtn());
-        }
-    }
-
-    WL.onEnsure(() => { patchReactHeader(); patchSearchHelp(); patchCalendarLinks(); });
+    // 本体のヘッダー (Navbar.jsx) の「？」とメニュー、カレンダーの中クリックは本体が描く (v3.1.15 まではここで差し込んでいた)
 
     /* ---------- ページ見出し (アイコン + テキスト) ---------- */
     WL.pageTitle = function (iconName, text) {
