@@ -9,6 +9,9 @@ const ICONS = {
     factory: '<path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/>',
     users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
     library: '<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>',
+    play: '<path d="m6 3 14 9-14 9z"/>',
+    'step-forward': '<line x1="18" x2="18" y1="4" y2="20"/><path d="m6 4 10 8-10 8z"/>',
+    'step-back': '<line x1="6" x2="6" y1="4" y2="20"/><path d="m18 4-10 8 10 8z"/>',
 };
 export function Icon({ name, size }) {
     return (

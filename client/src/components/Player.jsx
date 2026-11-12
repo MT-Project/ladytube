@@ -8,6 +8,7 @@ import PlayerOverlay from './Player/PlayerOverlay';
 import VideoRecommendation from './Player/VideoRecommendation';
 import { useDraggable } from './Player/useDraggable';
 import { useMsePlayback } from './Player/useMsePlayback';
+import { FrameStep } from './ExtWatchParts';
 import { css } from '@linaria/core';
 import { theme } from '../theme';
 import ASS from 'assjs';
@@ -1209,6 +1210,10 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     isNative={isNative} handleSeek={handleSeek} currentTime={currentTime}
                     subtitlesEnabled={subtitlesEnabled} setSubtitlesEnabled={setSubtitlesEnabled}
                 />
+
+                {/* LadyTube: コマ送り (キー・Shift+ホイール・タッチ端末のボタン。ExtWatchParts.jsx)。
+                    key は兄弟の <video key={video.id}> と重ねない (重なると再描画のたびに video が増えて落ちる) */}
+                <FrameStep key={'framestep-' + video.id} videoId={video.id} videoRef={videoElementRef} containerRef={containerRef} />
             </div>
         </Fragment>
     );
