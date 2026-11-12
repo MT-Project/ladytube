@@ -1,6 +1,9 @@
 /* =============================================================
-   WomanLive 拡張 - 設定ページへの「拡張機能」セクション注入
-   (カバー画像フォルダの指定)
+   LadyTube 拡張 - 管理画面の「拡張機能」の項目
+   (カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / メンテナンス / バックアップ)
+   置き場所と並びは本体の管理画面 (client/src/pages/SettingsPage.jsx の ExtSettingsSection) が決め、
+   ここは WL.settingsSections.<名前>() で項目を作って返すだけ (v3.1.15 までは「スキャン」の見出しを探して差し込んでいた)。
+   「メタデータ置換」(本体の「タグ置換」の代わり) は本体が描く (ExtSettingsParts.jsx の ExtMetaReplace)。
    ============================================================= */
 (function () {
     'use strict';
@@ -11,47 +14,13 @@
         return h('h3', { class: 'wlext-ext-h3' }, [WL.icon('puzzle', 16), h('span', null, text)]);
     }
 
-    function findContainer() {
-        const root = document.getElementById('root'); if (!root) return null;
-        const h2s = root.querySelectorAll('h2');
-        for (const el of h2s) {
-            if (el.textContent && el.textContent.indexOf('スキャン') !== -1) {
-                const section = el.parentElement;            // .section
-                if (section && section.parentElement) return { container: section.parentElement, firstSection: section };
-            }
-        }
-        return null;
+    // カバー画像フォルダと DMM の設定は同じ API で読むので、同時に作られたときは1回にまとめる
+    let extSettingsP = null;
+    function extSettings() {
+        return extSettingsP || (extSettingsP = WL.api.getExtSettings().finally(() => { extSettingsP = null; }));
     }
 
-    // 本家の「タグ置換」セクションを探す (見出しテキストで判定。クラス名には依存しない)
-    function findNativeTagRename() {
-        const root = document.getElementById('root'); if (!root) return null;
-        for (const el of root.querySelectorAll('h2')) {
-            if (el.textContent && el.textContent.indexOf('タグ置換') !== -1) {
-                const section = el.parentElement;
-                if (section && section.parentElement) return { section, title: el };
-            }
-        }
-        return null;
-    }
-
-    // 本家セクションを隠して、同じ見た目の「メタデータ置換」を同じ位置に差し込む。
-    // React が再描画しても拡張側のノードは残るので、毎回 ensure で存在を確認する。
-    function ensureReplaceSection() {
-        const native = findNativeTagRename();
-        if (!native) return;
-        native.section.style.display = 'none';
-        if (document.querySelector('.wlext-replace-section')) return;
-        native.section.insertAdjacentElement('afterend', buildReplaceSection(native));
-    }
-
-    function ensure() {
-        if (!WL.matchSettings()) return;
-        ensureReplaceSection();
-        const found = findContainer();
-        if (!found) return;
-        if (found.container.querySelector('.wlext-settings-host')) return;
-
+    function buildCoverSection() {
         const host = h('div', { class: 'wlext-settings-host wlext-settings-section' });
         host.appendChild(extH3('拡張機能：カバー画像'));
 
@@ -62,10 +31,12 @@
         host.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.5rem' } },
             '動画ファイル名と同じ名前の画像（例: AAA.mp4 → AAA.jpg）をこのフォルダから探し、動画ページのカバー画像として表示します。'));
         host.appendChild(h('div', { class: 'wlext-inline' }, [input, browseBtn, saveBtn]));
+        extSettings().then(s => { input.value = s.cover_folder || ''; }).catch(() => { });
+        return host;
+    }
 
-        found.container.insertBefore(host, found.firstSection);
-
-        // ---- DMM(FANZA) 商品検索API 設定 ----
+    // ---- DMM(FANZA) 商品検索API 設定 ----
+    function buildDmmSection() {
         const dmmSection = h('div', { class: 'wlext-settings-host wlext-settings-section' });
         dmmSection.appendChild(extH3('拡張機能：DMM(FANZA) 商品検索API'));
         dmmSection.appendChild(h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: '0.6rem' } },
@@ -81,95 +52,11 @@
         dmmSection.appendChild(h('div', { class: 'wlext-field' }, [h('label', null, 'API ID'), apiIn]));
         dmmSection.appendChild(h('div', { class: 'wlext-field' }, [h('label', null, 'アフィリエイトID'), affIn]));
         dmmSection.appendChild(h('div', { class: 'wlext-inline' }, [dmmSave]));
-        found.container.insertBefore(dmmSection, found.firstSection);
-
-        // 現在値を読み込み
-        WL.api.getExtSettings().then(s => {
-            input.value = s.cover_folder || '';
-            apiIn.value = s.dmm_api_id || '';
-            affIn.value = s.dmm_affiliate_id || '';
-        }).catch(() => { });
-
-        // 注: JSON 一括取込 (動画/出演者) は個人用(private)へ移設しました。
-        //     設定ページへのUI注入は server/private/public/importui.js が行います。
-        found.container.insertBefore(buildTagRuleSection(), found.firstSection);
-        found.container.insertBefore(buildRelatedSection(), found.firstSection);
-        found.container.insertBefore(buildMaintenanceSection(), found.firstSection);
-        found.container.insertBefore(buildBackupSection(), found.firstSection);
+        extSettings().then(s => { apiIn.value = s.dmm_api_id || ''; affIn.value = s.dmm_affiliate_id || ''; }).catch(() => { });
+        return dmmSection;
     }
-
-    // メタデータ置換セクション (本家の「タグ置換」を置き換える)
-    // 見た目を揃えるため、クラス名は隠した本家セクションの要素から借りる
-    // (CSS Modules のハッシュを決め打ちしないで済む)。
-    function buildReplaceSection(native) {
-        const cls = (sel, fallback) => {
-            const el = native.section.querySelector(sel);
-            return el ? el.className : (fallback || '');
-        };
-        const box = native.section.querySelector('h2 + div');
-        const section = h('div', { class: 'wlext-replace-section ' + native.section.className });
-
-        const title = h('h2', { class: native.title.className });
-        const icon = native.title.querySelector('svg');
-        if (icon) title.appendChild(icon.cloneNode(true));
-        title.appendChild(document.createTextNode('メタデータ置換'));
-        section.appendChild(title);
-
-        const body = h('div', { class: box ? box.className : '' });
-        const desc = native.section.querySelector('p');
-        body.appendChild(h('p', { class: desc ? desc.className : '' },
-            'すでに設定済みのメタデータを置換します。(タグ等はプリセット側も変更されます)'));
-
-        const inputCls = cls('input');
-        const kindSel = h('select', { class: inputCls, style: { marginBottom: '0.5rem' } });
-        const before = h('input', { class: inputCls, type: 'text', spellcheck: 'false', placeholder: '置換対象' });
-        const after = h('input', { class: inputCls, type: 'text', spellcheck: 'false', placeholder: '置換後' });
-
-        const nativeBtn = native.section.querySelector('button');
-        const btnCls = nativeBtn ? nativeBtn.className : 'wlext-btn';
-        const runBtn = h('button', { class: btnCls }, '置換');
-
-        let kindLabel = () => (kindSel.options[kindSel.selectedIndex] || {}).text || '';
-        function setPlaceholders() {
-            before.placeholder = '置換対象の' + kindLabel();
-            after.placeholder = '置換後の' + kindLabel();
-        }
-        kindSel.addEventListener('change', setPlaceholders);
-
-        WL.api.replaceKinds().then(kinds => {
-            (kinds || []).forEach(k => kindSel.appendChild(h('option', { value: k.key }, k.label)));
-            setPlaceholders();
-        }).catch(() => { });
-
-        runBtn.addEventListener('click', () => {
-            const b = before.value.trim(), a = after.value.trim();
-            if (!b || !a) { WL.toast('置換対象と置換後の両方を入力してください', 'error'); return; }
-            if (b === a) { WL.toast('置換対象と置換後が同じです', 'error'); return; }
-            const label = kindLabel();
-            const body2 = h('div', null, [
-                h('div', { style: { marginBottom: '0.5rem' } }, '置換すると元に戻せません。置換していいですか？'),
-                h('div', { style: { fontSize: '0.9rem' } }, label + '：' + b + ' → ' + a)
-            ]);
-            WL.dialog('メタデータ置換', body2, {
-                saveLabel: '置換', danger: true,
-                onSave: async (close) => {
-                    try {
-                        const r = await WL.api.replaceMetadata(kindSel.value, b, a);
-                        WL.toast(r.changed + ' 件の' + label + 'を置換しました', 'success');
-                        before.value = ''; after.value = '';
-                        close();
-                    } catch (e) { WL.toast('置換に失敗しました: ' + e.message, 'error'); }
-                }
-            });
-        });
-
-        body.appendChild(h('div', { class: 'wlext-field' }, [h('label', null, '置換するメタデータ'), kindSel]));
-        body.appendChild(h('div', { class: 'wlext-field' }, before));
-        body.appendChild(h('div', { class: 'wlext-field' }, after));
-        body.appendChild(h('div', { class: 'wlext-inline' }, runBtn));
-        section.appendChild(body);
-        return section;
-    }
+    // 注: JSON 一括取込 (動画/出演者) は個人用(private)へ移設しました。
+    //     設定ページへのUI注入は server/private/public/importui.js が行います。
 
     // メンテナンス (参照されていない拡張データ) セクション
     // 本家の「クリーンアップ」でも同じ掃除が走るが、件数を確認してから単独で実行もできる。
@@ -477,5 +364,13 @@
         load('/');
     }
 
-    WL.onEnsure(ensure);
+    // 本体の管理画面 (SettingsPage.jsx) が名前で呼んで、返った項目を置く。library.js も library を足す
+    WL.settingsSections = Object.assign(WL.settingsSections || {}, {
+        cover: buildCoverSection,
+        dmm: buildDmmSection,
+        tagRule: buildTagRuleSection,
+        related: buildRelatedSection,
+        maintenance: buildMaintenanceSection,
+        backup: buildBackupSection,
+    });
 })();

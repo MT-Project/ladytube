@@ -304,8 +304,8 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
   (グループ見出しの `# 名前` は置換対象外)。
 - 出演者は出演者マスタの名前を変更します。動画側は出演者IDで持っているのでそのまま追従します。
   置換後の名前が既に登録済みのときはエラーにします(統合は出演者ページで行ってください)。
-- 本家のセクションは非表示にして同じ位置へ差し込みます。見た目は本家のクラス名を借りて再現します。
-- 実装: `server/ext/routes/replace.js`、`public/settings.js`、
+- 本体の「タグ置換」の代わりに、同じ位置へ同じ見た目で置きます。
+- 実装: `server/ext/routes/replace.js`、画面は `client/src/components/ExtSettingsParts.jsx` の `ExtMetaReplace`(管理画面 `SettingsPage.jsx` が置く)、
   API `GET /ext/api/metadata/replace-kinds`, `POST /ext/api/metadata/replace`。
 
 ## 一覧ページの一括削除
@@ -446,7 +446,7 @@ server/ext/
     releasecal.js       公開カレンダー
     bookmark.js         ブックマーク追加ボタン/ダイアログ
     bookmarklist.js     ブックマーク一覧ページ
-    settings.js         設定ページへの拡張セクション注入
+    settings.js         管理画面の拡張の項目（置き場所は本体の SettingsPage.jsx が決める）
     settingsnav.js      設定ページのサイドメニュー（項目一覧・並び順の統一）
     library.js          ライブラリ（ヘッダーの切り替えメニュー・管理画面のセクション）
     womanlive-ext.css   スタイル

@@ -131,17 +131,7 @@
     }
 
     /* ---------- 管理画面: ライブラリ セクション ---------- */
-    function findContainer() {
-        const root = document.getElementById('root'); if (!root) return null;
-        for (const el of root.querySelectorAll('h2')) {
-            if (el.textContent && el.textContent.indexOf('スキャン') !== -1) {
-                const section = el.parentElement;
-                if (section && section.parentElement) return { container: section.parentElement, firstSection: section };
-            }
-        }
-        return null;
-    }
-
+    // 置き場所は本体の管理画面 (SettingsPage.jsx の ExtSettingsSection name="library") が決める
     function buildSection() {
         const block = h('div', { class: 'wlext-settings-host wlext-settings-section wlext-lib-section' });
         block.appendChild(h('h3', { class: 'wlext-ext-h3' }, [WL.icon('database', 16), h('span', null, '拡張機能：ライブラリ')]));
@@ -287,16 +277,15 @@
         return block;
     }
 
-    function ensureSection() {
-        if (!WL.matchSettings()) return;
-        const found = findContainer();
-        if (!found || found.container.querySelector('.wlext-lib-section')) return;
-        found.container.insertBefore(buildSection(), found.firstSection);
+    function librarySection() {
+        const block = buildSection();
         // ヘッダーのメニューの「ライブラリの管理」から来たときはこのセクションへ
         let go = null;
         try { go = sessionStorage.getItem('wlext_goto_library'); sessionStorage.removeItem('wlext_goto_library'); } catch (e) { }
         if (go) setTimeout(() => { const s = document.querySelector('.wlext-lib-section'); if (s) s.scrollIntoView(); }, 300);
+        return block;
     }
+    WL.settingsSections = Object.assign(WL.settingsSections || {}, { library: librarySection });
 
-    WL.onEnsure(() => { ensurePill(); ensureSection(); });
+    WL.onEnsure(ensurePill);
 })();

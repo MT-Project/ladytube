@@ -6,6 +6,10 @@ import { useUI } from '../contexts/UIContext';
 import { api } from '../services/api';
 import { theme } from '../theme';
 import FolderPicker from '../components/FolderPicker';
+import { ExtSettingsSection, ExtMetaReplace } from '../components/ExtSettingsParts';
+
+// LadyTube: 本体の「タグ置換」は描かず、拡張の「メタデータ置換」(タグも置換できる) を代わりに置く
+const SHOW_HOST_TAG_RENAME = false;
 
 // Linaria styles
 // Linaria styles
@@ -526,6 +530,9 @@ export default function SettingsPage() {
             </div>
 
             <div className={styles.container}>
+                {/* LadyTube: 項目の並びは管理画面の右のメニュー (settingsnav.js の ORDER) と同じ。拡張の項目は ExtSettingsParts.jsx */}
+                {/* ライブラリ: スキャン対象フォルダもライブラリごとなので、その上 */}
+                <ExtSettingsSection name="library" />
                 {/* Scan Section */}
                 <div className={styles.section}>
                     <h2 className={styles.sectionTitle}>
@@ -616,36 +623,12 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
-                {/* Network Section */}
-                <div className={styles.section}>
-                    <h2 className={styles.sectionTitle}>
-                        <Globe size={18} className={styles.sectionHeaderIcon} />
-                        ネットワーク
-                    </h2>
-                    <div className={styles.box}>
-                        <div className={styles.switchContainer}>
-                            <label
-                                htmlFor="allow-public"
-                                className={styles.checkboxLabel}
-                            >
-                                他のデバイスからのアクセスを許可する
-                            </label>
-                            <label className={styles.switchBase}>
-                                <input
-                                    type="checkbox"
-                                    id="allow-public"
-                                    checked={allowPublic}
-                                    onChange={(e) => toggleNetworkAccess(e.target.checked)}
-                                    className={styles.switchInput}
-                                />
-                                <span className={styles.switchSlider}></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
+                <ExtSettingsSection name="cover" />
+                <ExtSettingsSection name="related" />
+                <ExtSettingsSection name="tagRule" />
 
-                {/* Tag Rename Section */}
-                <div className={styles.section}>
+                {/* Tag Rename Section (LadyTube: 描かない。下の「メタデータ置換」が代わる) */}
+                {SHOW_HOST_TAG_RENAME && <div className={styles.section}>
                     <h2 className={styles.sectionTitle}>
                         <Tag size={18} className={styles.sectionHeaderIcon} />
                         タグ置換
@@ -685,7 +668,10 @@ export default function SettingsPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>}
+
+                {/* LadyTube: メタデータ置換 (本体の「タグ置換」の代わり) */}
+                <ExtMetaReplace cls={{ section: styles.section, title: styles.sectionTitle, icon: styles.sectionHeaderIcon, box: styles.box, desc: styles.tagRenameDescription, input: styles.input, button: styles.actionButton }} />
 
                 {/* Maintenance Section */}
                 <div className={styles.section}>
@@ -702,6 +688,38 @@ export default function SettingsPage() {
                         </div>
                     </div>
                 </div>
+                <ExtSettingsSection name="maintenance" />
+
+                {/* Network Section */}
+                <div className={styles.section}>
+                    <h2 className={styles.sectionTitle}>
+                        <Globe size={18} className={styles.sectionHeaderIcon} />
+                        ネットワーク
+                    </h2>
+                    <div className={styles.box}>
+                        <div className={styles.switchContainer}>
+                            <label
+                                htmlFor="allow-public"
+                                className={styles.checkboxLabel}
+                            >
+                                他のデバイスからのアクセスを許可する
+                            </label>
+                            <label className={styles.switchBase}>
+                                <input
+                                    type="checkbox"
+                                    id="allow-public"
+                                    checked={allowPublic}
+                                    onChange={(e) => toggleNetworkAccess(e.target.checked)}
+                                    className={styles.switchInput}
+                                />
+                                <span className={styles.switchSlider}></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <ExtSettingsSection name="dmm" />
+                <ExtSettingsSection name="backup" />
             </div>
 
             <FolderPicker
