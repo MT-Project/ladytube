@@ -35,10 +35,8 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/standard.js',
     '/ext/assets/bulkselect.js',
     '/ext/assets/settings.js',
-    // ライブラリ: 設定画面のセクションとヘッダーの表示 (セクションは settingsnav.js が並べ替える)
+    // ライブラリ: 管理画面の項目とヘッダーの表示
     '/ext/assets/library.js',
-    // 設定画面のサイドメニュー: settings.js がセクションを差し込んだ後に並べ替えるので、その後ろに置く
-    '/ext/assets/settingsnav.js',
 ];
 
 module.exports = function createInject() {

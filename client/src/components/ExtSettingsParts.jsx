@@ -1,27 +1,35 @@
-// LadyTube: 管理画面 (SettingsPage.jsx) の拡張の項目 (v3.1.15 までの server/ext/public/settings.js と library.js の差し込み)。
+// LadyTube: 管理画面 (SettingsPage.jsx) の拡張の部品 (v3.1.15 までの server/ext/public/settings.js・library.js の差し込みと settingsnav.js)。
 //  ・ExtSettingsSection: 拡張が作る項目 (window.WLExt.settingsSections[name]) を、この位置に置く。
 //    項目の中身 (カバー画像・DMM・タグの自動付与・関連動画・メンテナンス・バックアップ・ライブラリ) は拡張のまま。
-//    以前と同じく項目は本体の項目と同じ親の直下に並べる (settingsnav.js と private の importui.js などが、その並びを見る)。
-//    目印に見えない <template> を残し、その前に差し込む。
+//    name を付けないと、個人用モジュールなどが WLExt.settingsExtras に足した項目を、足した順にすべて置く (管理画面の末尾)。
+//    項目は本体の項目と同じ親の直下に並べる (ExtSettingsNav がその並びを見る)。目印に見えない <template> を残し、その前に差し込む。
 //  ・ExtMetaReplace: 本体の「タグ置換」の代わりの「メタデータ置換」(タグのほか、ジャンル・出演者・シリーズなども置換できる)。
 //    本体の項目と同じ見た目にするため、クラス名は SettingsPage から受け取る (以前は隠した本体の欄から借りていた)。
+//  ・ExtSettingsNav: 左上の「設定項目」ボタンで開閉するサイドメニュー。項目を押すとその位置へ移る。
+//    見た目は検索の絞り込み (ExtFacets.jsx) と同じ womanlive-ext.css の .wlext-facets* と、body の wlext-setnav-on / wlext-setnav-open。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Tag } from 'lucide-react';
+import { Icon } from './ExtIcon';
 
 export function ExtSettingsSection({ name }) {
     const ref = useRef(null);
     useLayoutEffect(() => {
         const marker = ref.current;
-        let node = null;
+        const nodes = new Map();
         const mount = () => {
-            const make = window.WLExt && window.WLExt.settingsSections && window.WLExt.settingsSections[name];
-            if (!make || node || !marker.parentNode) return;
-            node = make();
-            marker.parentNode.insertBefore(node, marker);
+            const WL = window.WLExt;
+            const makers = !WL ? {} : name ? { [name]: (WL.settingsSections || {})[name] } : (WL.settingsExtras || {});
+            for (const [key, make] of Object.entries(makers)) {
+                if (!make || nodes.has(key) || !marker.parentNode) continue;
+                const node = make();
+                nodes.set(key, node);
+                marker.parentNode.insertBefore(node, marker);
+            }
         };
         mount();
-        if (!node) window.addEventListener('DOMContentLoaded', mount, { once: true });   // 拡張は defer で読むので、まだなら読み終わってから
-        return () => { window.removeEventListener('DOMContentLoaded', mount); if (node) node.remove(); };
+        window.addEventListener('DOMContentLoaded', mount, { once: true });   // 拡張は defer で読むので、まだの分は読み終わってから
+        return () => { window.removeEventListener('DOMContentLoaded', mount); nodes.forEach(n => n.remove()); };
     }, [name]);
     return <template ref={ref} />;
 }
@@ -82,5 +90,103 @@ export function ExtMetaReplace({ cls }) {
                 <div className="wlext-inline"><button className={cls.button} onClick={run}>置換</button></div>
             </div>
         </div>
+    );
+}
+
+const NAV_OPEN_KEY = 'wlext_setnav_open';
+const NAV_NARROW = '(max-width: 900px), (pointer: coarse)';   // 既定で閉じる・項目を選ぶと閉じる画面 (本文に重ねて出す)
+const EXT_PREFIX = '拡張機能：';
+function navInitialOpen() {
+    try {
+        const v = localStorage.getItem(NAV_OPEN_KEY);
+        if (v === '1') return true;
+        if (v === '0') return false;
+    } catch { /* 使えなければ既定 */ }
+    return !window.matchMedia(NAV_NARROW).matches;
+}
+// 画面に出ている順の項目 [{el, name, ext}]。拡張の項目かどうかは見出しではなくクラスで見る
+// (メタデータ置換は本体の体裁なので、見出しに「拡張機能：」が付かない)
+function sectionsOf(container) {
+    const out = [];
+    for (const el of container.children) {
+        const head = el.querySelector('h2, h3');
+        if (!head) continue;
+        let name = (head.textContent || '').trim();
+        if (name.startsWith(EXT_PREFIX)) name = name.slice(EXT_PREFIX.length).trim();
+        const cls = String(el.className || '');
+        if (name) out.push({ el, name, ext: cls.includes('wlext-') || cls.includes('private-') });
+    }
+    return out;
+}
+const bottomOf = (ref) => (ref.current ? Math.max(0, Math.round(ref.current.getBoundingClientRect().bottom)) : 48);
+
+// containerRef: 項目が並ぶ親 / headerRef: 管理画面の固定ヘッダー (ボタンとパネルはそのすぐ下)
+export function ExtSettingsNav({ containerRef, headerRef }) {
+    const [open, setOpen] = useState(navInitialOpen);
+    const [list, setList] = useState([]);
+    const btnRef = useRef(null), panelRef = useRef(null), backdropRef = useRef(null);
+    const toggle = (on, remember = true) => {
+        if (remember) { try { localStorage.setItem(NAV_OPEN_KEY, on ? '1' : '0'); } catch { /* 覚えられなくても開閉はする */ } }
+        setOpen(on);
+    };
+
+    // body のクラスは CSS (パネルの表示・本文の左の余白・狭い画面の背景) が見る
+    useLayoutEffect(() => {
+        document.body.classList.add('wlext-setnav-on');
+        return () => document.body.classList.remove('wlext-setnav-on', 'wlext-setnav-open');
+    }, []);
+    useLayoutEffect(() => { document.body.classList.toggle('wlext-setnav-open', open); }, [open]);
+
+    // 一覧は画面の並びから拾う (個人用モジュールの項目も並ぶ)。拡張の項目は後から差し込まれるので、増減のたびに拾い直す
+    useEffect(() => {
+        const container = containerRef.current;
+        const scan = () => setList(sectionsOf(container));
+        const mo = new MutationObserver(scan);
+        mo.observe(container, { childList: true });
+        scan();
+        return () => mo.disconnect();
+    }, [containerRef]);
+
+    useLayoutEffect(() => {
+        const layout = () => {
+            const top = bottomOf(headerRef);
+            if (btnRef.current) btnRef.current.style.top = (top + 8) + 'px';
+            if (panelRef.current) panelRef.current.style.top = (top + 46) + 'px';
+            if (backdropRef.current) backdropRef.current.style.top = top + 'px';
+        };
+        layout();
+        window.addEventListener('resize', layout);
+        return () => window.removeEventListener('resize', layout);
+    }, [open, headerRef]);
+
+    // 固定ヘッダーに隠れないよう、その高さぶん手前で止める。
+    // スムーススクロールは環境によって無視される (動かない) ので、確実に飛ぶ即時移動にする
+    const jumpTo = (el) => {
+        const top = el.getBoundingClientRect().top + window.scrollY - bottomOf(headerRef) - 12;
+        window.scrollTo(0, Math.max(0, top));
+        if (window.matchMedia(NAV_NARROW).matches) toggle(false, false);   // 狭い画面は本文に重ねているので閉じる (覚えない)
+    };
+
+    return createPortal(
+        <>
+            <div ref={backdropRef} className="wlext-facets-backdrop" onClick={() => toggle(false)} />
+            <div ref={btnRef} className={'wlext-facets-btn' + (open ? ' on' : '')} title="設定項目メニューの開閉" onClick={() => toggle(!open)}>
+                <Icon name="menu" size={15} /><span>設定項目</span>
+            </div>
+            {open && (
+                <aside ref={panelRef} className="wlext-facets wlext-setnav">
+                    <div className="wlext-facets-body">
+                        {!list.length && <div className="wlext-facets-msg">設定項目が見つかりません</div>}
+                        {list.map((s, i) => (
+                            <div key={i + '|' + s.name} className="wlext-facet-item" title={s.name + ' へ移動'} onClick={() => jumpTo(s.el)}>
+                                <span className="wlext-facet-name">{s.name}</span>
+                                {s.ext && <span className="wlext-facet-count">Ex</span>}
+                            </div>
+                        ))}
+                    </div>
+                </aside>
+            )}
+        </>,
+        document.body
     );
 }

@@ -2,7 +2,7 @@
 // 評価 (範囲スライダー) と ジャンル / タグ / メーカー / 出演者 / シリーズ を出し、押すと今の検索に足す (もう一度押すと外す)。
 // 上位5件を出し、残りは折りたたむ。候補はサーバーの /ext/api/search/facets (一覧と同じ母集団を数える)。
 // 画面左上の「絞り込み」ボタンで開閉 (位置は固定)。既定は PC=開く / モバイル=閉じる、切り替えた状態はその端末に覚える。
-// 見た目は womanlive-ext.css の .wlext-facets* (設定画面のサイドメニュー settingsnav.js と共用) と、body の
+// 見た目は womanlive-ext.css の .wlext-facets* (管理画面のサイドメニュー ExtSettingsParts.jsx の ExtSettingsNav と共用) と、body の
 // wlext-facets-on / wlext-facets-open。一覧 (contentRef) の左の余白はここで決める。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';

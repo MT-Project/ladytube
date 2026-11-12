@@ -914,12 +914,12 @@ body.wlext-facets-open .wlext-facets { display: flex; }
     .wlext-facets { width: min(280px, 82vw); box-shadow: 0 0 24px rgba(0, 0, 0, 0.35); }
 }
 
-/* ---- 設定画面のサイドメニュー (絞り込みメニューと同じ見た目。パネル/ボタン/項目のCSSを共用) ---- */
+/* ---- 管理画面のサイドメニュー (client/src/components/ExtSettingsParts.jsx の ExtSettingsNav。絞り込みメニューと同じ見た目で、パネル/ボタン/項目のCSSを共用) ---- */
 body.wlext-setnav-open .wlext-facets.wlext-setnav { display: flex; }
-/* 設定の本文は中央寄せ(container が max-width)なので、ページ側の余白で右へ寄せる */
-body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 256px; }
+/* 管理画面の本文は中央寄せ(container が max-width)なので、ページ (SettingsPage.jsx の .wlext-settings-page) の余白で右へ寄せる */
+body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256px; }
 @media (max-width: 900px) {
-    body.wlext-setnav-on.wlext-setnav-open #root [class*="page_"] { padding-left: 0; }
+    body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 0; }
     body.wlext-setnav-open .wlext-facets-backdrop { display: block; }
 }
 

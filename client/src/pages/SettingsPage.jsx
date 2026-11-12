@@ -6,7 +6,7 @@ import { useUI } from '../contexts/UIContext';
 import { api } from '../services/api';
 import { theme } from '../theme';
 import FolderPicker from '../components/FolderPicker';
-import { ExtSettingsSection, ExtMetaReplace } from '../components/ExtSettingsParts';
+import { ExtSettingsSection, ExtMetaReplace, ExtSettingsNav } from '../components/ExtSettingsParts';
 
 // LadyTube: 本体の「タグ置換」は描かず、拡張の「メタデータ置換」(タグも置換できる) を代わりに置く
 const SHOW_HOST_TAG_RENAME = false;
@@ -324,6 +324,7 @@ export default function SettingsPage() {
     const [allowPublic, setAllowPublic] = useState(false);
     const abortControllerRef = useRef(null);
     const progressTimerRef = useRef(null);
+    const containerRef = useRef(null), navBarRef = useRef(null);   // LadyTube: 管理画面の左上のメニュー (ExtSettingsNav) が見る
 
     const isTagRenameDisabled = () => !beforeTag.trim() || !afterTag.trim() || isRenaming;
 
@@ -520,17 +521,17 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className={styles.page}>
+        <div className={styles.page + ' wlext-settings-page'}>
             {/* Fixed Navigation Bar */}
-            <div className={styles.navBar}>
+            <div ref={navBarRef} className={styles.navBar}>
                 <div onClick={() => navigate(-1)} className={styles.backButton}>
                     <ChevronLeft size={24} />
                 </div>
                 <h1 className={styles.navTitle}>管理</h1>
             </div>
 
-            <div className={styles.container}>
-                {/* LadyTube: 項目の並びは管理画面の右のメニュー (settingsnav.js の ORDER) と同じ。拡張の項目は ExtSettingsParts.jsx */}
+            <div ref={containerRef} className={styles.container}>
+                {/* LadyTube: 拡張の項目と左上の「設定項目」メニューは ExtSettingsParts.jsx。メニューはこの並びのまま一覧にする */}
                 {/* ライブラリ: スキャン対象フォルダもライブラリごとなので、その上 */}
                 <ExtSettingsSection name="library" />
                 {/* Scan Section */}
@@ -720,7 +721,10 @@ export default function SettingsPage() {
 
                 <ExtSettingsSection name="dmm" />
                 <ExtSettingsSection name="backup" />
+                {/* 個人用モジュールなどが足した項目は末尾 */}
+                <ExtSettingsSection />
             </div>
+            <ExtSettingsNav containerRef={containerRef} headerRef={navBarRef} />
 
             <FolderPicker
                 isOpen={showPicker}
