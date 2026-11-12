@@ -34,7 +34,6 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/groupview.js',
     '/ext/assets/standard.js',
     '/ext/assets/bulkselect.js',
-    '/ext/assets/homelinks.js',
     '/ext/assets/settings.js',
     // ライブラリ: 設定画面のセクションとヘッダーの表示 (セクションは settingsnav.js が並べ替える)
     '/ext/assets/library.js',

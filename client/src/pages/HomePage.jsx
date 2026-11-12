@@ -11,6 +11,18 @@ import LoadingDots from '../components/LoadingDots';
 import InitGuid from './InitGuid';
 import { Search, QrCode, X, Image, Calendar, Folder } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { Icon } from '../components/ExtIcon';
+
+// LadyTube: 拡張のページへのリンク (v3.1.14 までの server/ext/public/homelinks.js)。拡張のページなので <a> でページごと開く。
+// private の genrelist.js は a[href="/tags"] の後ろに「ジャンル一覧」を足す
+const EXT_HOME_LINKS = [
+    { href: '/bookmarks', icon: 'bookmark', label: 'ブックマーク' },
+    { href: '/release-calendar', icon: 'calendar-check', label: '公開カレンダー' },
+    { href: '/makers', icon: 'factory', label: 'メーカー一覧' },
+    { href: '/series', icon: 'library', label: 'シリーズ一覧' },
+    { href: '/performers', icon: 'users', label: '出演者一覧' },
+    { href: '/tags', icon: 'tag', label: 'タグ一覧' },
+];
 
 // Linaria styles
 const styles = {
@@ -354,24 +366,30 @@ export default function HomePage() {
                 {/* カルーセルセクション */}
                 <VideoCarousel videos={carouselVideos} showExtension={showExtension} />
 
-                {/* メニューセクション */}
+                {/* メニューセクション (LadyTube: 「すべての動画」の後ろは右上のメニュー (server/ext/public/nav.js の NAV_ITEMS) と同じ順) */}
                 <div className={styles.menuSection}>
                     <Link to="/search" className={styles.menuItem}>
                         <Search size={13} />
                         すべての動画
                     </Link>
-                    <Link to="/search?path=root" className={styles.menuItem}>
-                        <Folder size={13} />
-                        カテゴリー
+                    <Link to="/screenshots" className={styles.menuItem}>
+                        <Image size={13} />
+                        スクリーンショット
                     </Link>
                     <Link to="/calendar" className={styles.menuItem}>
                         <Calendar size={13} />
                         カレンダー
                     </Link>
-                    <Link to="/screenshots" className={styles.menuItem}>
-                        <Image size={13} />
-                        スクリーンショット
+                    <Link to="/search?path=root" className={styles.menuItem}>
+                        <Folder size={13} />
+                        カテゴリー
                     </Link>
+                    {EXT_HOME_LINKS.map(l => (
+                        <a key={l.href} href={l.href} className={styles.menuItem + ' wlext-home-link'}>
+                            <Icon name={l.icon} size={16} />
+                            {l.label}
+                        </a>
+                    ))}
                     <span
                         className={styles.menuItem}
                         onClick={() => setShowQR(true)}
