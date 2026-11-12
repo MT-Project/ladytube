@@ -226,11 +226,11 @@
 .wlext-genre-chip::before { content: "ジャンル: "; opacity: 0.6; }
 .wlext-genre-chip:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
 
-/* ---- スクリーンショット表示サイズ変更 (本家クラスをプロパティ名の属性セレクタで参照。ハッシュはビルド毎に変わるため) ---- */
-[class*="screenshotsSection_"] [class*="screenshotCard_"],
-[class*="screenshotsSection_"] [class*="screenshotImageWrapper_"],
-[class*="screenshotsSection_"] [class*="screenshotImage_"],
-[class*="screenshotsSection_"] .wlext-cover-card {
+/* ---- スクリーンショット表示サイズ変更 (幅は client/src/components/ExtWatchParts.jsx が欄に --wlext-ss-w / --wlext-ss-h で付ける) ---- */
+[data-wlext-std="screenshots"] [data-wlext-std="screenshot-card"],
+[data-wlext-std="screenshots"] [data-wlext-std="screenshot-wrapper"],
+[data-wlext-std="screenshots"] [data-wlext-std="screenshot-image"],
+[data-wlext-std="screenshots"] .wlext-cover-card {
     width: var(--wlext-ss-w, 160px) !important;
     height: var(--wlext-ss-h, 90px) !important;
 }
@@ -1382,7 +1382,7 @@ body.wlext-std [data-wlext-std="screenshots"],
 body.wlext-std [data-wlext-std="info"],
 body.wlext-std [data-wlext-std="imagelist"],
 body.wlext-std .wlext-std-pane {
-    position: fixed !important;   /* スクショの大きさ変更(ssresize.js)が relative を直書きするので上書き */
+    position: fixed !important;   /* スクショの大きさ変更 (ExtWatchParts.jsx) が欄に relative を直に付けるので上書き */
     top: calc(var(--wlext-std-top, 56px) + var(--wlext-std-head)); right: 0; bottom: 0;
     width: var(--wlext-std-w); margin: 0 !important; padding: 8px 12px 5rem;   /* 下は右下のボタン列の分あけてスクロールで出せるように */
     box-sizing: border-box; overflow-y: auto; background: var(--bg-primary, #111); z-index: 15;

@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
+import { ScreenshotSizeSlider } from '../components/ExtWatchParts';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Pencil, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -1185,6 +1186,7 @@ export default function WatchPage() {
                             <div className={styles.noScreenshots} data-wlext-std="no-screenshots">スクリーンショットはありません</div>
                         )}
                     </div>
+                    {screenshots.length > 0 && <ScreenshotSizeSlider /> /* LadyTube: 表示サイズ */}
                 </div>
 
                 {/* Title & Tags (Full width) */}
