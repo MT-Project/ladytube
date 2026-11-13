@@ -288,7 +288,11 @@ export default function Navbar() {
             <nav className={styles.nav}>
                 <div className={styles.logoContainer}>
                     <Link to="/" className={styles.logoLink} title="ホーム">
-                        <span className={styles.logoText}>LadyTube</span>
+                        <span className={styles.logoText}>
+                            {/* LadyTube: ロゴの画像 (明るい表示 / ダークモード。切り替えは index.css の .lt-logo) */}
+                            <img src="/Logo-logo.png" alt="LadyTube" className="lt-logo lt-logo-light" />
+                            <img src="/Logo-logo-dark.png" alt="LadyTube" className="lt-logo lt-logo-dark" />
+                        </span>
                         <span className={styles.logoHomeIcon}>
                             <Home size={20} strokeWidth={1.5} />
                         </span>

@@ -140,3 +140,9 @@ a {
     1px -1px 3px #000,
     -1px 1px 3px #000 !important;
 }
+
+/* LadyTube: 左上のロゴ (Navbar.jsx と、拡張のページの共通ヘッダー server/ext/public/nav.js)。
+   元の画像は logo/Logo-logo.png。ダークモードは「Tube」を白にした Logo-logo-dark.png を出す */
+.lt-logo { height: 24px; width: auto; display: inline-block; vertical-align: middle; }
+.lt-logo-dark, .dark .lt-logo-light { display: none; }
+.dark .lt-logo-dark { display: inline-block; }

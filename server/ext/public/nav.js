@@ -271,7 +271,11 @@
     WL.pageHeader = function () {
         // ロゴ
         const logo = h('div', { class: 'wlext-logo' }, [
-            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'LadyTube'),
+            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, [
+                // ロゴの画像 (本体のヘッダーと同じ。明るい表示 / ダークモードの切り替えは client/src/index.css の .lt-logo)
+                h('img', { src: '/Logo-logo.png', alt: 'LadyTube', class: 'lt-logo lt-logo-light' }),
+                h('img', { src: '/Logo-logo-dark.png', alt: 'LadyTube', class: 'lt-logo lt-logo-dark' }),
+            ]),
             WL.libraryPill ? WL.libraryPill() : null,   // 使用中のライブラリ名 (library.js。2つ以上のときだけ)
         ]);
         // 検索
