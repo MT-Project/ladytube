@@ -505,6 +505,8 @@ function VideoCard({
 }) {
     const { showToast, showExtension, showDisplayName } = useUI();
     const coverSrc = useCoverThumb(video.id, coverThumbs);
+    // LadyTube: サムネの左上に「N本」やポスター表示の評価の行があるカードは、ミュートボタンをその下へずらす (ポスターは評価の行の下)
+    const volumeTop = extMeta && viewMode === 'grid-poster' ? '24px' : video.ext_group_count > 1 ? '26px' : undefined;
     const [isHovered, setIsHovered] = useState(false);
     const [isThumbnailHovered, setIsThumbnailHovered] = useState(false);
     const [progress, setProgress] = useState(0);
@@ -887,6 +889,7 @@ function VideoCard({
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsPreviewMuted(!isPreviewMuted); }}
                             onMouseDown={(e) => e.stopPropagation()}
                             className={`${styles.volumeButton} ${!isPreviewMuted ? 'active' : ''}`}
+                            style={volumeTop ? { top: volumeTop } : undefined}
                             title={isPreviewMuted ? 'ミュート' : '音声あり (動画が開始できない場合はミュートにしてください)'}
                         >
                             {isPreviewMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}

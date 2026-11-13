@@ -157,8 +157,9 @@ export function ExtTagRow({ genres, tags, className, badgeClass }) {
         return () => ro.disconnect();
     }, [sig]);
     const all = [genres.length ? 'ジャンル: ' + genres.join(' / ') : '', tags.length ? 'タグ: ' + tags.join(' / ') : ''].filter(Boolean).join('\n');
+    // 1行に収める (本体の枠 tagBadgeContainer は折り返す)
     return (
-        <div ref={ref} className={`${className} wlext-tagrow`}>
+        <div ref={ref} className={`${className} wlext-tagrow`} style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
             {genres.map((g, i) => <Fragment key={'g' + i}>{searchLink('@genre:"' + g + '"', g, 'wlext-genre-chip wlext-list-genre')}</Fragment>)}
             {genres.length > 0 && tags.length > 0 && <span className="wlext-tagsep">│</span>}
             {tags.map((t, i) => <span key={'t' + i} className={badgeClass}>{t}</span>)}

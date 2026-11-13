@@ -947,8 +947,7 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85); pointer-events: none; z-index: 2;
 }
-/* リスト表示: タグを1行に収め、あふれた分は「…」(マウスオーバーで全タグ) */
-[class*="tagBadgeContainer_"].wlext-tagrow { flex-wrap: nowrap; overflow: hidden; }
+/* リスト表示: タグを1行に収め、あふれた分は「…」(マウスオーバーで全タグ)。1行にするのは ExtCardParts.jsx の ExtTagRow */
 .wlext-tagrow > * { flex-shrink: 0; }
 .wlext-tag-ell { cursor: help; }
 
@@ -1330,10 +1329,7 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-group-badge:hover { background: var(--accent, #007acc); }
 a:has(> .wlext-sel-badge) .wlext-group-badge { left: 34px; }
 .poster .wlext-group-badge { top: auto; bottom: 34px; left: 4px; }
-/* 本家のミュートボタン(volumeButton_: プレビュー中だけ左上4px・32px角)は、左上に「N本」や
-   ポスター表示の評価行があるカードではその下へずらす (後の規則ほど優先: ポスターは評価行の下) */
-[class*="thumbnailWrapper_"]:has(> .wlext-group-badge) [class*="volumeButton_"] { top: 26px; }
-[class*="thumbnailWrapper_"]:has(> .wlext-card-meta-poster) [class*="volumeButton_"] { top: 24px; }
+/* 左上に「N本」やポスター表示の評価の行があるカードのミュートボタンは、VideoList.jsx がその下へずらす */
 
 /* 動画の一覧行 (まとめた動画の一覧 / 動画ページ右側の一覧) */
 .wlext-vrow-list { display: flex; flex-direction: column; gap: 4px; }
