@@ -12,9 +12,10 @@ import InitGuid from './InitGuid';
 import { Search, QrCode, X, Image, Calendar, Folder } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Icon } from '../components/ExtIcon';
+import ExtSlot from '../components/ExtSlot';
 
 // LadyTube: 拡張のページへのリンク (v3.1.14 までの server/ext/public/homelinks.js)。拡張のページなので <a> でページごと開く。
-// private の genrelist.js は a[href="/tags"] の後ろに「ジャンル一覧」を足す
+// 個人用モジュールなどのリンクは WLExt.homeLinks に足すと、これらの後ろ (QRコードの前) に並ぶ (ExtSlot。本体のクラスは className で渡す)
 const EXT_HOME_LINKS = [
     { href: '/bookmarks', icon: 'bookmark', label: 'ブックマーク' },
     { href: '/release-calendar', icon: 'calendar-check', label: '公開カレンダー' },
@@ -390,6 +391,7 @@ export default function HomePage() {
                             {l.label}
                         </a>
                     ))}
+                    <ExtSlot from="homeLinks" args={{ className: styles.menuItem }} />
                     <span
                         className={styles.menuItem}
                         onClick={() => setShowQR(true)}
