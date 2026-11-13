@@ -364,6 +364,7 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
   起動し直します(コンソール画面はそのまま。2回目以降は `-browser` を外すのでタブは増えません)。`ladytube.bat` 以外から
   起動したとき(bat が渡す `LADYTUBE_RESTART=1` が無いとき)は自動で再起動せず、次の起動から切り替わります。
 - 実装: `server/ext/library.js`、`server/ext/routes/library.js`、`server/ext/public/library.js`(と `api.js` の書き込みガード)。
+  ヘッダーのライブラリ名は `library.js` の `WL.libraryPill` が作り、本体のヘッダー(`Navbar.jsx` の `ExtSlot`)と拡張のページの共通ヘッダー(`nav.js` の `WL.pageHeader`)が置きます。
 
 ## 設定画面のサイドメニュー
 設定画面(本家の表記は「管理」)の左側に、設定項目の一覧を出します。

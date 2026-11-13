@@ -270,8 +270,10 @@
 
     WL.pageHeader = function () {
         // ロゴ
-        const logo = h('div', { class: 'wlext-logo' },
-            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'LadyTube'));
+        const logo = h('div', { class: 'wlext-logo' }, [
+            h('a', { class: 'wlext-brand', href: '/', onClick: (e) => { e.preventDefault(); WL.navigate('/'); } }, 'LadyTube'),
+            WL.libraryPill ? WL.libraryPill() : null,   // 使用中のライブラリ名 (library.js。2つ以上のときだけ)
+        ]);
         // 検索
         const input = h('input', { class: 'wlext-search-input', type: 'text', placeholder: '動画を検索...', spellcheck: 'false' });
         const submit = () => {

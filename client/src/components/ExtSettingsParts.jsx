@@ -11,27 +11,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Tag } from 'lucide-react';
 import { Icon } from './ExtIcon';
+import ExtSlot from './ExtSlot';
 
 export function ExtSettingsSection({ name }) {
-    const ref = useRef(null);
-    useLayoutEffect(() => {
-        const marker = ref.current;
-        const nodes = new Map();
-        const mount = () => {
-            const WL = window.WLExt;
-            const makers = !WL ? {} : name ? { [name]: (WL.settingsSections || {})[name] } : (WL.settingsExtras || {});
-            for (const [key, make] of Object.entries(makers)) {
-                if (!make || nodes.has(key) || !marker.parentNode) continue;
-                const node = make();
-                nodes.set(key, node);
-                marker.parentNode.insertBefore(node, marker);
-            }
-        };
-        mount();
-        window.addEventListener('DOMContentLoaded', mount, { once: true });   // 拡張は defer で読むので、まだの分は読み終わってから
-        return () => { window.removeEventListener('DOMContentLoaded', mount); nodes.forEach(n => n.remove()); };
-    }, [name]);
-    return <template ref={ref} />;
+    return name ? <ExtSlot from="settingsSections" name={name} /> : <ExtSlot from="settingsExtras" />;
 }
 
 // cls: { section, title, icon, box, desc, input, button } (SettingsPage の styles)

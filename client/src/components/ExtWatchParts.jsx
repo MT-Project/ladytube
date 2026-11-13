@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
+import ExtSlot from './ExtSlot';
 
 const SS_KEY = 'wlext_ss_size';
 const SS_MIN = 80, SS_MAX = 640, SS_DEFAULT = 160;   // 160px(本体の既定) の半分から横 640px まで
@@ -109,24 +110,7 @@ export function MobileActions({ videoId, boxClassName, buttonClassName }) {
 }
 
 export function ExtWatchExtras({ videoId, boxClassName, buttonClassName }) {
-    const ref = useRef(null);
-    useLayoutEffect(() => {
-        const marker = ref.current;
-        const nodes = new Map();
-        const mount = () => {
-            const extras = (window.WLExt && window.WLExt.watchExtras) || {};
-            for (const [key, make] of Object.entries(extras)) {
-                if (nodes.has(key) || !marker.parentNode) continue;
-                const node = make({ id: String(videoId), boxClass: boxClassName, buttonClass: buttonClassName });
-                nodes.set(key, node);
-                marker.parentNode.insertBefore(node, marker);
-            }
-        };
-        mount();
-        window.addEventListener('DOMContentLoaded', mount, { once: true });   // 拡張は defer で読むので、まだの分は読み終わってから
-        return () => { window.removeEventListener('DOMContentLoaded', mount); nodes.forEach(n => n.remove()); };
-    }, [videoId, boxClassName, buttonClassName]);
-    return <template ref={ref} />;
+    return <ExtSlot from="watchExtras" args={{ id: String(videoId), boxClass: boxClassName, buttonClass: buttonClassName }} />;
 }
 
 function fmtFrameTime(t) {

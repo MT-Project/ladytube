@@ -117,18 +117,16 @@
         if (mr.right > window.innerWidth - 8) menu.style.left = Math.max(8, window.innerWidth - 8 - mr.width) + 'px';
     }
 
-    function ensurePill() {
-        if (LIB.count < 2) return;   // ライブラリが1つ(既定のみ)なら出さない
-        document.querySelectorAll('nav a[href="/"]').forEach(a => {
-            const next = a.nextElementSibling;
-            if (next && next.classList.contains('wlext-libpill')) return;
-            const pill = h('button', { class: 'wlext-libpill', type: 'button', title: 'ライブラリ: ' + LIB.name + '（クリックで切り替え）' }, [
-                WL.icon('database', 14), h('span', { class: 'wlext-libpill-name' }, LIB.name), WL.icon('chevron-down', 14)
-            ]);
-            pill.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); if (menuEl) closeMenu(); else openMenu(pill); });
-            a.insertAdjacentElement('afterend', pill);
-        });
-    }
+    // ロゴの右のライブラリ名。置き場所は本体のヘッダー (Navbar.jsx の ExtSlot from="libraryPill") と
+    // 拡張のページの共通ヘッダー (nav.js の WL.pageHeader) が決める (v3.1.15 まではここが nav a[href="/"] を探して足していた)
+    WL.libraryPill = function () {
+        if (LIB.count < 2) return null;   // ライブラリが1つ(既定のみ)なら出さない
+        const pill = h('button', { class: 'wlext-libpill', type: 'button', title: 'ライブラリ: ' + LIB.name + '（クリックで切り替え）' }, [
+            WL.icon('database', 14), h('span', { class: 'wlext-libpill-name' }, LIB.name), WL.icon('chevron-down', 14)
+        ]);
+        pill.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); if (menuEl) closeMenu(); else openMenu(pill); });
+        return pill;
+    };
 
     /* ---------- 管理画面: ライブラリ セクション ---------- */
     // 置き場所は本体の管理画面 (SettingsPage.jsx の ExtSettingsSection name="library") が決める
@@ -286,6 +284,4 @@
         return block;
     }
     WL.settingsSections = Object.assign(WL.settingsSections || {}, { library: librarySection });
-
-    WL.onEnsure(ensurePill);
 })();
