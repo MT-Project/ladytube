@@ -78,19 +78,27 @@ const subscribeSs = (f) => { ssListeners.add(f); return () => ssListeners.delete
 // ブックマーク済みの動画は拡張 (bookmark.js の WL._bmIds) が持ち、変わると wlext-bookmarks-changed を投げる
 const subscribeBm = (f) => { window.addEventListener('wlext-bookmarks-changed', f); return () => window.removeEventListener('wlext-bookmarks-changed', f); };
 
-// カードのブックマークボタン (押すとフォルダを選ぶダイアログ) とスクリーンショットの枚数
+// ブックマークボタン (押すとフォルダを選ぶダイアログ)。fab は動画ページの右下の丸ボタン (ExtWatchMeta.jsx の ExtWatchFabs)
+export function ExtBookmarkButton({ id, fab }) {
+    const on = useSyncExternalStore(subscribeBm, () => { const s = window.WLExt && window.WLExt._bmIds; return !!(s && s.has(Number(id))); });
+    return (
+        <button className={'wlext-bm-btn' + (fab ? ' wlext-bm-watch wlext-bm-fab' : '') + (on ? ' on' : '')} data-vid={id}
+            title={on ? 'ブックマーク済み（クリックで編集）' : 'ブックマークに追加'}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openBookmarkDialog?.(id); }}>
+            {on
+                ? <svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                : <Icon name="bookmark-add" size="100%" />}
+        </button>
+    );
+}
+
+// カードのブックマークボタンとスクリーンショットの枚数
 export function ExtCardBadges({ id }) {
     const n = useSyncExternalStore(subscribeSs, () => ssCounts[id]);
-    const on = useSyncExternalStore(subscribeBm, () => { const s = window.WLExt && window.WLExt._bmIds; return !!(s && s.has(Number(id))); });
     useEffect(() => { if (n == null) askSsCount(id); }, [id, n]);
     return (
         <>
-            <button className={'wlext-bm-btn' + (on ? ' on' : '')} data-vid={id} title={on ? 'ブックマーク済み（クリックで編集）' : 'ブックマークに追加'}
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openBookmarkDialog?.(id); }}>
-                {on
-                    ? <svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    : <Icon name="bookmark-add" size="100%" />}
-            </button>
+            <ExtBookmarkButton id={id} />
             <span className={'wlext-ss-badge' + (n == null ? ' loading' : '')} data-vid={id} title={n == null ? 'スクリーンショット枚数' : 'スクリーンショット ' + n + ' 枚'}>
                 <Icon name="camera" size={14} />
                 <span className="wlext-ss-num">{n == null ? '' : String(n)}</span>

@@ -1,9 +1,9 @@
 /* =============================================================
    WomanLive 拡張 - ブックマーク (追加ボタン + フォルダ選択ダイアログ)
-   ・一覧のカード: 本体の画面 (client/src/components/ExtCardParts.jsx の ExtCardBadges) がボタンを置き、
-     押すと WL.openBookmarkDialog。ブックマーク済みかどうかは WL._bmIds を見て、変わると
-     wlext-bookmarks-changed で知らせる (v3.1.15 まではここがカードを探してボタンを足していた)
-   ・動画ページ: 表示動画名の後に追加ボタン
+   ボタンは本体の画面 (client/src/components/ExtCardParts.jsx の ExtBookmarkButton) が置く
+   (一覧のカードと動画ページの右下の丸ボタン)。押すと WL.openBookmarkDialog。ブックマーク済みかどうかは
+   WL._bmIds を見て、変わると wlext-bookmarks-changed で知らせる
+   (v3.1.15 まではここがカードを探してボタンを足し、動画ページのボタンを body に足していた)
    ============================================================= */
 (function () {
     'use strict';
@@ -19,35 +19,9 @@
             .catch(() => { loading = false; });
     }
 
-    function svgPlus() {
-        return WL.iconSvg('bookmark-add', '100%');
-    }
-    function svgOn() {
-        return '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>';
-    }
-
-    function paintBtn(btn) {
-        const vid = Number(btn.getAttribute('data-vid'));
-        const on = !!(WL._bmIds && WL._bmIds.has(vid));
-        btn.classList.toggle('on', on);
-        btn.innerHTML = on ? svgOn() : svgPlus();
-        btn.title = on ? 'ブックマーク済み（クリックで編集）' : 'ブックマークに追加';
-    }
-    // ここで作ったボタン (動画ページ) を塗り直し、本体の画面のボタンには知らせる
-    function repaintAll() {
-        document.querySelectorAll('.wlext-bm-btn.wlext-bm-fab').forEach(paintBtn);
-        window.dispatchEvent(new Event('wlext-bookmarks-changed'));
-    }
+    // ブックマークのボタンは本体の画面 (ExtCardParts.jsx の ExtBookmarkButton) が描くので、変わったことを知らせる
+    function repaintAll() { window.dispatchEvent(new Event('wlext-bookmarks-changed')); }
     WL.repaintBookmarks = repaintAll;
-
-    function makeBtn(vid) {
-        const btn = h('button', {
-            class: 'wlext-bm-btn', attrs: { 'data-vid': vid },
-            onClick: (e) => { e.preventDefault(); e.stopPropagation(); openDialog(vid); }
-        });
-        paintBtn(btn);
-        return btn;
-    }
 
     function setBookmarkedFromFolders(vid, folders) {
         if (!WL._bmIds) WL._bmIds = new Set();
@@ -113,21 +87,6 @@
         WL.dialog('ブックマーク', body, {});  // 変更は即時反映のため保存ボタンなし
     }
 
-    /* ---------- ボタン注入 ---------- */
-    // 動画ページ: 「動画情報取得」「タグ編集」と同じ FAB として配置
-    // (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集 の順になるよう最上段に置く)
-    function ensureWatch() {
-        const vid = WL.matchWatch(); if (!vid) return;
-        if (document.querySelector('.wlext-bm-fab')) return;
-        const btn = makeBtn(vid);
-        btn.classList.add('wlext-bm-watch', 'wlext-bm-fab');
-        document.body.appendChild(btn);
-    }
-
-    function ensure() {
-        ensureIds();
-        ensureWatch();
-    }
-    WL.onEnsure(ensure);
-    WL.onRoute(() => { if (!WL.matchWatch()) document.querySelectorAll('.wlext-bm-watch').forEach(e => e.remove()); });
+    // ブックマーク済みの動画を読む (どのページでも。本体の画面のボタンが WL._bmIds を見る)
+    WL.onEnsure(ensureIds);
 })();

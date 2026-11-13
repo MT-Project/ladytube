@@ -296,7 +296,7 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 - 旧形式の**フォルダID指定(`@bookmark:2`)も引き続き動きます**。名前に一致しないときにIDとして
   解釈するので、保存済みのリンクは壊れません。
 - フォルダ名に `"` が含まれるときだけ、一覧のリンクはID指定になります(検索トークンが壊れるため)。
-- 実装: カードのボタンは `client/src/components/ExtCardParts.jsx` の `ExtCardBadges`、フォルダを選ぶダイアログと動画ページのボタンは `server/ext/public/bookmark.js`。
+- 実装: ボタンは `client/src/components/ExtCardParts.jsx` の `ExtBookmarkButton`(カードは `ExtCardBadges`、動画ページの右下は `ExtWatchMeta.jsx` の `ExtWatchFabs` が置く)、フォルダを選ぶダイアログは `server/ext/public/bookmark.js`。
 
 ## メタデータ置換
 設定画面の本家「タグ置換」を「**メタデータ置換**」に差し替え、タグ以外のメタデータも一括置換できるようにします。
@@ -445,7 +445,7 @@ server/ext/
     serieslist.js       シリーズ一覧
     taglist.js          タグ一覧（サムネイル登録・タグ名/本数ソート・タグ検索）
     releasecal.js       公開カレンダー
-    bookmark.js         ブックマークのダイアログと動画ページの追加ボタン
+    bookmark.js         ブックマークのダイアログ（ブックマーク済みの動画の読み込み）
     bookmarklist.js     ブックマーク一覧ページ
     settings.js         管理画面の拡張の項目（置き場所は本体の SettingsPage.jsx が決める）
     library.js          ライブラリ（ヘッダーの切り替えメニュー・管理画面のセクション）
