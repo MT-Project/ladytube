@@ -3,7 +3,12 @@
   "name": "LadyTube",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/Logo-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/Logo-icon-512.png",
       "type": "image/png",
       "sizes": "512x512"
     }
