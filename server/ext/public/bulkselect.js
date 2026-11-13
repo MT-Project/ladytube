@@ -6,6 +6,8 @@
    ・WL.openVideoMenu(id, anchor): 動画単体の操作メニュー (「⋮」の近く)
    ・WL.closeBulkMenu(): メニューを閉じる
    操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。品番でまとめたカードは中の動画すべてが対象。
+   個人用モジュールなどは WL.videoMenuExtras に「項目を作る関数 (ids, close) => 要素」を足すと、
+   両方のメニューの「動画の削除」の上に並ぶ (ids は他の項目と同じ対象)。
    ============================================================= */
 (function () {
     'use strict';
@@ -21,6 +23,7 @@
             h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doTags(ids, done); } }, [WL.icon('tag', 15), h('span', null, 'タグ追加')]),
             h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doMeta(ids, done); } }, '✎ 詳細情報編集'),
             h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); doBookmark(ids); } }, [WL.icon('bookmark-add', 15), h('span', null, 'ブックマーク追加')]),
+            ...Object.values(WL.videoMenuExtras || {}).map(make => make(ids, closeMenu)),
             h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids, done); } }, '🗑 動画の削除'),
         ];
     }

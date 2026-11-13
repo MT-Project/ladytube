@@ -7,7 +7,10 @@
 // 標準モードでは右欄の列幅の最小値になる。スクリーンショットが無い動画では出さない (欄の幅も既定に戻る)。
 // モバイルの操作 (v3.1.11 までの server/ext/public/mobileact.js): 本体の「フォルダーを開く」「アプリで再生」はサーバー機で
 // 開くものなので、タッチ端末では代わりに「端末に保存」(ブラウザのダウンロード) と「アプリで開く」(Android は intent:、
-// ほかは別タブ) を出す。置くかどうかは WatchPage が決める。class の wlext-mobileact は private の metacheck.js も目印にする。
+// ほかは別タブ) を出す。置くかどうかは WatchPage が決める。
+// 個人用モジュールなどの欄 (ExtWatchExtras): WLExt.watchExtras に足された「欄を作る関数 ({ id, boxClass, buttonClass }) => 要素」を、
+// 足した順に「コーデック情報」の箱 (タッチ端末では MobileActions) の後ろへ置く。クラスは本体の箱とボタンのもの。
+// 動画が変わると作り直す (v3.1.15 までは private の metacheck.js が「コーデック情報」のボタンを探して足していた)。
 // コマ送り (v3.1.12 までの server/ext/public/framestep.js): Player がプレイヤーの枠の最後に置く。
 //  ・「,」で1コマ戻し / 「.」で1コマ送り (本体は Space と矢印しか使っていない)
 //  ・プレイヤー上の Shift+ホイールでも同じ。本体のホイール (5秒送り) は修飾キーを見ないので、document のキャプチャ段階で先に取る
@@ -103,6 +106,27 @@ export function MobileActions({ videoId, boxClassName, buttonClassName }) {
             </div>
         </div>
     );
+}
+
+export function ExtWatchExtras({ videoId, boxClassName, buttonClassName }) {
+    const ref = useRef(null);
+    useLayoutEffect(() => {
+        const marker = ref.current;
+        const nodes = new Map();
+        const mount = () => {
+            const extras = (window.WLExt && window.WLExt.watchExtras) || {};
+            for (const [key, make] of Object.entries(extras)) {
+                if (nodes.has(key) || !marker.parentNode) continue;
+                const node = make({ id: String(videoId), boxClass: boxClassName, buttonClass: buttonClassName });
+                nodes.set(key, node);
+                marker.parentNode.insertBefore(node, marker);
+            }
+        };
+        mount();
+        window.addEventListener('DOMContentLoaded', mount, { once: true });   // 拡張は defer で読むので、まだの分は読み終わってから
+        return () => { window.removeEventListener('DOMContentLoaded', mount); nodes.forEach(n => n.remove()); };
+    }, [videoId, boxClassName, buttonClassName]);
+    return <template ref={ref} />;
 }
 
 function fmtFrameTime(t) {

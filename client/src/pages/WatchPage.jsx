@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
-import { CoverCard, MobileActions, ScreenshotSizeSlider } from '../components/ExtWatchParts';
+import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
 import { ExtRating, ExtMetaBlock, ExtWatchFabs } from '../components/ExtWatchMeta';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
@@ -1326,6 +1326,8 @@ export default function WatchPage() {
 
                         {/* LadyTube: 端末に保存 / アプリで開く (タッチ端末のみ) */}
                         {isTouch && <MobileActions videoId={video.id} boxClassName={styles.infoBox} buttonClassName={styles.normalButton} />}
+                        {/* LadyTube: 個人用モジュールなどの欄 (メタデータチェックなど) */}
+                        <ExtWatchExtras videoId={video.id} boxClassName={styles.infoBox} buttonClassName={styles.normalButton} />
 
                         {/* Local execution commands (localhost only) */}
                         {isLocalhost && !isTouch && (

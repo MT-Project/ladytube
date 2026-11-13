@@ -437,7 +437,8 @@ server/ext/
     videometa.js        動画ページの拡張メタの読み込み/保存・編集/DMM検索/タグ編集のダイアログ
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
     standard.js         動画ページの標準モードの右欄の一覧（同じシリーズ・関連動画。切替と見出しは ExtStandard.jsx）
-    bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx）
+    bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx。
+                        WL.videoMenuExtras に足した項目もメニューに並べる）
     listselect.js       一覧ページの選択モード・一括削除
     performer.js        出演者ページ
     performerlist.js    出演者一覧
