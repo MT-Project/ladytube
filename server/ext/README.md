@@ -57,7 +57,8 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 表示サイズは**80px〜640px**の範囲で変更（既定 160px。16:9 の縦横比を維持）。
 - カバー画像（先頭のカバーカード）も同じサイズに追従します。
 - 変更したサイズはブラウザに保存され、次回訪問時も引き継がれます。
-- 実装: スライダーは `client/src/components/ExtWatchParts.jsx`(動画ページ `WatchPage.jsx` がスクリーンショットの欄の末尾に置く)。欄に付けた `--wlext-ss-w`/`--wlext-ss-h` を `womanlive-ext.css` がカードとカバーに当てます。
+- 実装: 枚数はカードの `client/src/components/ExtCardParts.jsx` の `ExtCardBadges`(描いたカードの分をまとめて `/ext/api/screenshots/counts` で取る)。
+  スライダーは `client/src/components/ExtWatchParts.jsx`(動画ページ `WatchPage.jsx` がスクリーンショットの欄の末尾に置く)。欄に付けた `--wlext-ss-w`/`--wlext-ss-h` を `womanlive-ext.css` がカードとカバーに当てます。
 
 ## コマ送り
 動画を1コマずつ進める／戻せます。本家のホイール操作（5秒送り）はそのままです。
@@ -187,7 +188,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 値は一覧 API (`/api/videos`) が一緒に返します(`routes/search.js` の `withCardFields`。メーカー・シリーズ・ジャンル・監督・出演者)。
 - 実装: `client/src/components/ExtCardParts.jsx`(検索画面のカードだけに出す。サムネのメーカー名とフォルダ名、評価の行も同じファイル)。
   見た目は `womanlive-ext.css` のクラス(`.wlext-maker-ov` / `.wlext-folder-ov` / `.wlext-card-meta` ほか)。
-  評価の行には、スクショ数(`screenshots.js`)とブックマーク(`bookmark.js`)が拡張側から入ります。
+  評価の行の末尾にブックマークボタンとスクショ数(`ExtCardBadges`。検索画面以外のカードにも出す)。
 
 ## 同じ品番の動画をまとめて表示
 検索画面で、品番(拡張メタデータ)が同じ動画を1枚のカードにまとめます。パート分割された作品向けです。
@@ -295,6 +296,7 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 - 旧形式の**フォルダID指定(`@bookmark:2`)も引き続き動きます**。名前に一致しないときにIDとして
   解釈するので、保存済みのリンクは壊れません。
 - フォルダ名に `"` が含まれるときだけ、一覧のリンクはID指定になります(検索トークンが壊れるため)。
+- 実装: カードのボタンは `client/src/components/ExtCardParts.jsx` の `ExtCardBadges`、フォルダを選ぶダイアログと動画ページのボタンは `server/ext/public/bookmark.js`。
 
 ## メタデータ置換
 設定画面の本家「タグ置換」を「**メタデータ置換**」に差し替え、タグ以外のメタデータも一括置換できるようにします。
@@ -433,7 +435,6 @@ server/ext/
     core.js             fetch フック（まとめたカードの手直し・関連動画の差し替え）・ルート検知・共通 UI（ダイアログ/チップ入力/クロッパ等）
     nav.js              ナビゲーション統一（単色アイコン/拡張ページの共通ヘッダー/メニューと検索ヘルプの中身/テーマ）
     videometa.js        動画ページの拡張メタの読み込み/保存・編集/DMM検索/タグ編集のダイアログ
-    screenshots.js      検索カードへスクショ枚数(カメラアイコン)を表示
     groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
     standard.js         動画ページの標準モードの右欄の一覧（同じシリーズ・関連動画。切替と見出しは ExtStandard.jsx）
     bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx）
@@ -444,7 +445,7 @@ server/ext/
     serieslist.js       シリーズ一覧
     taglist.js          タグ一覧（サムネイル登録・タグ名/本数ソート・タグ検索）
     releasecal.js       公開カレンダー
-    bookmark.js         ブックマーク追加ボタン/ダイアログ
+    bookmark.js         ブックマークのダイアログと動画ページの追加ボタン
     bookmarklist.js     ブックマーク一覧ページ
     settings.js         管理画面の拡張の項目（置き場所は本体の SettingsPage.jsx が決める）
     library.js          ライブラリ（ヘッダーの切り替えメニュー・管理画面のセクション）

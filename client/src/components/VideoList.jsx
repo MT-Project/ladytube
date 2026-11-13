@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { MoreVertical, Check, Volume2, VolumeX, Music, Layers } from 'lucide-react';
-import { ExtThumbOverlays, ExtCardMeta, ExtPerformers, ExtTagRow } from './ExtCardParts';
+import { ExtThumbOverlays, ExtCardMeta, ExtCardBadges, ExtPerformers, ExtTagRow } from './ExtCardParts';
 import { Link } from 'react-router-dom';
 import { css } from '@linaria/core';
 import { useUI } from '../contexts/UIContext';
@@ -917,6 +917,8 @@ function VideoCard({
                         <div className={styles.filename}>{filenameToDisplay}{video.display_name ? ` ${video.display_name}` : ''}</div>
                         {/* LadyTube: 検索画面ではフォルダ名をサムネ左下へ移し、ここには評価の行と出演者の行を置く */}
                         {!extMeta && <div className={styles.folderName}>{getFolderName(video.path)}</div>}
+                        {/* LadyTube: 検索画面以外のカードも、ブックマークボタンとスクショ数の行を置く (検索画面は ExtCardMeta の中) */}
+                        {!extMeta && <div className="wlext-card-meta"><ExtCardBadges id={video.id} /></div>}
                         {extMeta && viewMode !== 'grid-poster' && <ExtCardMeta video={video} list={viewMode === 'list'} />}
                         {extMeta && viewMode === 'list' && <ExtPerformers video={video} />}
                     </div>

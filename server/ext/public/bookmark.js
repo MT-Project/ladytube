@@ -1,6 +1,8 @@
 /* =============================================================
    WomanLive 拡張 - ブックマーク (追加ボタン + フォルダ選択ダイアログ)
-   ・検索一覧: フォルダ名の右側に追加ボタン
+   ・一覧のカード: 本体の画面 (client/src/components/ExtCardParts.jsx の ExtCardBadges) がボタンを置き、
+     押すと WL.openBookmarkDialog。ブックマーク済みかどうかは WL._bmIds を見て、変わると
+     wlext-bookmarks-changed で知らせる (v3.1.15 まではここがカードを探してボタンを足していた)
    ・動画ページ: 表示動画名の後に追加ボタン
    ============================================================= */
 (function () {
@@ -31,7 +33,11 @@
         btn.innerHTML = on ? svgOn() : svgPlus();
         btn.title = on ? 'ブックマーク済み（クリックで編集）' : 'ブックマークに追加';
     }
-    function repaintAll() { document.querySelectorAll('.wlext-bm-btn').forEach(paintBtn); }
+    // ここで作ったボタン (動画ページ) を塗り直し、本体の画面のボタンには知らせる
+    function repaintAll() {
+        document.querySelectorAll('.wlext-bm-btn.wlext-bm-fab').forEach(paintBtn);
+        window.dispatchEvent(new Event('wlext-bookmarks-changed'));
+    }
     WL.repaintBookmarks = repaintAll;
 
     function makeBtn(vid) {
@@ -51,6 +57,7 @@
     }
 
     /* ---------- フォルダ選択ダイアログ ---------- */
+    WL.openBookmarkDialog = openDialog;
     async function openDialog(vid) {
         let data;
         try { data = await WL.api.bmVideoFolders(vid); }
@@ -117,21 +124,9 @@
         document.body.appendChild(btn);
     }
 
-    // 一覧カード: 評価/スクショ数と同じ行へ (表示順は CSS の order で担保)
-    function ensureList() {
-        const root = document.getElementById('root'); if (!root) return;
-        root.querySelectorAll('a[href^="/watch/"]').forEach(card => {
-            const m = (card.getAttribute('href') || '').match(/\/watch\/(\d+)/); if (!m) return;
-            const row = WL.cardMetaRow(card); if (!row) return;
-            let btn = row.querySelector('.wlext-bm-btn');
-            if (!btn) { btn = makeBtn(m[1]); row.appendChild(btn); }
-        });
-    }
-
     function ensure() {
         ensureIds();
         ensureWatch();
-        ensureList();
     }
     WL.onEnsure(ensure);
     WL.onRoute(() => { if (!WL.matchWatch()) document.querySelectorAll('.wlext-bm-watch').forEach(e => e.remove()); });

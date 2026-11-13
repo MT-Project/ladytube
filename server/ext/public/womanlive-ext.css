@@ -956,7 +956,7 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-card-rating .wlext-rating { margin: 0; }
 .wlext-card-rating .wlext-star { font-size: 0.85rem; }
 
-/* ---- 評価/スクショ数/ブックマークの行 (タイトル直下。表示位置は WL.cardMetaRow が判定) ---- */
+/* ---- 評価/スクショ数/ブックマークの行 (タイトル直下、ポスター表示はサムネに重ねる。置くのは client/src/components/VideoList.jsx と ExtCardParts.jsx) ---- */
 .wlext-card-meta {
     display: flex; align-items: center; gap: 0.5rem;
     margin: 0.25rem 0 0.35rem;

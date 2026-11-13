@@ -54,23 +54,6 @@
         return 'hsl(' + (n % 360) + ', 42%, 40%)';
     };
 
-    // カードの評価/スクショ数/ブックマークをまとめる行。表示形式(グリッド/リスト/ポスター)に
-    // 応じて適切な位置(通常はタイトル直下、ポスターはサムネ上のオーバーレイ)へ配置する。
-    // bookmark/screenshots から呼ばれ、何度呼んでも同じ行を返す(冪等)。検索画面では本体の画面
-    // (client/src/components/ExtCardParts.jsx) が評価入りの行を先に置くので、それを見つけて返す。
-    WL.cardMetaRow = function (card) {
-        const isPoster = !!card.closest('.poster');
-        const parent = isPoster
-            ? card.querySelector('[class*="thumbnailWrapper_"]')
-            : (card.querySelector('[class*="filename_"]') || {}).parentElement;
-        if (!parent) return card.querySelector('.wlext-card-meta');
-        let row = card.querySelector('.wlext-card-meta');
-        if (!row) row = h('div', { class: 'wlext-card-meta' });
-        row.classList.toggle('wlext-card-meta-poster', isPoster);
-        if (row.parentElement !== parent) parent.appendChild(row);
-        return row;
-    };
-
     // クリック可能カードを <a href> 化するヘルパー。中クリック/Ctrl+クリック等は
     // ブラウザ標準の新規タブ動作に任せ、通常の左クリックだけ SPA 風のフルリロード遷移にする。
     WL.navA = function (url, props, children) {
