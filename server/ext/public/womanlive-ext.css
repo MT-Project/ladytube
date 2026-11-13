@@ -469,7 +469,7 @@
 .wlext-cropper-fit { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
 
 /* =============================================================
-   出演者ページ (React 未定義ルート /performer/:id を拡張で描画)
+   出演者ページ (/performer/:id。置き場所は本体の ExtPage.jsx)
    ============================================================= */
 .wlext-performer-page {
     position: fixed; inset: 0; z-index: 4000;

@@ -441,6 +441,7 @@ server/ext/
     bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx。
                         WL.videoMenuExtras に足した項目もメニューに並べる）
     listselect.js       一覧ページの選択モード・一括削除
+    (以下のページは WL.extPages に登録し、置き場所は本体の client/src/components/ExtPage.jsx が決める)
     performer.js        出演者ページ
     performerlist.js    出演者一覧
     makerlist.js        メーカー一覧（画像登録・情報編集・FANZAからの情報取得）

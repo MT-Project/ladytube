@@ -5,6 +5,7 @@ import WatchPage from './pages/WatchPage';
 import SettingsPage from './pages/SettingsPage';
 import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
 import CalendarPage from './pages/CalendarPage';
+import ExtPage from './components/ExtPage';
 import { UIProvider } from './contexts/UIContext';
 
 function App() {
@@ -18,6 +19,8 @@ function App() {
           <Route path="/watch/:id" element={<WatchPage />} />
           <Route path="/screenshots" element={<ScreenshotGalleryPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          {/* LadyTube: 拡張のページ (/makers・/performer/:id など。中身は server/ext/public の各ファイル) */}
+          <Route path="*" element={<ExtPage />} />
         </Routes>
       </UIProvider>
     </BrowserRouter>

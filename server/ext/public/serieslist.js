@@ -7,20 +7,12 @@
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
-    function ensure() {
-        const on = location.pathname === '/series';
-        const existing = document.querySelector('.wlext-series-page');
-        if (!on) { if (existing) existing.remove(); return; }
-        if (existing) return;
-        render();
-    }
-
-    async function render() {
+    async function render(params, mount) {
         const page = h('div', { class: 'wlext-series-page wlext-ext-page' });
         page.appendChild(WL.pageHeader());
         const container = h('div', { class: 'wlext-pp-container' }, h('div', { style: { color: 'var(--text-secondary,#888)' } }, '読み込み中...'));
         page.appendChild(container);
-        document.body.appendChild(page);
+        mount(page);
         window.scrollTo(0, 0);
         WL.setDocTitle('シリーズ一覧');
 
@@ -87,5 +79,7 @@
         WL.listSelect({ page, kind: 'series', kindLabel: 'シリーズ' });
     }
 
-    WL.onEnsure(ensure);
+    // 置き場所は本体 (client/src/components/ExtPage.jsx。App.jsx の最後のルート) が決め、URL が合うと render(params, mount) を呼ぶ
+    // (v3.1.15 までは onEnsure で URL を見て、ここが body に足していた)
+    WL.extPages = Object.assign(WL.extPages || {}, { '/series': render });
 })();

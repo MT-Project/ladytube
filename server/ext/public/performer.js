@@ -1,31 +1,16 @@
 /* =============================================================
-   WomanLive 拡張 - 出演者ページ (React 未定義ルート /performer/:id を描画)
+   WomanLive 拡張 - 出演者ページ (/performer/:id)
    ============================================================= */
 (function () {
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
-    let currentId = null;
-
-    function ensure() {
-        const id = WL.matchPerformer();
-        const existing = document.querySelector('.wlext-performer-page');
-        if (!id) {
-            if (existing) { existing.remove(); currentId = null; }
-            return;
-        }
-        if (existing && currentId === id) return;
-        if (existing) existing.remove();
-        currentId = id;
-        renderPage(id);
-    }
-
-    async function renderPage(id) {
+    async function renderPage({ id }, mount) {
         const page = h('div', { class: 'wlext-performer-page' });
         page.appendChild(WL.pageHeader());
         const container = h('div', { class: 'wlext-pp-container' }, h('div', null, '読み込み中...'));
         page.appendChild(container);
-        document.body.appendChild(page);
+        mount(page);
         WL.setDocTitle('出演者');
 
         let perf;
@@ -299,5 +284,7 @@
         });
     }
 
-    WL.onEnsure(ensure);
+    // 置き場所は本体 (client/src/components/ExtPage.jsx。App.jsx の最後のルート) が決め、URL が合うと render(params, mount) を呼ぶ
+    // (v3.1.15 までは onEnsure で URL を見て、ここが body に足していた)
+    WL.extPages = Object.assign(WL.extPages || {}, { '/performer/:id': renderPage });
 })();
