@@ -1,0 +1,108 @@
+// LadyTube: ブックマーク (/bookmarks)。ブックマークのフォルダをサムネイル・本数・平均評価で並べる。
+// 並び替え: フォルダ名 / 動画本数 / 評価 (保存しない)。フォルダの追加・名称変更・削除。サムネイルか名前を押すとそのフォルダを検索。
+// v3.2.1 までは拡張の server/ext/public/bookmarklist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
+// API・ダイアログ・通知は拡張の WL.* (api.js・core.js。React より先に読まれる)
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
+import { ExtStars } from '../components/ExtCardParts';
+
+const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
+const muted = { color: 'var(--text-secondary,#888)' };
+
+function compare(order) {
+    const nameCompare = window.WLExt.nameCompare;
+    const dir = order.dir === 'asc' ? 1 : -1;
+    return (a, b) => {
+        const byName = nameCompare(a.name || '', b.name || '');
+        if (order.sort === 'name') return byName * dir;
+        if (order.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || byName;
+        // 評価: 未評価 (null) は向きによらず末尾
+        const ra = a.avgRating, rb = b.avgRating;
+        if (ra == null && rb == null) return byName;
+        if (ra == null) return 1;
+        if (rb == null) return -1;
+        return (ra - rb) * dir || byName;
+    };
+}
+
+// フォルダ名を1つ入れるダイアログ (追加・名称変更)。save(name) が済んだら閉じて onDone
+function nameDialog(title, saveLabel, value, save, onDone, emptyToast) {
+    const WL = window.WLExt, h = WL.h;
+    const input = h('input', value == null ? { class: 'wlext-input', placeholder: 'フォルダ名' } : { class: 'wlext-input', value });
+    WL.dialog(title, h('div', { class: 'wlext-field' }, [h('label', null, 'フォルダ名'), input]), {
+        saveLabel,
+        onSave: async (close) => {
+            const name = input.value.trim();
+            if (!name) { if (emptyToast) WL.toast('フォルダ名を入力してください', 'error'); return; }
+            try { await save(name); close(); onDone(); } catch (e) { WL.toast(saveLabel + 'に失敗: ' + e.message, 'error'); }
+        },
+    });
+    setTimeout(() => input.focus(), 50);
+}
+
+function deleteDialog(s, onDone) {
+    const WL = window.WLExt;
+    WL.dialog('フォルダを削除', WL.h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } }, '「' + s.name + '」を削除します（中のブックマークも削除されます。動画自体は削除されません）。よろしいですか？'), {
+        saveLabel: '削除する',
+        onSave: async (close) => { try { await WL.api.bmDeleteFolder(s.id); close(); onDone(); } catch (e) { WL.toast('削除に失敗: ' + e.message, 'error'); } },
+    });
+}
+
+function FolderCard({ s, reload }) {
+    // フォルダ名で検索する。名前に " を含むとトークンが壊れるので、そのときだけ ID で指定する
+    const token = String(s.name || '').includes('"') ? ('@bookmark:' + s.id) : ('@bookmark:"' + s.name + '"');
+    const url = '/search?q=' + encodeURIComponent(token);
+    return (
+        <div className="wlext-series-card">
+            <Link to={url} className="wlext-video-thumb" title="開く">
+                {s.thumbId
+                    ? <img src={'/api/video/' + s.thumbId + '/thumbnail'} loading="lazy" alt={s.name} />
+                    : <div className="noimg">NO IMAGE</div>}
+                <div className="wlext-series-count" title={s.count + '本'}>{String(s.count)}</div>
+            </Link>
+            <Link to={url} className="wlext-series-name" style={{ cursor: 'pointer' }} title="開く">{s.name || '(無題)'}</Link>
+            <div className="wlext-series-rating">
+                {s.avgRating != null
+                    ? <><ExtStars value={Math.round(s.avgRating)} /><span className="wlext-series-ratingnum">{s.avgRating.toFixed(1)}</span></>
+                    : <span style={{ ...muted, fontSize: '0.75rem' }}>評価なし</span>}
+            </div>
+            <div className="wlext-bm-actions">
+                <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => window.WLExt.api.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
+                <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}>🗑削除</span>
+            </div>
+        </div>
+    );
+}
+
+export default function BookmarksPage() {
+    const [list, setList] = useState(null);
+    const [error, setError] = useState(null);
+    const [order, setOrder] = useState({ sort: 'name', dir: 'asc' });
+
+    useEffect(() => {
+        window.WLExt.api.bmFolders().then(setList, e => setError(e.message));
+    }, []);
+
+    if (error) return <ExtListPage title="ブックマーク"><div>{'読み込みに失敗しました: ' + error}</div></ExtListPage>;
+    if (!list) return <ExtListPage title="ブックマーク"><div style={muted}>読み込み中...</div></ExtListPage>;
+
+    const reload = () => window.WLExt.api.bmFolders().then(setList, () => { });
+    const sorted = list.slice().sort(compare(order));
+    return (
+        <ExtListPage title="ブックマーク">
+            <ExtPageTitle icon="bookmark" text={'ブックマーク（' + list.length + 'フォルダ）'} />
+            <div className="wlext-plist-controls">
+                <ExtSortRow defs={SORTS} order={order} onChange={setOrder} />
+                <div className="wlext-plist-sortrow">
+                    <button className="wlext-btn" onClick={() => nameDialog('フォルダを追加', '追加', null, (name) => window.WLExt.api.bmCreateFolder(name), reload, true)}>＋ フォルダを追加</button>
+                </div>
+            </div>
+            <div className="wlext-series-grid">
+                {sorted.length
+                    ? sorted.map(s => <FolderCard key={s.id} s={s} reload={reload} />)
+                    : <div style={muted}>ブックマークフォルダがありません。「＋ フォルダを追加」または各動画の🔖ボタンから作成できます。</div>}
+            </div>
+        </ExtListPage>
+    );
+}

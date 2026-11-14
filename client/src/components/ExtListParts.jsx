@@ -69,7 +69,7 @@ export function ExtListFabs({ sel, items, kind, kindLabel }) {
 }
 
 // 並び替えの行 (拡張の WL.sortRow と同じ形)。defs は [キー, 表示名, 既定の向き] の並び、order は { sort, dir }。
-// 押すと同じキーなら向きを変え、違うキーならそのキーの既定の向き。storeKey に保存する (戻すのは utils/formatters.js の storedSort)
+// 押すと同じキーなら向きを変え、違うキーならそのキーの既定の向き。storeKey があれば保存する (戻すのは utils/formatters.js の storedSort)
 export function ExtSortRow({ defs, order, onChange, storeKey }) {
     return (
         <div className="wlext-plist-sortrow">
@@ -78,7 +78,7 @@ export function ExtSortRow({ defs, order, onChange, storeKey }) {
                 const active = order.sort === key;
                 const choose = () => {
                     const next = active ? { sort: key, dir: order.dir === 'asc' ? 'desc' : 'asc' } : { sort: key, dir: defDir || 'asc' };
-                    try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* 保存できなくても並び替える */ }
+                    if (storeKey) { try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* 保存できなくても並び替える */ } }
                     onChange(next);
                 };
                 return (

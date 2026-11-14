@@ -10,6 +10,7 @@ import SeriesPage from './pages/SeriesPage';
 import TagsPage from './pages/TagsPage';
 import PerformersPage from './pages/PerformersPage';
 import MakersPage from './pages/MakersPage';
+import BookmarksPage from './pages/BookmarksPage';
 import { UIProvider } from './contexts/UIContext';
 
 function App() {
@@ -25,12 +26,13 @@ function App() {
           <Route path="/calendar" element={<CalendarPage />} />
           {/* LadyTube: 公開カレンダー (公開日で年月別。v3.2.1 までは拡張のページ。key でカレンダーとは別のものとして置く) */}
           <Route path="/release-calendar" element={<CalendarPage key="release" release />} />
-          {/* LadyTube: シリーズ一覧・タグ一覧・出演者一覧・メーカー一覧 (v3.2.1 までは拡張のページ) */}
+          {/* LadyTube: シリーズ一覧・タグ一覧・出演者一覧・メーカー一覧・ブックマーク (v3.2.1 までは拡張のページ) */}
           <Route path="/series" element={<SeriesPage />} />
           <Route path="/tags" element={<TagsPage />} />
           <Route path="/performers" element={<PerformersPage />} />
           <Route path="/makers" element={<MakersPage />} />
-          {/* LadyTube: 拡張のページ (/performer/:id・/bookmarks など。中身は server/ext/public の各ファイル) */}
+          <Route path="/bookmarks" element={<BookmarksPage />} />
+          {/* LadyTube: 拡張のページ (/performer/:id など。中身は server/ext/public の各ファイル) */}
           <Route path="*" element={<ExtPage />} />
         </Routes>
       </UIProvider>
