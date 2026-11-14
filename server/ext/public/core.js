@@ -1,6 +1,5 @@
 /* =============================================================
    WomanLive 拡張 - コア
-   ・fetch フック (品番でまとめたカードの手直し / 関連動画の差し替え)
    ・SPA ルート検知
    ・DOM 監視 (React 再描画後の再注入)
    ・共通 UI (ライトボックス / トースト / チップ入力 など)
@@ -8,7 +7,6 @@
 (function () {
     'use strict';
     const WL = window.WLExt;
-    const origFetch = WL._rawFetch || window.fetch.bind(window);
 
     /* ---------- 小道具 ---------- */
     function h(tag, props, children) {
@@ -169,74 +167,14 @@
 
     // 拡張ページ共通ヘッダー (本家ヘッダーと統一: ロゴ/検索/操作) は nav.js が定義。
 
-    /* ---------- fetch フック ---------- */
-    function jsonResponse(data) {
-        return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }
+    // (v3.2.1 までは、ここに本家 API を包む fetch フックがあった: まとめたカードの手直し・タグの複製・関連動画の差し替え。
+    //  今はサーバー (search.js・videoService.js) と本体の画面 (VideoList.jsx・SearchPage.jsx) が行う)
+
     // 表示動画名を使うかどうか (表示設定の「動画表示名で表示する」。既定はON)。
     // 一覧と動画ページの名前は本体の画面 (client/src/utils/formatters.js の videoName) が出す。
     // ここは拡張の UI (品番でまとめたパートの一覧など) が同じ設定を読むためのもの。
     WL.useDisplayName = () => {
         try { return localStorage.getItem('wlext_use_display_name') !== '0'; } catch (e) { return true; }
-    };
-
-    // 検索画面で同じ品番の動画を1枚のカードにまとめるか (既定はON)。トグルは本体の検索画面
-    // (client/src/pages/SearchPage.jsx) にあり、同じキーに書く。ここは拡張の UI (一括操作・絞り込み) が読むためのもの
-    WL.groupByModel = () => {
-        try { return localStorage.getItem('wlext_group_model') !== '0'; } catch (e) { return true; }
-    };
-    const grouping = () => location.pathname === '/search' && WL.groupByModel();
-
-    // まとめたカードの中身: 代表 id -> メンバーの id (ファイル名順)。一括操作・「N本」の一覧で使う
-    WL._groupIds = WL._groupIds || {};
-    WL.groupMembers = (id) => WL._groupIds[id] || [Number(id)];
-    function applyGroups(list) {
-        if (!Array.isArray(list)) return;
-        list.forEach(v => {
-            if (!v || !(v.ext_group_count > 1)) return;
-            WL._groupIds[v.id] = String(v.ext_group_ids || '').split(',').map(Number).filter(n => n > 0);
-            // カードの名前はパート番号を外す (「…vol.5_1.mp4」→「…vol.5.mp4」、表示動画名「…_1」→「…」)
-            v.filename = String(v.filename).replace(/_\d+(\.[^.\\/]+)?$/, '$1');
-            if (v.ext_display_name) v.ext_display_name = String(v.ext_display_name).replace(/_\d+$/, '');
-        });
-    }
-
-    // 検索そのもの (項目検索・品番でまとめる・件数) はサーバーの /api/videos と /api/videos/count が
-    // 拡張の search.js で行う。ここでは一覧の結果に、まとめたカードの手直しだけをする。
-    async function handleVideosFetch(input, init) {
-        const r = await origFetch(input, init);
-        if (!r.ok) return r;
-        try {
-            const data = await r.clone().json();
-            applyGroups(data.videos);
-            return jsonResponse(data);
-        } catch (e) { return r; }
-    }
-
-    // (v3.2.1 までは /api/video/:id の結果の関連動画もここで差し替えていた。今は本体のサーバー
-    //  (server/services/videoService.js の getVideo) が拡張の related.js を呼んで返す)
-
-    // グリッド表示の⋮(本家のタグメニュー)は代表の動画1本にタグを付け外しする。
-    // 品番でまとめたカードでは、同じ変更を中の動画すべてへ送る。
-    async function handleGroupTagFetch(id, url, input, init) {
-        const r = await origFetch(input, init);
-        if (r.ok) {
-            const others = WL.groupMembers(id).filter(x => x !== Number(id));
-            await Promise.all(others.map(o => origFetch(url.replace('/api/video/' + id + '/', '/api/video/' + o + '/'), init).catch(() => { })));
-        }
-        return r;
-    }
-
-    window.fetch = function (input, init) {
-        try {
-            const url = typeof input === 'string' ? input : (input && input.url) || '';
-            if (typeof input === 'string') {
-                const mt = url.match(/\/api\/video\/(\d+)\/tags(\?|$)/);
-                if (mt && init && /^(POST|DELETE)$/i.test(init.method || '') && grouping()) return handleGroupTagFetch(mt[1], url, input, init);
-                if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(input, init);
-            }
-        } catch (e) { /* fall through */ }
-        return origFetch(input, init);
     };
 
     /* ---------- ルート検知 ---------- */

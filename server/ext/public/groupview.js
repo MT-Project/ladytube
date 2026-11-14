@@ -2,7 +2,7 @@
    WomanLive 拡張 - 同じ品番の動画をまとめて表示 (検索画面)
    トグルと「N本」バッジは本体の画面 (client/src/pages/SearchPage.jsx・components/VideoList.jsx) が出す。
    まとめる処理はサーバー (search.js の groupedVideos)。ここに残すのは次の2つ:
-   ・WL.openGroupMembers(id): 「N本」を押したときの、まとめた動画の一覧 (選んで再生できる)
+   ・WL.openGroupMembers(id, ids): 「N本」を押したときの、まとめた動画の一覧 (選んで再生できる)。ids は本体の画面が渡す中の動画
    ・WL.videoRow(v, opts): 一覧の1行 (動画ページ右側の一覧 standard.js と共用)
    ============================================================= */
 (function () {
@@ -28,8 +28,7 @@
         ]);
     };
 
-    WL.openGroupMembers = async (id) => {
-        const ids = WL.groupMembers(id);
+    WL.openGroupMembers = async (id, ids = [Number(id)]) => {
         const list = h('div', { class: 'wlext-vrow-list' }, h('div', { class: 'wlext-facets-msg' }, '読み込み中...'));
         const close = WL.dialog('まとめた動画（' + ids.length + '本）', list);
         try {

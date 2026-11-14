@@ -3,9 +3,10 @@
    選択モードの丸ボタン・カードのチェック・リスト表示の「⋮」は本体の画面
    (client/src/components/ExtSelection.jsx・components/VideoList.jsx) が出し、ここを呼ぶ:
    ・WL.toggleBulkMenu(ids, done): 一括操作メニュー (右下)。開いていれば閉じる。done は操作が終わったら呼ぶ (選択の解除)
-   ・WL.openVideoMenu(id, anchor): 動画単体の操作メニュー (「⋮」の近く)
+   ・WL.openVideoMenu(id, anchor, ids): 動画単体の操作メニュー (「⋮」の近く)
    ・WL.closeBulkMenu(): メニューを閉じる
-   操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。品番でまとめたカードは中の動画すべてが対象。
+   操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。品番でまとめたカードは中の動画すべてが対象で、
+   その ids は本体の画面が広げて渡す (v3.2.1 まではここが core.js の WL.groupMembers で広げていた)。
    個人用モジュールなどは WL.videoMenuExtras に「項目を作る関数 (ids, close) => 要素」を足すと、
    両方のメニューの「動画の削除」の上に並ぶ (ids は他の項目と同じ対象)。
    ============================================================= */
@@ -27,14 +28,8 @@
             h('div', { class: 'wlext-sel-menu-item danger', onClick: () => { closeMenu(); doDelete(ids, done); } }, '🗑 動画の削除'),
         ];
     }
-    // 品番でまとめたカードは、中の動画すべてを対象にする
-    function expand(ids) {
-        if (!WL.groupByModel()) return ids;
-        return [...new Set(ids.flatMap(id => WL.groupMembers(id)))];
-    }
-    WL.toggleBulkMenu = (selectedIds, done) => {
+    WL.toggleBulkMenu = (ids, done) => {
         if (menuEl) { closeMenu(); return; }
-        const ids = expand(selectedIds);
         if (!ids.length) return;
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-sel-menu' }, [
@@ -46,10 +41,9 @@
     };
 
     // 動画単体の操作メニュー (リスト表示の「⋮」から開く・ボタン近くにアンカー)
-    WL.openVideoMenu = (id, anchor) => {
+    WL.openVideoMenu = (id, anchor, ids = [Number(id)]) => {
         closeMenu();
         menuBackdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
-        const ids = expand([id]);
         menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, [
             ids.length > 1 ? h('div', { class: 'wlext-sel-menu-head' }, 'まとめた ' + ids.length + '本を操作') : null,
             ...menuItems(ids, null),

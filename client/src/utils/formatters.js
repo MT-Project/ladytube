@@ -75,6 +75,11 @@ export function videoName(video, showExtension, showDisplayName) {
     return showExtension ? disp + filename.slice(removeExtension(filename).length) : disp;
 }
 
+// LadyTube: 品番でまとめたカードの中の動画の id (サーバーが group=1 のときだけ ext_group_ids を返す)。まとめていなければその動画だけ
+export function groupMemberIds(video) {
+    return video.ext_group_ids ? String(video.ext_group_ids).split(',').map(Number).filter(n => n > 0) : [video.id];
+}
+
 // LadyTube: 公開日 (拡張メタデータの release_date。'YYYY-MM-DD' を端末の日付として読む) を「2024/03/15」に
 function parseYmd(s) {
     const m = String(s || '').trim().replace(/[./]/g, '-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);

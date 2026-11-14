@@ -11,7 +11,7 @@ import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { LayoutGrid, Grid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder, Layers } from 'lucide-react';
 import { theme } from '../theme';
-import { removeExtension } from '../utils/formatters';
+import { removeExtension, groupMemberIds } from '../utils/formatters';
 
 // Linaria styles
 const styles = {
@@ -368,6 +368,8 @@ export default function SearchPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
+  // LadyTube: 品番でまとめたカードの中の動画 (代表の id → 中の id)。選んだ動画はページを移っても残るので、読んだページの分を控えて一括操作に渡す
+  const groupMembersRef = useRef(new Map());
   const [totalCount, setTotalCount] = useState(0);
   const [showDelayedLoading, setShowDelayedLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -496,6 +498,7 @@ export default function SearchPage() {
         }
         setShowDelayedLoading(false);
         setVideos(data.videos || []);
+        (data.videos || []).forEach(v => { if (v.ext_group_ids) groupMembersRef.current.set(v.id, groupMemberIds(v)); });
 
         const savedScroll = sessionStorage.getItem('searchPageScroll');
         if (savedScroll) {
@@ -877,6 +880,7 @@ export default function SearchPage() {
           )}
         </div>
         <ExtSelectionFabs selectionMode={selectionMode} selectedIds={selectedIds}
+          expandIds={(ids) => groupByModel ? [...new Set(ids.flatMap(id => groupMembersRef.current.get(id) || [id]))] : ids}
           onToggleMode={toggleSelectionMode} onSelectAll={selectAllVisible} onDeselectAll={deselectAll} />
 
         {/* Pagination */}

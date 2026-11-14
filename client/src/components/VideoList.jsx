@@ -6,7 +6,7 @@ import { css } from '@linaria/core';
 import { useUI } from '../contexts/UIContext';
 import { api } from '../services/api';
 import { theme } from '../theme';
-import { getFolderName, videoName } from '../utils/formatters';
+import { getFolderName, videoName, groupMemberIds } from '../utils/formatters';
 import { useMsePlayback } from './Player/useMsePlayback';
 import LoadingDots from './LoadingDots';
 
@@ -728,6 +728,8 @@ function VideoCard({
             } else {
                 await api.addTag(video.id, tagName);
             }
+            // LadyTube: 品番でまとめたカードは、中の他の動画にも同じ変更を送る (v3.2.1 までは拡張の core.js の fetch フックが送っていた)
+            await Promise.all(groupMemberIds(video).filter(x => x !== video.id).map(o => (hasTag ? api.removeTag : api.addTag)(o, tagName).catch(() => { })));
 
             const nextTags = hasTag
                 ? currentTags.filter(t => t !== tagName)
@@ -908,7 +910,7 @@ function VideoCard({
                     押すとまとめた動画の一覧を出す (server/ext/public/groupview.js)。見た目は womanlive-ext.css の .wlext-group-badge */}
                 {video.ext_group_count > 1 && (
                     <div className="wlext-group-badge" title="まとめた動画を一覧で表示"
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openGroupMembers?.(video.id); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openGroupMembers?.(video.id, groupMemberIds(video)); }}
                     >
                         <Layers size={12} /><span>{video.ext_group_count}本</span>
                     </div>
@@ -932,7 +934,7 @@ function VideoCard({
                             // LadyTube: 検索画面のリスト表示では「⋮」を動画単体の操作メニューにする (server/ext/public/bulkselect.js)
                             if (!window.WLExt?.openVideoMenu) return;
                             e.preventDefault(); e.stopPropagation();
-                            window.WLExt.openVideoMenu(video.id, e.currentTarget.firstElementChild || e.currentTarget);
+                            window.WLExt.openVideoMenu(video.id, e.currentTarget.firstElementChild || e.currentTarget, groupMemberIds(video));
                         } : undefined}
                     >
                         <div

@@ -215,7 +215,15 @@ function respond(req, res, countOnly) {
                 ORDER BY ${orderBy}
                 LIMIT ? OFFSET ?
             `).all(...params, ...extraParams, limit, offset);
-        res.json({ videos: withCardFields(videos) });
+        const list = withCardFields(videos);
+        // まとめたカードの名前はパート番号を外す (「…vol.5_1.mp4」→「…vol.5.mp4」、表示動画名「…_1」→「…」)。
+        // v3.2.1 までは拡張のクライアント (core.js の fetch フック) が外していた
+        if (grouped) list.forEach(v => {
+            if (!(v.ext_group_count > 1)) return;
+            v.filename = String(v.filename).replace(/_\d+(\.[^.\\/]+)?$/, '$1');
+            if (v.ext_display_name) v.ext_display_name = String(v.ext_display_name).replace(/_\d+$/, '');
+        });
+        res.json({ videos: list });
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
         console.error('[ext search]', e);

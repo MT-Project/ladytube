@@ -9,7 +9,8 @@ const ICON_ALL = svg('<polyline points="20 6 9 17 4 12"></polyline>');
 const ICON_NONE = svg('<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>');
 const ICON_MENU = svg('<circle cx="12" cy="5" r="1.6" fill="currentColor"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor"></circle>');
 
-export default function ExtSelectionFabs({ selectionMode, selectedIds, onToggleMode, onSelectAll, onDeselectAll }) {
+// expandIds: 選んだ id を、品番でまとめたカードなら中の動画すべてに広げる (SearchPage.jsx。v3.2.1 までは拡張の bulkselect.js が広げていた)
+export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds = (ids) => ids, onToggleMode, onSelectAll, onDeselectAll }) {
     const count = selectedIds.size;
     const fab = (className, title, icon, onClick, show = true) => (
         <button className={className} title={title} style={{ display: show ? '' : 'none' }}
@@ -20,7 +21,7 @@ export default function ExtSelectionFabs({ selectionMode, selectedIds, onToggleM
         <div className="wlext-sel-fabs">
             <button className="wlext-sel-fab wlext-sel-menu-btn" title={'一括操作 (' + count + '件選択中)'} data-count={count}
                 style={{ display: selectionMode && count > 0 ? '' : 'none' }}
-                onClick={(e) => { e.stopPropagation(); window.WLExt?.toggleBulkMenu?.([...selectedIds], onDeselectAll); }}
+                onClick={(e) => { e.stopPropagation(); window.WLExt?.toggleBulkMenu?.(expandIds([...selectedIds]), onDeselectAll); }}
                 dangerouslySetInnerHTML={{ __html: ICON_MENU }} />
             {fab('wlext-sel-fab', '表示中をすべて選択', ICON_ALL, onSelectAll, selectionMode)}
             {fab('wlext-sel-fab', '選択をすべて解除', ICON_NONE, onDeselectAll, selectionMode)}
