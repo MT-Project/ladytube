@@ -86,7 +86,7 @@
 
     /* ---------- メニュー項目 (ホーム画面の並び順) ---------- */
     const NAV_ITEMS = [
-        { href: '/screenshots', icon: 'image', label: 'スクリーンショットギャラリー' },
+        { href: '/screenshots', icon: 'image', label: 'スクリーンショット' },
         { href: '/calendar', icon: 'calendar', label: 'カレンダー' },
         // 本家 ver.260914 で /folder-tree は廃止され、検索画面のフォルダ絞り込み(カテゴリー)になった
         { href: '/search?path=root', icon: 'folder', label: 'カテゴリー' },
@@ -96,9 +96,10 @@
         { href: '/series', icon: 'library', label: 'シリーズ一覧' },
         { href: '/performers', icon: 'users', label: '出演者一覧' },
         { href: '/tags', icon: 'tag', label: 'タグ一覧' },
-        { qr: true, icon: 'qr-code', label: 'QRコードでアクセス' }
+        { qr: true, icon: 'qr-code', label: 'QRコード' }
     ];
-    const SETTINGS_ITEM = { href: '/settings', icon: 'settings', label: '設定' };
+    // 表記は本体のホームのメニューと、管理画面の見出し (本家 ver.260914 で「設定」→「管理」) に合わせる
+    const SETTINGS_ITEM = { href: '/settings', icon: 'settings', label: '管理' };
 
     /* ---------- QR (本体のホームのダイアログを開く。HomePage.jsx が受ける) ---------- */
     function openQR() {
@@ -275,6 +276,8 @@
                 // ロゴの画像 (本体のヘッダーと同じ。明るい表示 / ダークモードの切り替えは client/src/index.css の .lt-logo)
                 h('img', { src: '/Logo-logo.png', alt: 'LadyTube', class: 'lt-logo lt-logo-light' }),
                 h('img', { src: '/Logo-logo-dark.png', alt: 'LadyTube', class: 'lt-logo lt-logo-dark' }),
+                // スマホ幅ではロゴの代わりに出す (本体のヘッダーと同じ。切り替えは womanlive-ext.css の .wlext-brand)
+                h('img', { src: '/Logo-icon-192.png', alt: 'LadyTube', class: 'lt-logo-icon' }),
             ]),
             WL.libraryPill ? WL.libraryPill() : null,   // 使用中のライブラリ名 (library.js。2つ以上のときだけ)
         ]);

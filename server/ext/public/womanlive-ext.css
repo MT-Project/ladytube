@@ -1184,6 +1184,12 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
     font-weight: 700; text-decoration: none; font-family: sans-serif; transition: color 0.2s;
 }
 .wlext-brand:hover { color: var(--accent, #007acc); }
+/* スマホ幅はロゴの代わりにアイコン (本体のヘッダーの Navbar.jsx と同じ。img を付けて .dark .lt-logo-dark より強くする) */
+.wlext-brand .lt-logo-icon { display: none; }
+@media (max-width: 600px) {
+    .wlext-brand img.lt-logo { display: none; }
+    .wlext-brand .lt-logo-icon { display: block; }
+}
 .wlext-search { display: flex; flex: 1; justify-content: center; height: 2rem; }
 .wlext-search-wrap { display: flex; position: relative; width: 100%; max-width: 400px; }
 .wlext-search-input {

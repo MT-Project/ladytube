@@ -1,6 +1,7 @@
 
 import { Link, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { Settings, Search, X, Moon, Sun, Home } from 'lucide-react';
+// LadyTube: スマホ幅の家のアイコン (Home) はロゴのアイコンに替えたので読み込まない
+import { Settings, Search, X, Moon, Sun } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { css } from '@linaria/core';
 import { api } from '../services/api';
@@ -294,7 +295,8 @@ export default function Navbar() {
                             <img src="/Logo-logo-dark.png" alt="LadyTube" className="lt-logo lt-logo-dark" />
                         </span>
                         <span className={styles.logoHomeIcon}>
-                            <Home size={20} strokeWidth={1.5} />
+                            {/* LadyTube: スマホ幅では家のアイコンの代わりにロゴのアイコン (index.css の .lt-logo-icon) */}
+                            <img src="/Logo-icon-192.png" alt="LadyTube" className="lt-logo-icon" />
                         </span>
                     </Link>
                     {/* LadyTube: 使用中のライブラリ名 (押すと切り替え。ライブラリが2つ以上のときだけ。server/ext/public/library.js) */}

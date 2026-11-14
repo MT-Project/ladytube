@@ -146,3 +146,5 @@ a {
 .lt-logo { height: 24px; width: auto; display: inline-block; vertical-align: middle; }
 .lt-logo-dark, .dark .lt-logo-light { display: none; }
 .dark .lt-logo-dark { display: inline-block; }
+/* LadyTube: スマホ幅でロゴの代わりに出すアイコン (Logo-icon-192.png。明るい表示もダークモードも同じ画像) */
+.lt-logo-icon { height: 24px; width: 24px; display: block; }

@@ -224,7 +224,7 @@ export default function HomePage() {
     const [scanFolders, setScanFolders] = useState([]);
     const [allowPublic, setAllowPublic] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
-    // LadyTube: 拡張のメニューの「QRコードでアクセス」(nav.js) からも開く。ホームでは wlext-open-qr、ほかのページからは /?qr=1 で来る
+    // LadyTube: 拡張のメニューの「QRコード」(nav.js) からも開く。ホームでは wlext-open-qr、ほかのページからは /?qr=1 で来る
     const [showQR, setShowQR] = useState(() => new URLSearchParams(window.location.search).has('qr'));
     const [serverInfo, setServerInfo] = useState(null);
     useEffect(() => {
