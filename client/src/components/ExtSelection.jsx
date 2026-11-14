@@ -1,4 +1,5 @@
 // LadyTube: 検索画面の選択モード (一括操作) の丸ボタン (v3.1.5 までの server/ext/public/bulkselect.js の前半を移したもの)。
+// 本体へ移した一覧のページ (SeriesPage.jsx) も使う (onMenu で拡張の listselect.js の WL.toggleListMenu を呼ぶ)。
 // 下から 選択モード / 選択の解除 / 表示中をすべて選択 / 一括操作メニュー。画面の右下に固定 (body の末尾に置く)。
 // 押したときのメニューとダイアログは拡張側 (bulkselect.js の WL.toggleBulkMenu)。見た目は womanlive-ext.css の .wlext-sel-*。
 import { createPortal } from 'react-dom';
@@ -10,7 +11,8 @@ const ICON_NONE = svg('<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y
 const ICON_MENU = svg('<circle cx="12" cy="5" r="1.6" fill="currentColor"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor"></circle>');
 
 // expandIds: 選んだ id を、品番でまとめたカードなら中の動画すべてに広げる (SearchPage.jsx。v3.2.1 までは拡張の bulkselect.js が広げていた)
-export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds = (ids) => ids, onToggleMode, onSelectAll, onDeselectAll }) {
+// onMenu: 一括操作の丸ボタンを押したとき (一覧のページ。無ければ検索画面の動画の一括操作 WL.toggleBulkMenu)
+export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds = (ids) => ids, onMenu, onToggleMode, onSelectAll, onDeselectAll }) {
     const count = selectedIds.size;
     const fab = (className, title, icon, onClick, show = true) => (
         <button className={className} title={title} style={{ display: show ? '' : 'none' }}
@@ -21,7 +23,7 @@ export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds
         <div className="wlext-sel-fabs">
             <button className="wlext-sel-fab wlext-sel-menu-btn" title={'一括操作 (' + count + '件選択中)'} data-count={count}
                 style={{ display: selectionMode && count > 0 ? '' : 'none' }}
-                onClick={(e) => { e.stopPropagation(); window.WLExt?.toggleBulkMenu?.(expandIds([...selectedIds]), onDeselectAll); }}
+                onClick={(e) => { e.stopPropagation(); if (onMenu) onMenu(); else window.WLExt?.toggleBulkMenu?.(expandIds([...selectedIds]), onDeselectAll); }}
                 dangerouslySetInnerHTML={{ __html: ICON_MENU }} />
             {fab('wlext-sel-fab', '表示中をすべて選択', ICON_ALL, onSelectAll, selectionMode)}
             {fab('wlext-sel-fab', '選択をすべて解除', ICON_NONE, onDeselectAll, selectionMode)}

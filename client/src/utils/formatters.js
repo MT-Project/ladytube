@@ -117,3 +117,12 @@ export function formatAgeYm(birthday, ref) {
     if (years < 0) return '';
     return years + '歳' + months + 'ヶ月';
 }
+// LadyTube: 一覧のページの並び替えを localStorage から戻す (拡張の WL.sortRow と同じキー・同じ形 { sort, dir })。
+// defs は [キー, 表示名, 既定の向き] の並び。保存が無いか、今は無いキーなら initial
+export function storedSort(storeKey, defs, initial) {
+    try {
+        const saved = JSON.parse(localStorage.getItem(storeKey) || 'null');
+        if (saved && defs.some(d => d[0] === saved.sort)) return { sort: saved.sort, dir: saved.dir === 'desc' ? 'desc' : 'asc' };
+    } catch { /* 戻せなければ既定のまま */ }
+    return initial;
+}

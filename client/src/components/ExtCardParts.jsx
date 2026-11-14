@@ -37,17 +37,22 @@ export function ExtThumbOverlays({ video, folder, durationClass }) {
     );
 }
 
+// 評価の星 (表示だけ。拡張の WL.starsEl(value) の読み取り専用と同じ形)
+export function ExtStars({ value }) {
+    return (
+        <div className="wlext-rating readonly">
+            {[1, 2, 3, 4, 5].map(i => <span key={i} className={'wlext-star' + (i <= value ? ' on' : '')}>★</span>)}
+        </div>
+    );
+}
+
 export function ExtCardMeta({ video, poster, list }) {
     const rating = video.ext_rating || 0;
     return (
         <div className={'wlext-card-meta' + (poster ? ' wlext-card-meta-poster' : '')}>
             {list && video.ext_series && searchLink('@series:"' + video.ext_series + '"', video.ext_series, 'wlext-card-series')}
             <div className="wlext-card-rating">
-                {rating > 0 && (
-                    <div className="wlext-rating readonly">
-                        {[1, 2, 3, 4, 5].map(i => <span key={i} className={'wlext-star' + (i <= rating ? ' on' : '')}>★</span>)}
-                    </div>
-                )}
+                {rating > 0 && <ExtStars value={rating} />}
             </div>
             <ExtCardBadges id={video.id} />
         </div>
