@@ -73,9 +73,12 @@ module.exports = function setupExt(app) {
     app.use('/ext/api', express.json({ limit: '25mb' }));
 
     // 3. クライアント拡張アセット (js/css) の配信
+    //    inject.js が付ける ?v=<起動時刻> 付きの要求は、起動し直すまで中身が変わらないので長く持たせる
+    //    (ページを開くたびの問い合わせを省く。サーバーを止めずに書き換えたときは Ctrl+F5 で読み直す)
     app.use('/ext/assets', express.static(path.join(__dirname, 'public'), {
         etag: true,
         maxAge: 0,
+        setHeaders: (res) => { if (res.req && res.req.query && res.req.query.v) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); },
     }));
 
     // 4. 拡張 API ルート

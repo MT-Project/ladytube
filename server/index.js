@@ -76,7 +76,11 @@ app.get('/api/video/:id/subtitle', routes.getSubtitle);
 // Serve static files from the client/dist directory
 const clientDistPath = path.join(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {
-    app.use(express.static(clientDistPath));
+    // LadyTube: vite がファイル名にハッシュを付ける assets/ は、中身が変わればファイル名も変わるので長く持たせる
+    //   (ページを開くたびの問い合わせを省く。index.html やロゴなどは今までどおり毎回確かめる)
+    app.use(express.static(clientDistPath, {
+        setHeaders: (res, p) => { if (p.includes(path.sep + 'assets' + path.sep)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); },
+    }));
     // Serve index.html for any unknown routes (for React Router)
     app.use((req, res, next) => {
         if (req.path.startsWith('/api')) {

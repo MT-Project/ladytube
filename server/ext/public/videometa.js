@@ -44,7 +44,6 @@
     // 本体の動画ページ (WatchPage.jsx) に知らせる。評価・表・タイトル・公開日を描き直す
     function rerender(vid) {
         window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta: WL._meta[vid] } }));
-        WL.requestEnsure();
     }
 
     // 評価 (★) を押したとき

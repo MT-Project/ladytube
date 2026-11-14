@@ -1,7 +1,6 @@
 /* =============================================================
    WomanLive 拡張 - コア
    ・SPA ルート検知
-   ・DOM 監視 (React 再描画後の再注入)
    ・共通 UI (ライトボックス / トースト / チップ入力 など)
    ============================================================= */
 (function () {
@@ -191,21 +190,8 @@
     WL.matchPerformer = () => { const m = location.pathname.match(/^\/performer\/(\d+)/); return m ? m[1] : null; };
     WL.matchSettings = () => location.pathname === '/settings';
 
-    /* ---------- DOM 監視 (再注入) ---------- */
-    WL._ensureCbs = [];
-    WL.onEnsure = (cb) => WL._ensureCbs.push(cb);
-    function runEnsure() { WL._ensureCbs.forEach(cb => { try { cb(); } catch (e) { console.error('[wlext ensure]', e); } }); }
-    const debouncedEnsure = debounce(runEnsure, 80);
-    WL.requestEnsure = () => { setTimeout(runEnsure, 0); setTimeout(runEnsure, 200); setTimeout(runEnsure, 500); };
-
-    function startObserver() {
-        const root = document.getElementById('root') || document.body;
-        new MutationObserver(debouncedEnsure).observe(root, { childList: true, subtree: true });
-        WL.onRoute(() => WL.requestEnsure());
-        WL.requestEnsure();
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver);
-    else startObserver();
+    // (v3.2.1 までは、ここに DOM 監視 WL.onEnsure / WL.requestEnsure があった。#root の変化のたびに、登録された関数を呼んで
+    //  本体の画面へ差し込み直していた。差し込みはすべて本体の画面・差し込み口に移り、登録する所が無くなったので消した)
 
     /* ---------- ライトボックス ---------- */
     WL.lightbox = function (src, opts) {
