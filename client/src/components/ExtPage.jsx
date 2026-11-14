@@ -1,5 +1,5 @@
-// LadyTube: 拡張のページ (メーカー一覧・タグ一覧・出演者一覧・出演者・ブックマーク
-// と、個人用モジュールのページ。公開カレンダー・シリーズ一覧は v3.2.1 の後から本体の CalendarPage.jsx・SeriesPage.jsx)。本体のページが無い URL で App.jsx の最後のルートが置く。
+// LadyTube: 拡張のページ (メーカー一覧・出演者一覧・出演者・ブックマーク
+// と、個人用モジュールのページ。公開カレンダー・シリーズ一覧・タグ一覧は v3.2.1 の後から本体の CalendarPage.jsx・SeriesPage.jsx・TagsPage.jsx)。本体のページが無い URL で App.jsx の最後のルートが置く。
 // 拡張は WLExt.extPages に { 'URL の形': render(params, mount) } を足しておき、URL が合うと render を呼ぶ。
 // ページの中身は拡張が作り、mount(要素) で渡された要素をここが body の末尾に置く (v3.1.15 までと同じ位置。
 // 拡張のページは画面全体に重ねる position: fixed)。URL が変わるか、ほかのページへ移ると外す。
