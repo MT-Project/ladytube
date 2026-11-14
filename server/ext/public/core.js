@@ -213,21 +213,8 @@
         } catch (e) { return r; }
     }
 
-    async function handleSingleVideoFetch(id, input, init) {
-        const r = await origFetch(input, init);
-        const clone = r.clone();
-        try {
-            const data = await r.json();
-            // 拡張: 関連動画をメタデータ類似度で差し替え (空なら本体のパス近傍を維持)
-            // (表示動画名 ext_display_name は、本体の /api/video/:id も関連動画 API も返す)
-            try {
-                const rel = await WL.api.relatedVideos(id);
-                if (rel && Array.isArray(rel.videos) && rel.videos.length) data.relatedVideos = rel.videos;
-            } catch (e) { }
-            // (v3.2.1 まではここで WL._watch を書いていた。更新日と標準モードの関連動画は本体の動画ページが直接持つようになり、読む所が無くなった)
-            return jsonResponse(data);
-        } catch (e) { return clone; }
-    }
+    // (v3.2.1 までは /api/video/:id の結果の関連動画もここで差し替えていた。今は本体のサーバー
+    //  (server/services/videoService.js の getVideo) が拡張の related.js を呼んで返す)
 
     // グリッド表示の⋮(本家のタグメニュー)は代表の動画1本にタグを付け外しする。
     // 品番でまとめたカードでは、同じ変更を中の動画すべてへ送る。
@@ -247,8 +234,6 @@
                 const mt = url.match(/\/api\/video\/(\d+)\/tags(\?|$)/);
                 if (mt && init && /^(POST|DELETE)$/i.test(init.method || '') && grouping()) return handleGroupTagFetch(mt[1], url, input, init);
                 if (/\/api\/videos(\?|$)/.test(url)) return handleVideosFetch(input, init);
-                const mv = url.match(/\/api\/video\/(\d+)(\?|$)/);
-                if (mv) return handleSingleVideoFetch(mv[1], input, init);
             }
         } catch (e) { /* fall through */ }
         return origFetch(input, init);

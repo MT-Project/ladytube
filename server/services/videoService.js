@@ -57,10 +57,16 @@ class VideoService {
             const neighbors = [...neighborsBefore, ...neighborsAfter];
             const nextVideoId = neighborsAfter.length > 0 ? neighborsAfter[0].id : null;
 
+            // LadyTube: 関連動画は拡張のメタデータの類似度 (server/ext/routes/related.js) を優先し、空なら本体の近傍のまま。
+            //   次の動画 (nextVideoId) は本体の近傍のまま。v3.2.1 までは拡張のクライアントの fetch フックが差し替えていた
+            let related = [];
+            try { related = require('../ext/routes/related').forVideo(id); }
+            catch (e) { logger.error("関連動画 (拡張) の取得エラー", e); }
+
             // Remove Base64 thumbnail generation for neighbors
             res.json({
                 video,
-                relatedVideos: neighbors,
+                relatedVideos: related.length ? related : neighbors,
                 nextVideoId
             });
         } catch (err) {

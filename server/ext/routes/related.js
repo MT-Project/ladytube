@@ -4,7 +4,8 @@
 // 本体の関連動画はファイルパスの前後12件(同フォルダ近傍)を返すだけで、
 // 拡張メタデータを考慮しません。ここでは シリーズ/出演者/メーカー/レーベル/
 // 監督/ジャンル/タグ/公開時期/評価 の一致度を加重スコアで採点し、
-// 類似動画の上位を返します(本体は無改変。クライアントの fetch フックが差し替え)。
+// 類似動画の上位を返します(本体の動画 API (videoService.js の getVideo) が forVideo を呼び、
+// 空でなければ本体の近傍と差し替える。v3.2.1 まではクライアントの fetch フックが差し替えていた)。
 //
 // 事前計算: 結果は ext_related に保存。ソースの ext_video_meta.updated_at が
 // キャッシュの計算時刻より新しければ自動で再計算(=その動画を編集すれば反映)。
@@ -132,18 +133,24 @@ function resolveFiles(hashes, excludeHash) {
     return out;
 }
 
+// 動画 id の関連動画 (本体の近傍と同じ列)。キャッシュが古ければ計算し直して保存する
+function forVideo(id) {
+    const hash = hashOfVideo(id);
+    if (!hash) return [];
+    if (!isFresh(hash)) {
+        const W = getWeights();
+        const scored = computeRelated(hash, W);
+        db.transaction(() => storeRelated(hash, scored))();
+    }
+    const hashes = db.prepare('SELECT rel_hash FROM ext_related WHERE src_hash = ? AND rel_hash IS NOT NULL ORDER BY rank ASC').all(hash).map(r => r.rel_hash);
+    return resolveFiles(hashes, hash);
+}
+exports.forVideo = forVideo;
+
 // GET /ext/api/video/:id/related
 exports.getForVideo = (req, res) => {
     try {
-        const hash = hashOfVideo(req.params.id);
-        if (!hash) return res.json({ videos: [] });
-        if (!isFresh(hash)) {
-            const W = getWeights();
-            const scored = computeRelated(hash, W);
-            db.transaction(() => storeRelated(hash, scored))();
-        }
-        const hashes = db.prepare('SELECT rel_hash FROM ext_related WHERE src_hash = ? AND rel_hash IS NOT NULL ORDER BY rank ASC').all(hash).map(r => r.rel_hash);
-        res.json({ videos: resolveFiles(hashes, hash) });
+        res.json({ videos: forVideo(req.params.id) });
     } catch (e) {
         console.error('[ext related]', e);
         res.status(500).json({ error: e.message });
