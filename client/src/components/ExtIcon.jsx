@@ -20,6 +20,7 @@ const ICONS = {
     'calendar-check': '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
     menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
     help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+    search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
 };
 // sw は線の太さ (nav.js の iconSvg の 3つ目の引数と同じ。既定 2)
 export function Icon({ name, size, sw = 2 }) {

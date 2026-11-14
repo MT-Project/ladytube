@@ -161,7 +161,7 @@ exports.setImage = async (req, res) => {
 
         let buf = Buffer.from(m[1], 'base64');
         // アニメーション画像 (GIF / APNG / WebP) は変換すると止まるので元のまま保存し、
-        // 表示範囲 view {x,y,w,h} (元画像に対する割合) を一緒に持つ。表示側 (makerlist.js) で当てる。
+        // 表示範囲 view {x,y,w,h} (元画像に対する割合) を一緒に持つ。表示側 (本体の MakersPage.jsx) で当てる。
         const v = b.view;
         if (v && ['x', 'y', 'w', 'h'].every(k => Number.isFinite(v[k])) && v.w > 0 && v.h > 0) {
             const t = imageContentType(buf);

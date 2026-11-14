@@ -22,7 +22,6 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/videometa.js',
     '/ext/assets/listselect.js',
     '/ext/assets/performer.js',
-    '/ext/assets/makerlist.js',
     '/ext/assets/bookmark.js',
     '/ext/assets/bookmarklist.js',
     '/ext/assets/groupview.js',
