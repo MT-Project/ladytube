@@ -56,12 +56,13 @@ export function ExtListCard({ to, className, title, sel, id, name, children }) {
 }
 
 // 選択モードの丸ボタン (検索画面と同じ ExtSelectionFabs)。items は表示中の [削除対象の値, 表示名] の並び。
+// 「すべて選択」は表示中を選んだものに足す (絞り込みで隠れた選択は残す。拡張と同じ)。
 // kind / kindLabel は削除の種類 (series / tag ...) と、メニュー・確認に出す名前。メニューと確認は拡張の listselect.js
 export function ExtListFabs({ sel, items, kind, kindLabel }) {
     return (
         <ExtSelectionFabs selectionMode={sel.mode} selectedIds={sel.selected}
             onToggleMode={() => { window.WLExt?.closeListMenu?.(); sel.setMode(!sel.mode); sel.setSelected(new Map()); }}
-            onSelectAll={() => sel.setSelected(new Map(items))}
+            onSelectAll={() => sel.setSelected(prev => new Map([...prev, ...items]))}
             onDeselectAll={() => sel.setSelected(new Map())}
             onMenu={() => window.WLExt?.toggleListMenu?.({ kind, kindLabel }, sel.selected)} />
     );

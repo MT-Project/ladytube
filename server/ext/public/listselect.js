@@ -6,7 +6,7 @@
 
    使い方: カード要素に data-wl-target(削除対象の値) と data-wl-name(表示名) を付け、
    一覧を描画したあとに WL.listSelect({ page, kind, kindLabel }) を呼ぶ (拡張のページ)。
-   本体へ移した一覧のページ (SeriesPage.jsx・TagsPage.jsx) は丸ボタンを本体の ExtListParts.jsx の ExtListFabs で置き、
+   本体へ移した一覧のページ (SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx) は丸ボタンを本体の ExtListParts.jsx の ExtListFabs で置き、
    一括操作の丸ボタンを押したときに WL.toggleListMenu(opts, selected) を呼ぶ。
    FAB はページ要素の中に入れる (.wlext-ext-page が z-index 4000 の重ね面のため)。
    ============================================================= */
@@ -99,7 +99,7 @@
         updateFabs();
     };
 
-    /* ---------- メニュー (本体の一覧のページ SeriesPage.jsx・TagsPage.jsx も押されたときに呼ぶ) ---------- */
+    /* ---------- メニュー (本体の一覧のページ SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx も押されたときに呼ぶ) ---------- */
     // WL.toggleListMenu(opts, selected): 「N件を一括操作」のメニュー。開いていれば閉じる。
     //   opts は { kind, kindLabel }、selected は Map (削除対象の値 -> 表示名)
     let menuEl = null, backdrop = null;
