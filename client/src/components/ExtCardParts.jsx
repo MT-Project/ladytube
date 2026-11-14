@@ -5,7 +5,7 @@
 // 項目は一覧 API (server/ext/routes/search.js の withCardFields) が返す。見た目は womanlive-ext.css のクラス。
 // 評価の行 .wlext-card-meta の末尾にブックマークボタンとスクショ数 (ExtCardBadges。v3.1.15 までは
 // server/ext/public/bookmark.js と screenshots.js がカードを探して足していた)。並びは CSS の order で決まる。
-import { Fragment, useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Icon } from './ExtIcon';
 
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
@@ -42,6 +42,23 @@ export function ExtStars({ value }) {
     return (
         <div className="wlext-rating readonly">
             {[1, 2, 3, 4, 5].map(i => <span key={i} className={'wlext-star' + (i <= value ? ' on' : '')}>★</span>)}
+        </div>
+    );
+}
+
+// 評価の星 (押すと onChange(n)、「クリア」で 0。拡張の WL.starsEl(value, onChange) と同じ形)。
+// value は最初の値だけ見る (変わったら key で作り直す)。動画ページの評価 (ExtWatchMeta.jsx の ExtRating) と出演者のページ
+export function ExtStarsEdit({ value, onChange }) {
+    const [cur, setCur] = useState(value || 0);
+    const [hover, setHover] = useState(null);
+    const shown = hover === null ? cur : hover;
+    const pick = (e, n) => { e.stopPropagation(); e.preventDefault(); setCur(n); onChange(n); };
+    return (
+        <div className="wlext-rating" onMouseLeave={() => setHover(null)}>
+            {[1, 2, 3, 4, 5].map(i => (
+                <span key={i} className={'wlext-star' + (i <= shown ? ' on' : '')} onMouseEnter={() => setHover(i)} onClick={(e) => pick(e, i)}>★</span>
+            ))}
+            <span className="wlext-rating-clear" onClick={(e) => pick(e, 0)}>クリア</span>
         </div>
     );
 }

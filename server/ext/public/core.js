@@ -187,7 +187,6 @@
     window.addEventListener('popstate', () => setTimeout(emitRoute, 0));
 
     WL.matchWatch = () => { const m = location.pathname.match(/^\/watch\/(\d+)/); return m ? m[1] : null; };
-    WL.matchPerformer = () => { const m = location.pathname.match(/^\/performer\/(\d+)/); return m ? m[1] : null; };
     WL.matchSettings = () => location.pathname === '/settings';
 
     // (v3.2.1 までは、ここに DOM 監視 WL.onEnsure / WL.requestEnsure があった。#root の変化のたびに、登録された関数を呼んで

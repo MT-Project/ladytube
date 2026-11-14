@@ -11,7 +11,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
-import { ExtBookmarkButton } from './ExtCardParts';
+import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { formatYmd, formatYmAgo, formatAgeYm } from '../utils/formatters';
 
 const WL = () => window.WLExt;
@@ -19,18 +19,9 @@ const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 
 // 評価。変わったら WatchPage が key で作り直す (以前の「保存したら描き直す」と同じ)
 export function ExtRating({ videoId, value }) {
-    const [cur, setCur] = useState(value || 0);
-    const [hover, setHover] = useState(null);
-    const shown = hover === null ? cur : hover;
-    const pick = (e, n) => { e.stopPropagation(); e.preventDefault(); setCur(n); WL().saveRating(videoId, n); };
     return (
         <div className="wlext-rating-host">
-            <div className="wlext-rating" onMouseLeave={() => setHover(null)}>
-                {[1, 2, 3, 4, 5].map(i => (
-                    <span key={i} className={'wlext-star' + (i <= shown ? ' on' : '')} onMouseEnter={() => setHover(i)} onClick={(e) => pick(e, i)}>★</span>
-                ))}
-                <span className="wlext-rating-clear" onClick={(e) => pick(e, 0)}>クリア</span>
-            </div>
+            <ExtStarsEdit value={value} onChange={(n) => WL().saveRating(videoId, n)} />
         </div>
     );
 }

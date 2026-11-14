@@ -469,27 +469,8 @@
 .wlext-cropper-fit { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
 
 /* =============================================================
-   出演者ページ (/performer/:id。置き場所は本体の ExtPage.jsx)
+   出演者のページ (/performer/:id。本体の PerformerPage.jsx)。.wlext-pp-container は本体へ移した一覧のページの外枠も
    ============================================================= */
-.wlext-performer-page {
-    position: fixed; inset: 0; z-index: 4000;
-    background: var(--bg-primary, #fff);
-    color: var(--text-primary, #222);
-    overflow-y: auto;
-}
-.wlext-pp-topbar {
-    position: sticky; top: 0; z-index: 10;
-    height: 3rem; display: flex; align-items: center; gap: 1rem;
-    padding: 0 1rem;
-    background: var(--bg-secondary, #f3f3f3);
-    border-bottom: 1px solid var(--border-primary, #e4e4e4);
-}
-.wlext-pp-back {
-    cursor: pointer; color: var(--text-primary, #222);
-    display: inline-flex; align-items: center; gap: 0.3rem; text-decoration: none;
-    font-weight: bold;
-}
-.wlext-pp-back:hover { color: var(--accent, #007acc); }
 .wlext-pp-container { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.2rem 4rem; }
 .wlext-pp-header { display: flex; gap: 1.5rem; flex-wrap: wrap; }
 .wlext-pp-image {
