@@ -125,7 +125,8 @@ export function ExtWatchFabs({ videoId }) {
         <>
             {/* 位置は CSS で決まる (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集) */}
             <ExtBookmarkButton id={videoId} fab />
-            <button className="wlext-search-fab" title="動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）" onClick={call('openMetaSearch')}>
+            {/* 説明は検索を差し替えたもの (WL.metaSearchTitle) があればそれ。拡張は defer で読むが、ここは動画を読み込んでから描くので間に合う */}
+            <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={call('openMetaSearch')}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
             <button className="wlext-tag-fab" title="タグを編集" onClick={call('openTagEditor')}><Icon name="tag" size={22} /></button>

@@ -5,7 +5,8 @@
    (client/src/components/ExtWatchMeta.jsx。v3.1.13 まではここで DOM に差し込んでいた)。
    本体が使うもの: WL.loadMeta / WL.saveRating / WL.openMetaSearch / WL.openTagEditor / WL.openMetaEdit、
    保存したら window に wlext-meta-updated ({ id, meta }) を投げる。
-   private が使うもの: WL._meta (読み込んだ詳細情報)、WL.metaSearch / WL.showMetaPreview (差し込み口)
+   private が使うもの: WL._meta (読み込んだ詳細情報)、WL.metaSearch / WL.showMetaPreview (差し込み口)、
+   WL.metaSearchTitle (「動画情報を検索」の丸ボタンの説明。本体の ExtWatchMeta.jsx が読む。無ければ本体の既定の文)
    ============================================================= */
 (function () {
     'use strict';

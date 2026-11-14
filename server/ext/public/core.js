@@ -224,14 +224,7 @@
                 const rel = await WL.api.relatedVideos(id);
                 if (rel && Array.isArray(rel.videos) && rel.videos.length) data.relatedVideos = rel.videos;
             } catch (e) { }
-            // 動画ページの拡張 (更新日の表示・標準モードの関連動画) が使う
-            if (data && data.video) {
-                WL._watch = {
-                    id: String(id), updatedAt: data.video.updated_at, nextVideoId: data.nextVideoId,
-                    relatedIds: (data.relatedVideos || []).map(v => v.id),
-                };
-                WL.requestEnsure();
-            }
+            // (v3.2.1 まではここで WL._watch を書いていた。更新日と標準モードの関連動画は本体の動画ページが直接持つようになり、読む所が無くなった)
             return jsonResponse(data);
         } catch (e) { return clone; }
     }

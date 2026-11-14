@@ -1,5 +1,7 @@
 /* =============================================================
    WomanLive 拡張 - 出演者ページ (/performer/:id)
+   個人用モジュールなどは WL.performerExtras に「部品を作る関数 (id) => 要素」を足すと、
+   ページを開くたびにページの中に置かれる (ページを離れると一緒に外れる。丸ボタンなどは position: fixed で置く)
    ============================================================= */
 (function () {
     'use strict';
@@ -11,6 +13,7 @@
         const container = h('div', { class: 'wlext-pp-container' }, h('div', null, '読み込み中...'));
         page.appendChild(container);
         mount(page);
+        Object.values(WL.performerExtras || {}).forEach(make => { const el = make(id); if (el) page.appendChild(el); });
         WL.setDocTitle('出演者');
 
         let perf;
