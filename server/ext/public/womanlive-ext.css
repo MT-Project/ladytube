@@ -616,14 +616,14 @@
 @media (max-width: 520px) { .wlext-related-grid { grid-template-columns: 1fr; } }
 
 /* ---- カード類の <a> 化 (中クリック/Ctrl+クリック対応) によるリンク既定装飾の打ち消し ---- */
-.wlext-series-card, .wlext-plist-card, .wlext-relcal-month, .wlext-relcal-year-link,
+.wlext-series-card, .wlext-plist-card,
 .wlext-video-thumb, .wlext-series-name {
     text-decoration: none;
     color: inherit;
 }
 
 /* =============================================================
-   拡張ページ共通シェル (公開カレンダー / 出演者一覧)
+   拡張ページ共通シェル (一覧のページ・出演者。.wlext-relcal-title は WL.pageTitle の見出し)
    ============================================================= */
 .wlext-ext-page {
     position: fixed; inset: 0; z-index: 4000;
@@ -636,23 +636,6 @@
     display: flex; align-items: center; gap: 0.5rem;
 }
 
-/* ---- 公開カレンダー ---- */
-.wlext-relcal-year { margin-bottom: 2.5rem; }
-.wlext-relcal-year-title {
-    font-size: 1.25rem; font-weight: 600; margin: 0 0 1rem;
-    border-bottom: 1px solid var(--border-primary, #e4e4e4);
-    padding-bottom: 0.5rem; cursor: pointer;
-}
-.wlext-relcal-year-title:hover { color: var(--accent, #007acc); }
-.wlext-relcal-months { display: flex; flex-wrap: wrap; gap: 1rem; }
-.wlext-relcal-month {
-    padding: 0.75rem 1rem; background: var(--bg-secondary, #f3f3f3);
-    border: 1px solid var(--border-primary, #e4e4e4); border-radius: 0.5rem;
-    cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
-}
-.wlext-relcal-month:hover { background: var(--bg-hover, #e8e8e8); border-color: var(--accent, #007acc); }
-.wlext-relcal-month-name { font-weight: 500; }
-.wlext-relcal-month-count { font-size: 0.9rem; color: var(--text-secondary, #888); }
 
 /* ---- 出演者一覧 ---- */
 .wlext-plist-controls {

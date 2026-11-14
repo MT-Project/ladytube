@@ -19,6 +19,8 @@ function App() {
           <Route path="/watch/:id" element={<WatchPage />} />
           <Route path="/screenshots" element={<ScreenshotGalleryPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          {/* LadyTube: 公開カレンダー (公開日で年月別。v3.2.1 までは拡張のページ。key でカレンダーとは別のものとして置く) */}
+          <Route path="/release-calendar" element={<CalendarPage key="release" release />} />
           {/* LadyTube: 拡張のページ (/makers・/performer/:id など。中身は server/ext/public の各ファイル) */}
           <Route path="*" element={<ExtPage />} />
         </Routes>

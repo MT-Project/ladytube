@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { theme } from '../theme';
 import { Calendar } from 'lucide-react';
+import { Icon } from '../components/ExtIcon';
 
 // Linaria styles
 const styles = {
@@ -43,6 +44,11 @@ const styles = {
             color: ${theme.colors.accent.primary};
         }
     `,
+    // LadyTube: 公開カレンダーの「未分類」の見出し (押せない)
+    yearTitlePlain: css`
+        cursor: default;
+        &:hover { color: ${theme.colors.text.primary}; }
+    `,
     monthGrid: css`
         display: flex;
         flex-wrap: wrap;
@@ -80,24 +86,29 @@ const styles = {
     `,
 };
 
-export default function CalendarPage() {
+// LadyTube: release = 公開カレンダー (/release-calendar。拡張のメタデータの公開日で年月別。v3.2.1 までは拡張の
+//   server/ext/public/releasecal.js)。違うのはデータ・検索の URL・見出し・「未分類」の欄だけ
+export default function CalendarPage({ release = false }) {
     const [monthlyCounts, setMonthlyCounts] = useState([]);
+    const [uncategorized, setUncategorized] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        document.title = 'カレンダー - LadyTube';
-        fetch('/api/calendar/months')
+        document.title = release ? '公開カレンダー - LadyTube' : 'カレンダー - LadyTube';
+        fetch(release ? '/ext/api/release-calendar' : '/api/calendar/months')
             .then(res => res.json())
             .then(data => {
-                setMonthlyCounts(data);
+                // LadyTube: 公開カレンダーは { months, uncategorized (公開日なしの本数) }
+                if (release) { setMonthlyCounts(data.months || []); setUncategorized(data.uncategorized || 0); }
+                else setMonthlyCounts(data);
                 setIsLoading(false);
             })
             .catch(err => {
                 console.error('Failed to fetch monthly counts:', err);
                 setIsLoading(false);
             });
-    }, []);
+    }, [release]);
 
     const groupedByYear = monthlyCounts.reduce((acc, item) => {
         if (!acc[item.year]) {
@@ -112,6 +123,8 @@ export default function CalendarPage() {
 
     // LadyTube: 押したときと中クリックで同じ URL を使うため、URL の組み立てを分けた
     const monthUrl = (year, month) => {
+        // LadyTube: 公開カレンダーは公開日の検索 (拡張の検索トークン)
+        if (release) return `/search?q=${encodeURIComponent(`@releasemonth:"${year}-${month}"`)}`;
         // Calculate the last day of the month
         const nextMonth = new Date(parseInt(year), parseInt(month), 1);
         const lastDay = new Date(nextMonth - 1).getDate();
@@ -119,7 +132,8 @@ export default function CalendarPage() {
         const q = `>${year}/${month}/01 <${year}/${month}/${lastDay}`;
         return `/search?q=${encodeURIComponent(q)}`;
     };
-    const yearUrl = (year) => `/search?q=${encodeURIComponent(`>${year}/01/01 <${year}/12/31`)}`;
+    const yearUrl = (year) => `/search?q=${encodeURIComponent(release ? `@releaseyear:"${year}"` : `>${year}/01/01 <${year}/12/31`)}`;
+    const noneUrl = `/search?q=${encodeURIComponent('@release:none')}`;
     const handleMonthClick = (year, month) => navigate(monthUrl(year, month));
     const handleYearClick = (year) => navigate(yearUrl(year));
     // LadyTube: 年と月は <a> ではないので、中クリックで新しいタブに開けるようにする (v3.1.15 までの nav.js の patchCalendarLinks)
@@ -132,14 +146,16 @@ export default function CalendarPage() {
         <div className={styles.page}>
             <Navbar />
             <div className={styles.content}>
-                <h1 className={styles.title}><Calendar size={20} /> カレンダー</h1>
+                {release
+                    ? <h1 className={styles.title}><Icon name="calendar-check" size={20} /> 公開カレンダー（公開日でグループ化）</h1>
+                    : <h1 className={styles.title}><Calendar size={20} /> カレンダー</h1>}
 
                 {isLoading ? (
                     <div className={styles.loadingContainer}>
                         <LoadingDots />
                     </div>
                 ) : (
-                    years.length > 0 ? (
+                    years.length > 0 || uncategorized > 0 ? (
                         years.map(year => (
                             <div key={year} className={styles.yearSection}>
                                 <h2
@@ -167,9 +183,21 @@ export default function CalendarPage() {
                         ))
                     ) : (
                         <div style={{ textAlign: 'center', color: theme.colors.text.secondary }}>
-                            動画が見つかりませんでした。
+                            {release ? '公開日が設定された動画がありません。動画の詳細情報で公開日を設定してください。' : '動画が見つかりませんでした。'}
                         </div>
                     )
+                )}
+                {/* LadyTube: 公開カレンダーの公開日なし */}
+                {uncategorized > 0 && (
+                    <div className={styles.yearSection}>
+                        <h2 className={`${styles.yearTitle} ${styles.yearTitlePlain}`}>未分類 ({uncategorized})</h2>
+                        <div className={styles.monthGrid}>
+                            <div className={styles.monthItem} title="公開日が未設定の動画" onClick={() => navigate(noneUrl)} {...midClick(noneUrl)}>
+                                <span className={styles.monthText}>公開日なし</span>
+                                <span className={styles.countText}>({uncategorized})</span>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>

@@ -262,7 +262,7 @@ exports.seriesList = (req, res) => {
     }
 };
 
-// 公開日(release_date)で年月別に集計 (公開カレンダー用)
+// 公開日(release_date)で年月別に集計 (公開カレンダー用。本体の CalendarPage.jsx が読む。並びは本体の /api/calendar/months と同じ 年の新しい順・年の中は1月から)
 exports.releaseCalendar = (req, res) => {
     try {
         const rows = db.prepare(`
@@ -271,7 +271,7 @@ exports.releaseCalendar = (req, res) => {
             JOIN ext_video_meta e ON e.hash = f.hash
             WHERE e.release_date IS NOT NULL AND e.release_date != ''
             GROUP BY ym
-            ORDER BY ym DESC
+            ORDER BY substr(ym, 1, 4) DESC, ym ASC
         `).all();
 
         const uncategorized = db.prepare(`

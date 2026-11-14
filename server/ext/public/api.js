@@ -113,7 +113,6 @@
         searchPerformers: (q) => req('/ext/api/performers?q=' + encodeURIComponent(q || '')),
         performersAll: () => req('/ext/api/performers/all'),
         cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
-        releaseCalendar: () => req('/ext/api/release-calendar'),
         seriesList: () => req('/ext/api/series'),
 
         // メーカー一覧 / メーカー情報

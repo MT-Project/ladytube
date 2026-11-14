@@ -26,7 +26,6 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/makerlist.js',
     '/ext/assets/serieslist.js',
     '/ext/assets/taglist.js',
-    '/ext/assets/releasecal.js',
     '/ext/assets/bookmark.js',
     '/ext/assets/bookmarklist.js',
     '/ext/assets/groupview.js',
