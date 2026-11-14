@@ -4,6 +4,8 @@
    ・拡張ページ共通ヘッダー (本家ヘッダーと同じ構成: ロゴ/検索/操作)
    ・ヘッダーのメニュー(ハンバーガー)とドロップダウン
    ・本体のヘッダーの「？」とメニューは本体 (client/src/components/ExtNavParts.jsx) が描き、ここの WL.help* / WL.toggleNavMenu を呼ぶ
+   ・個人用モジュールなどは WL.navMenuExtras に「項目を作る関数 (close) => 要素」を足すと、メニューの「QRコード」の上に並ぶ
+     (ホームの homeLinks と同じ位置。押したら close() を呼ぶ)
    ・テーマ(ダーク/ライト)切替を本家と同じ仕組みで再現
    ============================================================= */
 (function () {
@@ -96,8 +98,8 @@
         { href: '/series', icon: 'library', label: 'シリーズ一覧' },
         { href: '/performers', icon: 'users', label: '出演者一覧' },
         { href: '/tags', icon: 'tag', label: 'タグ一覧' },
-        { qr: true, icon: 'qr-code', label: 'QRコード' }
     ];
+    const QR_ITEM = { qr: true, icon: 'qr-code', label: 'QRコード' };
     // 表記は本体のホームのメニューと、管理画面の見出し (本家 ver.260914 で「設定」→「管理」) に合わせる
     const SETTINGS_ITEM = { href: '/settings', icon: 'settings', label: '管理' };
 
@@ -125,6 +127,8 @@
         backdropEl = h('div', { class: 'wlext-navmenu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-navmenu' });
         NAV_ITEMS.forEach(it => menuEl.appendChild(menuItemEl(it)));
+        Object.values(WL.navMenuExtras || {}).forEach(make => { const el = make(closeMenu); if (el) menuEl.appendChild(el); });
+        menuEl.appendChild(menuItemEl(QR_ITEM));
         menuEl.appendChild(h('div', { class: 'wlext-navmenu-sep' }));
         menuEl.appendChild(menuItemEl(SETTINGS_ITEM));
         document.body.appendChild(backdropEl);

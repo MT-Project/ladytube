@@ -6,6 +6,8 @@
    ・TOP10タグクリック  … メーカー×タグの AND 検索
    ・レーベルクリック   … そのレーベルで検索
    ・⋮メニュー          … メーカー情報の編集 / FANZAからの取得
+     個人用モジュールなどは WL.makerMenuExtras に「項目を作る関数 (maker, close) => 要素」を足すと、その下に並ぶ
+     (maker は一覧の1行のデータ { name, listUrl, siteUrl, catchCopy, ... }。押したら close() を呼ぶ)
    ============================================================= */
 (function () {
     'use strict';
@@ -20,12 +22,13 @@
     /* ---------- ⋮ メニュー (リスト表示の動画メニューと同じ見た目・配置) ---------- */
     let menuEl = null, backdrop = null;
     function closeMenu() { if (menuEl) menuEl.remove(); if (backdrop) backdrop.remove(); menuEl = backdrop = null; }
-    function openMenu(anchor, items) {
+    function openMenu(anchor, items, extraEls) {
         closeMenu();
         backdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
         menuEl = h('div', { class: 'wlext-sel-menu wlext-sel-menu-anchored' }, items.map(it =>
             h('div', { class: 'wlext-sel-menu-item', onClick: () => { closeMenu(); it.onClick(); } },
                 [WL.icon(it.icon, 15), h('span', null, it.label)])));
+        (extraEls || []).forEach(el => { if (el) menuEl.appendChild(el); });   // 位置を決める前に足す (高さに入れる)
         document.body.appendChild(backdrop);
         document.body.appendChild(menuEl);
         // アンカー(⋮ボタン)直下に配置。画面外なら上側へ反転。
@@ -218,7 +221,7 @@
                 openMenu(menuBtn, [
                     { icon: 'pencil', label: 'メーカー情報編集', onClick: () => editDialog(m, repaint) },
                     { icon: 'search', label: 'メーカー情報取得', onClick: () => fetchInfo(m, repaint) }
-                ]);
+                ], Object.values(WL.makerMenuExtras || {}).map(make => make(m, closeMenu)));
             });
 
             const fanzaEl = h('a', {
