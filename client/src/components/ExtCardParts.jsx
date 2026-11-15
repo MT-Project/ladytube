@@ -7,6 +7,10 @@
 // server/ext/public/bookmark.js と screenshots.js がカードを探して足していた)。並びは CSS の order で決まる。
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Icon } from './ExtIcon';
+import { ExtDialog } from './ExtDialog';
+import { extGet, extSend } from '../services/extApi';
+import { isBookmarked, setBookmarked, subscribeBookmarks } from '../utils/bookmarks';
+import { openExtDialog } from '../utils/extDialog';
 
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 
@@ -97,16 +101,63 @@ function askSsCount(id) {
     }, 0);
 }
 const subscribeSs = (f) => { ssListeners.add(f); return () => ssListeners.delete(f); };
-// ブックマーク済みの動画は拡張 (bookmark.js の WL._bmIds) が持ち、変わると wlext-bookmarks-changed を投げる
-const subscribeBm = (f) => { window.addEventListener('wlext-bookmarks-changed', f); return () => window.removeEventListener('wlext-bookmarks-changed', f); };
+// ブックマークのダイアログ: フォルダを押すとその場で追加 / 解除、下の欄で新しいフォルダを作って追加 (保存ボタンなし)。
+// v3.2.1 までは拡張の bookmark.js の WL.openBookmarkDialog。folders は開く前に読んだもの ([{ id, name, in }])
+export function ExtBookmarkDialog({ vid, folders: initial, onClose }) {
+    const [folders, setFolders] = useState(initial);
+    const input = useRef(null);
+    const changed = (list) => { setFolders(list); setBookmarked(vid, list.some(f => f.in)); };
+    const toggle = async (f) => {
+        try {
+            await extSend(f.in ? 'DELETE' : 'POST', '/ext/api/bookmark/video/' + vid, { folderId: f.id });
+            changed(folders.map(x => x.id === f.id ? { ...x, in: !f.in } : x));
+        } catch (e) { window.WLExt?.toast?.('更新に失敗: ' + e.message, 'error'); }
+    };
+    const add = async () => {
+        const n = input.current.value.trim(); if (!n) return;
+        try {
+            const nf = await extSend('POST', '/ext/api/bookmark/folders', { name: n });
+            await extSend('POST', '/ext/api/bookmark/video/' + vid, { folderId: nf.id });
+            input.current.value = '';
+            changed([...folders, { id: nf.id, name: nf.name, in: true }]);
+        } catch (e) { window.WLExt?.toast?.('フォルダ追加に失敗: ' + e.message, 'error'); }
+    };
+    return (
+        <ExtDialog title="ブックマーク" onClose={onClose}>
+            <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: '0.5rem' }}>フォルダをタップで追加/解除します。</div>
+                <div className="wlext-bm-dlg-list">
+                    {folders.length ? folders.map(f => (
+                        <div key={f.id} className={'wlext-bm-dlg-item' + (f.in ? ' on' : '')} onClick={() => toggle(f)}>
+                            <span className="name">{f.name}</span><span className="chk">{f.in ? '✓' : ''}</span>
+                        </div>
+                    )) : <div style={{ color: 'var(--text-secondary,#888)', fontSize: '0.85rem', padding: '0.5rem' }}>フォルダがありません。下の欄から追加してください。</div>}
+                </div>
+                <div className="wlext-inline" style={{ marginTop: '0.8rem' }}>
+                    <input ref={input} className="wlext-input" placeholder="新しいフォルダ名"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} />
+                    <button className="wlext-btn" onClick={add}>＋追加</button>
+                </div>
+            </div>
+        </ExtDialog>
+    );
+}
 
-// ブックマークボタン (押すとフォルダを選ぶダイアログ)。fab は動画ページの右下の丸ボタン (ExtWatchMeta.jsx の ExtWatchFabs)
+async function openBookmarkDialog(vid) {
+    let data;
+    try { data = await extGet('/ext/api/bookmark/video/' + vid); }
+    catch (e) { window.WLExt?.toast?.('読み込みに失敗: ' + e.message, 'error'); return; }
+    openExtDialog(ExtBookmarkDialog, { vid, folders: data.folders || [] });
+}
+
+// ブックマークボタン (押すとフォルダを選ぶダイアログ)。fab は動画ページの右下の丸ボタン (ExtWatchMeta.jsx の ExtWatchFabs)。
+// ブックマーク済みかどうかは utils/bookmarks.js が持つ
 export function ExtBookmarkButton({ id, fab }) {
-    const on = useSyncExternalStore(subscribeBm, () => { const s = window.WLExt && window.WLExt._bmIds; return !!(s && s.has(Number(id))); });
+    const on = useSyncExternalStore(subscribeBookmarks, () => isBookmarked(id));
     return (
         <button className={'wlext-bm-btn' + (fab ? ' wlext-bm-watch wlext-bm-fab' : '') + (on ? ' on' : '')} data-vid={id}
             title={on ? 'ブックマーク済み（クリックで編集）' : 'ブックマークに追加'}
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.WLExt?.openBookmarkDialog?.(id); }}>
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openBookmarkDialog(id); }}>
             {on
                 ? <svg width="100%" height="100%" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                 : <Icon name="bookmark-add" size="100%" />}

@@ -142,10 +142,6 @@
         bmCreateFolder: (name) => req('/ext/api/bookmark/folders', jsonOpts('POST', { name })),
         bmRenameFolder: (id, name) => req('/ext/api/bookmark/folders/' + id, jsonOpts('PUT', { name })),
         bmDeleteFolder: (id) => req('/ext/api/bookmark/folders/' + id, { method: 'DELETE' }),
-        bmIds: () => req('/ext/api/bookmark/ids'),
-        bmVideoFolders: (id) => req('/ext/api/bookmark/video/' + id),
-        bmAdd: (id, folderId) => req('/ext/api/bookmark/video/' + id, jsonOpts('POST', { folderId })),
-        bmRemove: (id, folderId) => req('/ext/api/bookmark/video/' + id, jsonOpts('DELETE', { folderId })),
 
         // スクリーンショット枚数
         ssCounts: (ids) => req('/ext/api/screenshots/counts?ids=' + ids.join(',')),
