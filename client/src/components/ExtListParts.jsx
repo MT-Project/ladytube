@@ -1,11 +1,15 @@
 // LadyTube: 拡張から本体へ移した一覧のページ (シリーズ一覧など) の共通の部品。
 // 中身の見た目は拡張のページと同じ womanlive-ext.css のクラス (.wlext-pp-container・.wlext-plist-*)。ヘッダーは本体の Navbar。
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { css } from '@linaria/core';
 import Navbar from './Navbar';
 import { Icon } from './ExtIcon';
 import ExtSelectionFabs from './ExtSelection';
+import { ExtDialog } from './ExtDialog';
+import { extSend } from '../services/extApi';
+import { closeExtDialog, extDialogSnapshot, openExtDialog } from '../utils/extDialog';
 import { theme } from '../theme';
 
 const page = css`
@@ -57,14 +61,60 @@ export function ExtListCard({ to, className, title, sel, id, name, children }) {
 
 // 選択モードの丸ボタン (検索画面と同じ ExtSelectionFabs)。items は表示中の [削除対象の値, 表示名] の並び。
 // 「すべて選択」は表示中を選んだものに足す (絞り込みで隠れた選択は残す。拡張と同じ)。
-// kind / kindLabel は削除の種類 (series / tag ...) と、メニュー・確認に出す名前。メニューと確認は拡張の listselect.js
+// kind / kindLabel は削除の種類 (series / tag ...) と、メニュー・確認に出す名前。メニューと確認は下の ListMenu (v3.2.1 までは拡張の listselect.js)
 export function ExtListFabs({ sel, items, kind, kindLabel }) {
     return (
         <ExtSelectionFabs selectionMode={sel.mode} selectedIds={sel.selected}
-            onToggleMode={() => { window.WLExt?.closeListMenu?.(); sel.setMode(!sel.mode); sel.setSelected(new Map()); }}
+            onToggleMode={() => { closeListMenu(); sel.setMode(!sel.mode); sel.setSelected(new Map()); }}
             onSelectAll={() => sel.setSelected(prev => new Map([...prev, ...items]))}
             onDeselectAll={() => sel.setSelected(new Map())}
-            onMenu={() => window.WLExt?.toggleListMenu?.({ kind, kindLabel }, sel.selected)} />
+            onMenu={() => {
+                if (extDialogSnapshot()?.Component === ListMenu) closeExtDialog();
+                else if (sel.selected.size) openExtDialog(ListMenu, { kind, kindLabel, selected: new Map(sel.selected) });
+            }} />
+    );
+}
+
+const closeListMenu = () => { if (extDialogSnapshot()?.Component === ListMenu) closeExtDialog(); };
+
+// 「N件を一括操作」のメニュー (右下)。selected は Map (削除対象の値 -> 表示名)
+function ListMenu({ kind, kindLabel, selected, onClose }) {
+    return createPortal(
+        <>
+            <div className="wlext-sel-menu-backdrop" onClick={onClose} />
+            <div className="wlext-sel-menu">
+                <div className="wlext-sel-menu-head">{selected.size + '件を一括操作'}</div>
+                <div className="wlext-sel-menu-item danger" onClick={() => { onClose(); openExtDialog(ListDeleteDialog, { kind, kindLabel, selected }); }}>
+                    <Icon name="trash" size={15} /><span>{kindLabel + 'の削除'}</span>
+                </div>
+            </div>
+        </>,
+        document.body
+    );
+}
+
+// 選んだ値を全動画のメタデータから取り除く。終わったらページを読み直す
+function ListDeleteDialog({ kind, kindLabel: label, selected, onClose }) {
+    const names = [...selected.values()];
+    const remove = async () => {
+        const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
+        try {
+            const r = await extSend('POST', '/ext/api/metadata/delete', { kind, targets: [...selected.keys()] });
+            toast(r.deleted + '件の' + label + 'を削除しました（動画 ' + r.videos + '件を更新）', 'success');
+            onClose();
+            // ponytail: 拡張と同じくページごと読み直す。各ページに読み直しの関数を渡すなら、それに替える
+            setTimeout(() => location.reload(), 500);
+        } catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
+    };
+    return (
+        <ExtDialog title={label + 'の削除'} onClose={onClose} onSave={remove} saveLabel="削除する" danger>
+            <div style={{ fontSize: '0.9rem', lineHeight: '1.7' }}>
+                <div style={{ color: 'var(--status-error,#e51400)', fontWeight: 'bold', marginBottom: '0.4rem' }}>{'⚠ 選択した ' + names.length + '件の' + label + 'を削除します'}</div>
+                <div className="wlext-sel-del-names">{names.join('、')}</div>
+                <div style={{ marginTop: '0.5rem' }}>{'すべての動画のメタデータから' + label + 'を取り除きます。動画そのものは削除しません。'}</div>
+                <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>この操作は元に戻せません。よろしいですか？</div>
+            </div>
+        </ExtDialog>
     );
 }
 

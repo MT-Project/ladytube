@@ -5,9 +5,9 @@
    選択した項目を全動画のメタデータから削除する。
 
    使い方: カード要素に data-wl-target(削除対象の値) と data-wl-name(表示名) を付け、
-   一覧を描画したあとに WL.listSelect({ page, kind, kindLabel }) を呼ぶ (拡張のページ)。
-   本体へ移した一覧のページ (SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx) は丸ボタンを本体の ExtListParts.jsx の ExtListFabs で置き、
-   一括操作の丸ボタンを押したときに WL.toggleListMenu(opts, selected) を呼ぶ。
+   一覧を描画したあとに WL.listSelect({ page, kind, kindLabel }) を呼ぶ (拡張の書き方のページ。今は個人用のジャンル一覧だけ)。
+   本体へ移した一覧のページ (SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx) は、本体の ExtListParts.jsx の
+   ExtListFabs が丸ボタン・メニュー・確認を出す (v3.2.1 までは下の toggleListMenu を呼んでいた)。
    FAB はページ要素の中に入れる (.wlext-ext-page が z-index 4000 の重ね面のため)。
    ============================================================= */
 (function () {
@@ -82,7 +82,7 @@
         }, true);
 
         /* ---------- FAB ---------- */
-        const btnMenu = h('button', { class: 'wlext-sel-fab wlext-sel-menu-btn', title: '一括操作メニュー', html: ICON_MENU, onClick: (e) => { e.stopPropagation(); WL.toggleListMenu(opts, selected); } });
+        const btnMenu = h('button', { class: 'wlext-sel-fab wlext-sel-menu-btn', title: '一括操作メニュー', html: ICON_MENU, onClick: (e) => { e.stopPropagation(); toggleListMenu(opts, selected); } });
         const btnAll = h('button', { class: 'wlext-sel-fab', title: '表示中をすべて選択', html: ICON_ALL, onClick: (e) => { e.stopPropagation(); selectAll(); } });
         const btnNone = h('button', { class: 'wlext-sel-fab', title: '選択をすべて解除', html: ICON_NONE, onClick: (e) => { e.stopPropagation(); deselectAll(); } });
         const btnMode = h('button', { class: 'wlext-sel-fab wlext-sel-mode-btn', title: '選択モード', html: ICON_MODE, onClick: (e) => { e.stopPropagation(); setMode(!mode); } });
@@ -99,13 +99,12 @@
         updateFabs();
     };
 
-    /* ---------- メニュー (本体の一覧のページ SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx も押されたときに呼ぶ) ---------- */
-    // WL.toggleListMenu(opts, selected): 「N件を一括操作」のメニュー。開いていれば閉じる。
+    /* ---------- メニュー ---------- */
+    // toggleListMenu(opts, selected): 「N件を一括操作」のメニュー。開いていれば閉じる。
     //   opts は { kind, kindLabel }、selected は Map (削除対象の値 -> 表示名)
     let menuEl = null, backdrop = null;
     function closeMenu() { if (menuEl) menuEl.remove(); if (backdrop) backdrop.remove(); menuEl = backdrop = null; }
-    WL.closeListMenu = closeMenu;
-    WL.toggleListMenu = function (opts, selected) {
+    function toggleListMenu(opts, selected) {
         if (menuEl) { closeMenu(); return; }
         if (!selected.size) return;
         backdrop = h('div', { class: 'wlext-sel-menu-backdrop', onClick: closeMenu });
@@ -116,7 +115,7 @@
         ]);
         document.body.appendChild(backdrop);
         document.body.appendChild(menuEl);
-    };
+    }
 
     /* ---------- 削除 ---------- */
     function confirmDelete(opts, selected) {

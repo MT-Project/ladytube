@@ -1,5 +1,5 @@
 // LadyTube: 検索画面の選択モード (一括操作) の丸ボタン (v3.1.5 までの server/ext/public/bulkselect.js の前半を移したもの)。
-// 本体へ移した一覧のページ (ExtListParts.jsx の ExtListFabs) も使う (onMenu で拡張の listselect.js の WL.toggleListMenu を呼ぶ)。
+// 本体へ移した一覧のページ (ExtListParts.jsx の ExtListFabs) も使う (onMenu で ExtListParts.jsx の一括削除のメニューを開く)。
 // 下から 選択モード / 選択の解除 / 表示中をすべて選択 / 一括操作メニュー。画面の右下に固定 (body の末尾に置く)。
 // 押したときのメニューとダイアログは ExtVideoMenu.jsx (v3.2.1 までは拡張の bulkselect.js)。見た目は womanlive-ext.css の .wlext-sel-*。
 import { createPortal } from 'react-dom';

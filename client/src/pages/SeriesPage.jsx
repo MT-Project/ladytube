@@ -1,5 +1,5 @@
 // LadyTube: シリーズ一覧 (/series)。シリーズ別にサムネイル・名前 (本数)・平均評価。押すとそのシリーズを検索。
-// 選択モードで選んだシリーズを、全動画のメタデータから取り除ける (メニューと確認は拡張の listselect.js の WL.toggleListMenu)。
+// 選択モードで選んだシリーズを、全動画のメタデータから取り除ける (メニューと確認は ExtListParts.jsx の ExtListFabs)。
 // v3.2.1 までは拡張の server/ext/public/serieslist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス
 import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
