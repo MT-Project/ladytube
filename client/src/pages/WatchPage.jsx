@@ -14,6 +14,8 @@ import { ChevronLeft, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
 
 import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName, formatYmd, formatYmAgo } from '../utils/formatters';
 import { api } from '../services/api';
+// LadyTube: 拡張メタデータの読み込み
+import { loadMeta } from '../utils/videoMeta';
 import { theme } from '../theme';
 
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -481,16 +483,15 @@ export default function WatchPage() {
         setStdMode(!stdMode);
     };
     // LadyTube: 拡張メタデータ (評価・ジャンル・出演者・品番・公開日など。表示は ExtWatchMeta.jsx)。
-    // 読み込みと保存は拡張 (videometa.js)。動画を開くたびに WL.loadMeta で読み直し、保存したら拡張が wlext-meta-updated で知らせる
+    // 読み書きは utils/videoMeta.js。動画を開くたびに loadMeta で読み直し、保存したら wlext-meta-updated で知らせる
+    // (拡張に残した FANZA の確認画面で反映したときも同じ)
     const [extMeta, setExtMeta] = useState(null);   // { id, meta }
     const extMetaVideoId = video ? String(video.id) : null;
     useEffect(() => {
         if (!extMetaVideoId) return;
         let alive = true;
-        const load = () => window.WLExt.loadMeta(extMetaVideoId).then(meta => { if (alive) setExtMeta({ id: extMetaVideoId, meta }); }, () => { });
-        if (window.WLExt && window.WLExt.loadMeta) load();
-        else window.addEventListener('DOMContentLoaded', load, { once: true });   // 拡張は defer で読むので、まだなら読み終わってから
-        return () => { alive = false; window.removeEventListener('DOMContentLoaded', load); };
+        loadMeta(extMetaVideoId).then(meta => { if (alive) setExtMeta({ id: extMetaVideoId, meta }); }, () => { });
+        return () => { alive = false; };
     }, [extMetaVideoId]);
     useEffect(() => {
         const onMeta = (e) => {

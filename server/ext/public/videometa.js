@@ -1,10 +1,8 @@
 /* =============================================================
-   LadyTube 拡張 - 動画ページの拡張メタデータの読み込み・保存・編集
-   (評価 / 出演者 / 型番・シリーズ・メーカー・レーベル・監督 / 公開日 / ジャンル)
-   表示 (評価の★・ジャンルや出演者の表・右下の丸ボタン) は本体の動画ページ
-   (client/src/components/ExtWatchMeta.jsx。v3.1.13 まではここで DOM に差し込んでいた)。
-   本体が使うもの: WL.loadMeta / WL.saveRating / WL.openMetaSearch / WL.openTagEditor / WL.openMetaEdit、
-   保存したら window に wlext-meta-updated ({ id, meta }) を投げる。
+   LadyTube 拡張 - 動画ページの「動画情報を検索」(FANZA を品番で検索し、確認画面で選んだ項目を反映する)
+   詳細情報の読み書き・評価・編集ダイアログ・タグ編集は本体 (client/src/utils/videoMeta.js・components/ExtMetaEdit.jsx。
+   v3.2.1 までここ)。表示は本体の client/src/components/ExtWatchMeta.jsx。
+   本体が使うもの: WL.openMetaSearch。反映したら window に wlext-meta-updated ({ id, meta }) を投げる。
    private が使うもの: WL._meta (読み込んだ詳細情報)、WL.metaSearch / WL.showMetaPreview (差し込み口)、
    WL.metaSearchTitle (「動画情報を検索」の丸ボタンの説明。本体の ExtWatchMeta.jsx が読む。無ければ本体の既定の文)
    ============================================================= */
@@ -14,131 +12,15 @@
 
     WL._meta = WL._meta || {};
 
-    // 動画ページを開くたびに読み直す (以前も動画が変わるたびにキャッシュを捨てていた)
-    WL.loadMeta = (vid) => WL.api.getMeta(vid).then(m => { WL._meta[vid] = m; return m; });
-
-    function metaToPayload(meta) {
-        return {
-            rating: meta.rating || 0,
-            display_name: meta.display_name || '',
-            model_no: meta.model_no || '',
-            release_date: meta.release_date || '',
-            series: meta.series || '',
-            maker: meta.maker || '',
-            label: meta.label || '',
-            directors: meta.directors || [],
-            genres: meta.genres || [],
-            performers: (meta.performers || []).map(p => p.id),
-        };
-    }
-
-    async function saveMeta(vid, payload) {
-        await WL.api.saveMeta(vid, payload);
-        // 出演者展開や file_name を含む最新版を取り直す
-        const fresh = await WL.api.getMeta(vid);
-        WL._meta[vid] = fresh;
-        rerender(vid);
-        return fresh;
-    }
-
     // 本体の動画ページ (WatchPage.jsx) に知らせる。評価・表・タイトル・公開日を描き直す
     function rerender(vid) {
         window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta: WL._meta[vid] } }));
-    }
-
-    // 評価 (★) を押したとき
-    WL.saveRating = async (vid, n) => {
-        const meta = WL._meta[vid]; if (!meta) return;
-        try { const p = metaToPayload(meta); p.rating = n; meta.rating = n; await saveMeta(vid, p); WL.toast('評価を保存しました', 'success'); }
-        catch (e) { WL.toast('評価の保存に失敗: ' + e.message, 'error'); }
-    };
-
-    /* ---------- 編集ダイアログ ---------- */
-    function openEditDialog(vid, meta) {
-        const temp = JSON.parse(JSON.stringify(metaToPayload(meta)));
-
-        const ratingHost = h('div');
-        const ratingEl = WL.starsEl(temp.rating, (n) => { temp.rating = n; });
-        ratingHost.appendChild(ratingEl);
-
-        const inDisplay = h('input', { class: 'wlext-input', value: temp.display_name });
-        const inModel = h('input', { class: 'wlext-input', value: temp.model_no });
-        const inRelease = h('input', { class: 'wlext-input', type: 'date', value: normalizeDateInput(temp.release_date) });
-        const inSeries = h('input', { class: 'wlext-input', value: temp.series });
-        const inMaker = h('input', { class: 'wlext-input', value: temp.maker });
-        const inLabel = h('input', { class: 'wlext-input', value: temp.label });
-        const directorsInput = WL.chipInput(temp.directors, '監督名を入力してEnter');
-        const performersInput = WL.performerInput(meta.performers || []);
-        const genresInput = WL.chipInput(temp.genres, 'ジャンルを入力してEnter');
-
-        const field = (label, node) => h('div', { class: 'wlext-field' }, [h('label', null, label), node]);
-
-        const body = h('div', null, [
-            field('評価', ratingHost),
-            field('表示動画名 (タイトルを置き換えます)', inDisplay),
-            field('出演者', performersInput.el),
-            field('ジャンル', genresInput.el),
-            h('div', { class: 'wlext-row2' }, [field('公開日', inRelease), field('品番', inModel)]),
-            h('div', { class: 'wlext-row2' }, [field('シリーズ名', inSeries), field('作品監督', directorsInput.el)]),
-            h('div', { class: 'wlext-row2' }, [field('メーカー', inMaker), field('レーベル', inLabel)]),
-        ]);
-
-        WL.dialog('詳細情報を編集', body, {
-            onSave: async (close) => {
-                const payload = {
-                    rating: temp.rating,
-                    display_name: inDisplay.value.trim(),
-                    model_no: inModel.value.trim(),
-                    release_date: inRelease.value.trim(),
-                    series: inSeries.value.trim(),
-                    maker: inMaker.value.trim(),
-                    label: inLabel.value.trim(),
-                    directors: directorsInput.getValues(),
-                    genres: genresInput.getValues(),
-                    performers: performersInput.getValues().map(p => p.id),
-                };
-                try { await saveMeta(vid, payload); WL.toast('保存しました', 'success'); close(); }
-                catch (e) { WL.toast('保存に失敗: ' + e.message, 'error'); }
-            }
-        });
-    }
-
-    function normalizeDateInput(s) {
-        if (!s) return '';
-        const d = WL.parseDate(s); if (!d) return '';
-        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
 
     /* ---------- 右下の丸ボタン (ExtWatchMeta.jsx の ExtWatchFabs) が呼ぶ ---------- */
     // 動画情報を検索。差し込み口: WL.metaSearch が登録されていれば、それに検索を任せる
     // (複数の情報ソースを並べる個人用モジュールなど)。無ければ FANZA を品番で検索する。
     WL.openMetaSearch = (vid) => (WL.metaSearch ? WL.metaSearch(vid) : runDmmSearch(vid));
-    // タグ編集 (本体のタグ編集の代わり。グループ対応のダイアログ)
-    WL.openTagEditor = (vid) => openTagEditor(vid);
-    // 詳細情報を編集
-    WL.openMetaEdit = (vid) => {
-        const meta = WL._meta[vid];
-        if (!meta) { WL.toast('詳細情報を読み込み中です'); return; }
-        openEditDialog(vid, meta);
-    };
-
-    async function openTagEditor(vid) {
-        let current = [];
-        try { const r = await WL.api.getVideoTags(vid); current = r.tags || []; } catch (e) { }
-        WL.presetTagDialog({
-            title: 'タグを編集',
-            current,
-            loadPresets: () => WL.loadVideoTagPresets(),
-            savePresets: (arr) => WL.saveVideoTagPresets(arr),
-            onSave: async (selected) => {
-                try {
-                    await WL.api.setVideoTags(vid, selected);
-                    WL.toast('タグを保存しました', 'success');
-                    setTimeout(() => location.reload(), 350);
-                } catch (e) { WL.toast('タグの保存に失敗: ' + e.message, 'error'); }
-            }
-        });
-    }
 
     async function runDmmSearch(vid) {
         const meta = WL._meta[vid];

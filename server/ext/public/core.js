@@ -309,31 +309,6 @@
         setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 2600);
     };
 
-    /* ---------- 評価(★) 部品 ---------- */
-    // onChange(value) を渡すと編集可能。省略で読み取り専用。
-    WL.starsEl = function (value, onChange) {
-        const wrap = h('div', { class: 'wlext-rating' + (onChange ? '' : ' readonly') });
-        let cur = value || 0;
-        const stars = [];
-        function paint(n) { stars.forEach((s, i) => s.classList.toggle('on', i < n)); }
-        for (let i = 1; i <= 5; i++) {
-            const star = h('span', { class: 'wlext-star' }, '★');
-            if (onChange) {
-                star.addEventListener('mouseenter', () => paint(i));
-                star.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); cur = i; onChange(i); });
-            }
-            stars.push(star); wrap.appendChild(star);
-        }
-        if (onChange) {
-            wrap.addEventListener('mouseleave', () => paint(cur));
-            const clr = h('span', { class: 'wlext-rating-clear', onClick: (e) => { e.stopPropagation(); e.preventDefault(); cur = 0; onChange(0); } }, 'クリア');
-            wrap.appendChild(clr);
-        }
-        paint(cur);
-        wrap.setValue = (n) => { cur = n; paint(n); };
-        return wrap;
-    };
-
     /* ---------- 単純チップ入力 (文字列の複数値) ---------- */
     WL.chipInput = function (initial, placeholder) {
         let values = (initial || []).slice();
@@ -353,52 +328,6 @@
         box.appendChild(input); render();
         box.addEventListener('click', () => input.focus());
         return { el: box, getValues: () => { const t = input.value.trim(); if (t && !values.includes(t)) values.push(t); return values.slice(); } };
-    };
-
-    /* ---------- 出演者入力 (サジェスト + 新規作成) ---------- */
-    WL.performerInput = function (initial) {
-        let values = (initial || []).map(p => ({ id: p.id, name: p.name })); // {id,name}
-        const box = h('div', { class: 'wlext-chips', style: { position: 'relative' } });
-        const input = h('input', { class: 'wlext-chip-input', placeholder: '出演者名を入力' });
-        let suggestEl = null;
-        function render() {
-            box.querySelectorAll('.wlext-chip').forEach(c => c.remove());
-            values.forEach((v, idx) => {
-                const chip = h('span', { class: 'wlext-chip' }, [v.name, h('span', { class: 'x', onClick: () => { values.splice(idx, 1); render(); } }, '×')]);
-                box.insertBefore(chip, input);
-            });
-        }
-        function closeSuggest() { if (suggestEl) { suggestEl.remove(); suggestEl = null; } }
-        async function add(name) {
-            name = name.trim(); if (!name) return;
-            if (values.some(v => v.name === name)) { input.value = ''; closeSuggest(); return; }
-            try { const p = await WL.api.createPerformer(name); values.push({ id: p.id, name: p.name }); render(); }
-            catch (e) { WL.toast('出演者の追加に失敗: ' + e.message, 'error'); }
-            input.value = ''; closeSuggest();
-        }
-        const doSuggest = debounce(async () => {
-            const q = input.value.trim();
-            closeSuggest();
-            if (!q) return;
-            let list = [];
-            try { list = await WL.api.searchPerformers(q); } catch (e) { }
-            suggestEl = h('div', { class: 'wlext-suggest' });
-            list.filter(p => !values.some(v => v.id === p.id)).forEach(p => {
-                suggestEl.appendChild(h('div', { onMousedown: (e) => { e.preventDefault(); values.push({ id: p.id, name: p.name }); render(); input.value = ''; closeSuggest(); } }, p.name + (p.furigana ? '（' + p.furigana + '）' : '')));
-            });
-            suggestEl.appendChild(h('div', { style: { borderTop: '1px solid var(--border-primary,#ccc)', color: 'var(--accent,#007acc)' }, onMousedown: (e) => { e.preventDefault(); add(q); } }, '＋「' + q + '」を新規追加'));
-            const r = input.getBoundingClientRect();
-            suggestEl.style.position = 'fixed';
-            suggestEl.style.left = r.left + 'px';
-            suggestEl.style.top = (r.bottom + 2) + 'px';
-            document.body.appendChild(suggestEl);
-        }, 200);
-        input.addEventListener('input', doSuggest);
-        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); add(input.value); } });
-        input.addEventListener('blur', () => setTimeout(closeSuggest, 200));
-        box.appendChild(input); render();
-        box.addEventListener('click', () => input.focus());
-        return { el: box, getValues: () => values.slice() };
     };
 
     /* ---------- 汎用ダイアログ ---------- */

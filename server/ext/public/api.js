@@ -91,7 +91,6 @@
 
         // 動画メタ
         getMeta: (id) => req('/ext/api/video/' + id + '/meta'),
-        saveMeta: (id, m) => req('/ext/api/video/' + id + '/meta', jsonOpts('PUT', m)),
 
         // コマ送り (フレームレート)
         frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
@@ -107,7 +106,6 @@
         deleteMetadataValues: (kind, targets) => req('/ext/api/metadata/delete', jsonOpts('POST', { kind, targets })),
 
         // 出演者
-        searchPerformers: (q) => req('/ext/api/performers?q=' + encodeURIComponent(q || '')),
         performersAll: () => req('/ext/api/performers/all'),
         cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
 
@@ -129,7 +127,6 @@
         getTagRules: () => req('/ext/api/performer-tag-rules'),
         saveTagRules: (rules) => req('/ext/api/performer-tag-rules', jsonOpts('PUT', { rules })),
         applyTagRules: (sync) => req('/ext/api/performer-tag-rules/apply', jsonOpts('POST', { sync })),
-        createPerformer: (name) => req('/ext/api/performers', jsonOpts('POST', { name })),
         getPerformer: (id) => req('/ext/api/performer/' + id),
         updatePerformer: (id, p) => req('/ext/api/performer/' + id, jsonOpts('PUT', p)),
         performerImageUrl: (id, bust) => '/ext/api/performer/' + id + '/image' + (bust ? ('?t=' + bust) : ''),
@@ -163,8 +160,6 @@
         getVideoTagLayout: () => req('/ext/api/video-tag-layout'),
         saveVideoTagLayout: (layout) => req('/ext/api/video-tag-layout', jsonOpts('PUT', { layout })),
         // 動画単体のタグ 取得/設定
-        getVideoTags: (id) => req('/ext/api/video/' + id + '/tags'),
-        setVideoTags: (id, tags) => req('/ext/api/video/' + id + '/tags', jsonOpts('PUT', { tags })),
 
         // 既存 API (フォルダ参照に流用)
         fsList: (p) => req('/api/fs/list?path=' + encodeURIComponent(p)),

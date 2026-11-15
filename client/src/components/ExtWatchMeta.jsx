@@ -3,16 +3,20 @@
 //  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者・品番などの表
 //  ・ExtWatchFabs: 右下の丸ボタン (ブックマーク / 動画情報を検索 / タグを編集 / 詳細情報を編集)。本体のタグ編集ボタンの代わり。
 //    ブックマークは ExtCardParts.jsx の ExtBookmarkButton (v3.1.15 までは bookmark.js が body に足していた)
-// 詳細情報の読み込みと保存、編集ダイアログ、DMM 検索、タグ編集は videometa.js のまま
+// 詳細情報の読み書きとタグ編集は utils/videoMeta.js、編集ダイアログは ExtMetaEdit.jsx (v3.2.1 までは videometa.js)。
+// 「動画情報を検索」(FANZA の検索と確認画面) は拡張の videometa.js のまま
 // (private の metasearch.js などが WL._meta と差し込み口 WL.metaSearch / WL.showMetaPreview を使うため)。
-// 詳細情報は WatchPage が WL.loadMeta で読み、保存したあとは videometa.js が window に wlext-meta-updated ({ id, meta }) を投げる。
+// 詳細情報は WatchPage が loadMeta で読み、保存したあとは window に wlext-meta-updated ({ id, meta }) が来る。
 // 拡張の関数 (window.WLExt) は、詳細情報が届いたあと (= 拡張は読み込み済み) か、押されたときにだけ呼ぶ。
 // 検索や出演者へのリンクは以前と同じくページごと読み直す (WL.searchBy / WL.openPerformer)。中クリックは data-wlext-href を core.js が拾う。
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
+import { ExtMetaEditDialog } from './ExtMetaEdit';
 import { formatYmd, formatYmAgo, formatAgeYm } from '../utils/formatters';
+import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
+import { openExtDialog } from '../utils/extDialog';
 
 const WL = () => window.WLExt;
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
@@ -21,7 +25,7 @@ const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 export function ExtRating({ videoId, value }) {
     return (
         <div className="wlext-rating-host">
-            <ExtStarsEdit value={value} onChange={(n) => WL().saveRating(videoId, n)} />
+            <ExtStarsEdit value={value} onChange={(n) => saveRating(videoId, n)} />
         </div>
     );
 }
@@ -111,17 +115,22 @@ export function ExtMetaBlock({ meta }) {
 
 // 丸ボタン。以前と同じく body の末尾に置く (位置は womanlive-ext.css の .wlext-*-fab)
 export function ExtWatchFabs({ videoId }) {
-    const call = (name) => () => { const w = WL(); if (w && w[name]) w[name](String(videoId)); };
+    const vid = String(videoId);
+    const editMeta = () => {
+        const meta = cachedMeta(vid);
+        if (!meta) { WL()?.toast?.('詳細情報を読み込み中です'); return; }
+        openExtDialog(ExtMetaEditDialog, { vid, meta });
+    };
     return createPortal(
         <>
             {/* 位置は CSS で決まる (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集) */}
             <ExtBookmarkButton id={videoId} fab />
             {/* 説明は検索を差し替えたもの (WL.metaSearchTitle) があればそれ。拡張は defer で読むが、ここは動画を読み込んでから描くので間に合う */}
-            <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={call('openMetaSearch')}>
+            <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={() => WL()?.openMetaSearch?.(vid)}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
-            <button className="wlext-tag-fab" title="タグを編集" onClick={call('openTagEditor')}><Icon name="tag" size={22} /></button>
-            <button className="wlext-tag-fab wlext-edit-fab" title="詳細情報を編集" onClick={call('openMetaEdit')}><Icon name="pencil" size={22} /></button>
+            <button className="wlext-tag-fab" title="タグを編集" onClick={() => openTagEditor(vid)}><Icon name="tag" size={22} /></button>
+            <button className="wlext-tag-fab wlext-edit-fab" title="詳細情報を編集" onClick={editMeta}><Icon name="pencil" size={22} /></button>
         </>,
         document.body
     );

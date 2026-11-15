@@ -4,10 +4,11 @@
 // 操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
-// タグ追加と詳細情報編集のダイアログは、拡張の部品 (WL.presetTagDialog / chipInput / performerInput。private も使う) で組む。
+// タグ追加のダイアログは拡張の部品 (WL.presetTagDialog) で組む。詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog。
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
+import { ExtBulkMetaDialog } from './ExtMetaEdit';
 import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { setBookmarked } from '../utils/bookmarks';
@@ -47,7 +48,7 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
             <div ref={menu} className={'wlext-sel-menu' + (anchor ? ' wlext-sel-menu-anchored' : '')}>
                 {head && <div className="wlext-sel-menu-head">{head}</div>}
                 <div className="wlext-sel-menu-item" onClick={run(doTags)}><Icon name="tag" size={15} /><span>タグ追加</span></div>
-                <div className="wlext-sel-menu-item" onClick={run(doMeta)}>✎ 詳細情報編集</div>
+                <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}>✎ 詳細情報編集</div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
                 <div ref={del} className="wlext-sel-menu-item danger" onClick={run((ids, done) => openExtDialog(DeleteDialog, { ids, done }))}>🗑 動画の削除</div>
             </div>
@@ -68,53 +69,6 @@ function doTags(ids, done) {
         onSave: async (tags) => {
             if (!tags.length) { toast('追加するタグを選んでください', 'error'); return; }
             try { const r = await extSend('POST', '/ext/api/bulk/tags', { ids, tags }); toast(r.count + '件にタグを追加しました', 'success'); afterAction(done); }
-            catch (e) { toast('失敗: ' + e.message, 'error'); }
-        }
-    });
-}
-
-/* ---------- 詳細情報編集 (表示動画名なし) ---------- */
-function doMeta(ids, done) {
-    const WL = window.WLExt, h = WL.h;
-    const temp = { rating: 0 };
-    const ratingHost = h('div');
-    ratingHost.appendChild(WL.starsEl(0, (n) => { temp.rating = n; }));
-    const inModel = h('input', { class: 'wlext-input' });
-    const inRelease = h('input', { class: 'wlext-input', type: 'date' });
-    const inSeries = h('input', { class: 'wlext-input' });
-    const inMaker = h('input', { class: 'wlext-input' });
-    const inLabel = h('input', { class: 'wlext-input' });
-    const directorsInput = WL.chipInput([], '監督名を入力してEnter');
-    const performersInput = WL.performerInput([]);
-    const genresInput = WL.chipInput([], 'ジャンルを入力してEnter');
-    const field = (label, node) => h('div', { class: 'wlext-field' }, [h('label', null, label), node]);
-
-    const body = h('div', null, [
-        h('div', { style: { ...muted, marginBottom: '0.6rem' } },
-            '入力した項目のみ上書きします（空欄は変更しません）。ジャンルは既存に追加します。表示動画名は一括では変更できません。'),
-        field('評価（★を選ぶと一括設定）', ratingHost),
-        field('出演者（上書き）', performersInput.el),
-        field('ジャンル（追加）', genresInput.el),
-        h('div', { class: 'wlext-row2' }, [field('公開日', inRelease), field('品番', inModel)]),
-        h('div', { class: 'wlext-row2' }, [field('シリーズ名', inSeries), field('作品監督', directorsInput.el)]),
-        h('div', { class: 'wlext-row2' }, [field('メーカー', inMaker), field('レーベル', inLabel)]),
-    ]);
-
-    WL.dialog('詳細情報を一括編集（' + ids.length + '件）', body, {
-        saveLabel: '適用',
-        onSave: async (close) => {
-            const meta = {
-                rating: temp.rating,
-                model_no: inModel.value.trim(),
-                release_date: inRelease.value.trim(),
-                series: inSeries.value.trim(),
-                maker: inMaker.value.trim(),
-                label: inLabel.value.trim(),
-                directors: directorsInput.getValues(),
-                genres: genresInput.getValues(),
-                performers: performersInput.getValues().map(p => p.id),
-            };
-            try { const r = await extSend('POST', '/ext/api/bulk/meta', { ids, meta }); toast(r.count + '件を更新しました', 'success'); close(); afterAction(done); }
             catch (e) { toast('失敗: ' + e.message, 'error'); }
         }
     });
