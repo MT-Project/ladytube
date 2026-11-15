@@ -12,6 +12,7 @@ import LoadingDots from './LoadingDots';
 // LadyTube: 品番でまとめたカードの「N本」の一覧
 import { ExtGroupMembers } from './ExtVideoRow';
 import { openExtDialog } from '../utils/extDialog';
+import ExtVideoMenu from './ExtVideoMenu';
 
 // Linaria styles
 const styles = {
@@ -934,10 +935,9 @@ function VideoCard({
                         className={styles.menuBtnWrapper}
                         onClick={e => e.preventDefault()}
                         onClickCapture={extMeta && viewMode === 'list' ? (e) => {
-                            // LadyTube: 検索画面のリスト表示では「⋮」を動画単体の操作メニューにする (server/ext/public/bulkselect.js)
-                            if (!window.WLExt?.openVideoMenu) return;
+                            // LadyTube: 検索画面のリスト表示では「⋮」を動画単体の操作メニューにする (ExtVideoMenu.jsx)
                             e.preventDefault(); e.stopPropagation();
-                            window.WLExt.openVideoMenu(video.id, e.currentTarget.firstElementChild || e.currentTarget, groupMemberIds(video));
+                            openExtDialog(ExtVideoMenu, { ids: groupMemberIds(video), anchor: e.currentTarget.firstElementChild || e.currentTarget });
                         } : undefined}
                     >
                         <div

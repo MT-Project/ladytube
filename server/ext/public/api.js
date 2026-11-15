@@ -156,12 +156,6 @@
         backupExport: () => req('/ext/api/backup/export'),
         backupImport: (data) => req('/ext/api/backup/import', jsonOpts('POST', { data })),
 
-        // 一括操作
-        bulkTags: (ids, tags) => req('/ext/api/bulk/tags', jsonOpts('POST', { ids, tags })),
-        bulkEditMeta: (ids, meta) => req('/ext/api/bulk/meta', jsonOpts('POST', { ids, meta })),
-        bulkBookmark: (ids, folderId) => req('/ext/api/bulk/bookmark', jsonOpts('POST', { ids, folderId })),
-        bulkDelete: (ids) => req('/ext/api/bulk/delete', jsonOpts('POST', { ids })),
-
         // 動画タグ プリセット (本体の /api/tags を利用。実タグのみ。# 見出しは含めない)
         getVideoPresetTags: () => req('/api/tags').then(a => Array.isArray(a) ? a.map(t => (t && t.name) || t).filter(Boolean) : []),
         saveVideoPresetTags: (tags) => req('/api/tags/bulk', jsonOpts('PUT', { tags })),

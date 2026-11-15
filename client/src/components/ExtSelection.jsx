@@ -1,8 +1,10 @@
 // LadyTube: 検索画面の選択モード (一括操作) の丸ボタン (v3.1.5 までの server/ext/public/bulkselect.js の前半を移したもの)。
 // 本体へ移した一覧のページ (ExtListParts.jsx の ExtListFabs) も使う (onMenu で拡張の listselect.js の WL.toggleListMenu を呼ぶ)。
 // 下から 選択モード / 選択の解除 / 表示中をすべて選択 / 一括操作メニュー。画面の右下に固定 (body の末尾に置く)。
-// 押したときのメニューとダイアログは拡張側 (bulkselect.js の WL.toggleBulkMenu)。見た目は womanlive-ext.css の .wlext-sel-*。
+// 押したときのメニューとダイアログは ExtVideoMenu.jsx (v3.2.1 までは拡張の bulkselect.js)。見た目は womanlive-ext.css の .wlext-sel-*。
 import { createPortal } from 'react-dom';
+import ExtVideoMenu from './ExtVideoMenu';
+import { closeExtDialog, extDialogSnapshot, openExtDialog } from '../utils/extDialog';
 
 const svg = (p) => '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
 const ICON_MODE = svg('<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>');
@@ -11,7 +13,7 @@ const ICON_NONE = svg('<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y
 const ICON_MENU = svg('<circle cx="12" cy="5" r="1.6" fill="currentColor"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><circle cx="12" cy="19" r="1.6" fill="currentColor"></circle>');
 
 // expandIds: 選んだ id を、品番でまとめたカードなら中の動画すべてに広げる (SearchPage.jsx。v3.2.1 までは拡張の bulkselect.js が広げていた)
-// onMenu: 一括操作の丸ボタンを押したとき (一覧のページ。無ければ検索画面の動画の一括操作 WL.toggleBulkMenu)
+// onMenu: 一括操作の丸ボタンを押したとき (一覧のページ。無ければ検索画面の動画の一括操作 ExtVideoMenu。開いていれば閉じる)
 export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds = (ids) => ids, onMenu, onToggleMode, onSelectAll, onDeselectAll }) {
     const count = selectedIds.size;
     const fab = (className, title, icon, onClick, show = true) => (
@@ -23,7 +25,7 @@ export default function ExtSelectionFabs({ selectionMode, selectedIds, expandIds
         <div className="wlext-sel-fabs">
             <button className="wlext-sel-fab wlext-sel-menu-btn" title={'一括操作 (' + count + '件選択中)'} data-count={count}
                 style={{ display: selectionMode && count > 0 ? '' : 'none' }}
-                onClick={(e) => { e.stopPropagation(); if (onMenu) onMenu(); else window.WLExt?.toggleBulkMenu?.(expandIds([...selectedIds]), onDeselectAll); }}
+                onClick={(e) => { e.stopPropagation(); if (onMenu) onMenu(); else if (extDialogSnapshot()?.Component === ExtVideoMenu) closeExtDialog(); else openExtDialog(ExtVideoMenu, { ids: expandIds([...selectedIds]), done: onDeselectAll }); }}
                 dangerouslySetInnerHTML={{ __html: ICON_MENU }} />
             {fab('wlext-sel-fab', '表示中をすべて選択', ICON_ALL, onSelectAll, selectionMode)}
             {fab('wlext-sel-fab', '選択をすべて解除', ICON_NONE, onDeselectAll, selectionMode)}

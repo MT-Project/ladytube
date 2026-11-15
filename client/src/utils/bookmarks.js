@@ -19,9 +19,3 @@ export function setBookmarked(id, on) {
     if (on) ids.add(Number(id)); else ids.delete(Number(id));
     emit();
 }
-
-// 拡張の一括操作 (bulkselect.js) が WL._bmIds に足して WL.repaintBookmarks を呼ぶので、同じものを渡す (bulkselect.js を移したら消す)
-if (window.WLExt) {
-    Object.defineProperty(window.WLExt, '_bmIds', { get: () => ids, configurable: true });
-    window.WLExt.repaintBookmarks = emit;
-}

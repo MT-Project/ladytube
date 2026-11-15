@@ -1,10 +1,13 @@
 // LadyTube: 拡張と同じ見た目のダイアログ (拡張の core.js の WL.dialog と同じ形。見た目は womanlive-ext.css の .wlext-dialog)。
 // 外側・✕・「キャンセル」・Esc で閉じる。ExtDialogHost は utils/extDialog.js の openExtDialog で開いたものを置く (App.jsx)。
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { closeExtDialog, extDialogSnapshot, subscribeExtDialog } from '../utils/extDialog';
 
-export function ExtDialog({ title, onClose, children }) {
+// onSave を渡すと「キャンセル」の右に saveLabel (既定「保存」) のボタンを置き、終わるまで押せなくする。danger は赤いボタン
+export function ExtDialog({ title, onClose, onSave, saveLabel, danger, children }) {
+    const [busy, setBusy] = useState(false);
+    const save = async () => { setBusy(true); try { await onSave(); } finally { setBusy(false); } };
     useEffect(() => {
         const onKey = (e) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', onKey);
@@ -15,7 +18,9 @@ export function ExtDialog({ title, onClose, children }) {
             <div className="wlext-dialog">
                 <div className="wlext-dialog-header"><span className="wlext-dialog-title">{title}</span><span className="wlext-close-x" onClick={onClose}>✕</span></div>
                 <div className="wlext-dialog-body">{children}</div>
-                <div className="wlext-dialog-footer"><button className="wlext-btn" onClick={onClose}>キャンセル</button></div>
+                <div className="wlext-dialog-footer"><button className="wlext-btn" onClick={onClose}>キャンセル</button>
+                    {onSave && <button className={'wlext-btn ' + (danger ? 'wlext-btn-danger' : 'wlext-btn-primary')} disabled={busy} onClick={save}>{saveLabel || '保存'}</button>}
+                </div>
             </div>
         </div>,
         document.body

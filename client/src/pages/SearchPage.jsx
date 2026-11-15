@@ -12,6 +12,11 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { LayoutGrid, Grid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder, Layers } from 'lucide-react';
 import { theme } from '../theme';
 import { removeExtension, groupMemberIds } from '../utils/formatters';
+import ExtVideoMenu from '../components/ExtVideoMenu';
+import { closeExtDialog, extDialogSnapshot } from '../utils/extDialog';
+
+// LadyTube: 動画の操作メニュー (ExtVideoMenu) が開いていれば閉じる
+const closeVideoMenu = () => { if (extDialogSnapshot()?.Component === ExtVideoMenu) closeExtDialog(); };
 
 // Linaria styles
 const styles = {
@@ -596,11 +601,11 @@ export default function SearchPage() {
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const currentVideos = videos;
 
-  // LadyTube: 選択モード (一括操作)。選んだ動画はページを移っても残す。メニューとダイアログは server/ext/public/bulkselect.js
+  // LadyTube: 選択モード (一括操作)。選んだ動画はページを移っても残す。メニューとダイアログは ExtVideoMenu.jsx
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(() => new Set());
   const toggleSelectionMode = () => {
-    window.WLExt?.closeBulkMenu?.();
+    closeVideoMenu();
     if (selectionMode) setSelectedIds(new Set());
     setSelectionMode(!selectionMode);
   };
@@ -611,7 +616,7 @@ export default function SearchPage() {
   });
   const selectAllVisible = () => setSelectedIds(prev => new Set([...prev, ...currentVideos.map(v => v.id)]));
   const deselectAll = () => setSelectedIds(new Set());
-  useEffect(() => () => window.WLExt?.closeBulkMenu?.(), []);   // 検索画面を離れたらメニューも閉じる
+  useEffect(() => closeVideoMenu, []);   // 検索画面を離れたらメニューも閉じる
 
   const updateParams = (updates) => {
     const newParams = {

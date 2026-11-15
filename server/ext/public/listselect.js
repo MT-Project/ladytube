@@ -1,7 +1,7 @@
 /* =============================================================
    WomanLive 拡張 - 一覧ページの選択モードと一括削除
    シリーズ一覧 / 出演者一覧 / タグ一覧 (＋個人用のジャンル一覧) で、
-   検索結果の一括操作 (bulkselect.js) と同じ操作・同じ見た目のまま、
+   検索結果の一括操作 (本体の ExtVideoMenu.jsx) と同じ操作・同じ見た目のまま、
    選択した項目を全動画のメタデータから削除する。
 
    使い方: カード要素に data-wl-target(削除対象の値) と data-wl-name(表示名) を付け、
@@ -14,7 +14,7 @@
     'use strict';
     const WL = window.WLExt; const h = WL.h;
 
-    // FAB のアイコン (bulkselect.js と同じ図形で揃える)
+    // FAB のアイコン (本体の ExtSelection.jsx と同じ図形で揃える)
     const svg = (p) => '<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
     const ICON_MODE = svg('<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>');
     const ICON_ALL = svg('<polyline points="20 6 9 17 4 12"></polyline>');
