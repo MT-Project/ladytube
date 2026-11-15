@@ -1285,7 +1285,7 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-lib-mode { flex: 1; }
 .wlext-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
 
-/* ---- 同じ品番の動画をまとめたカード (groupview.js) ---- */
+/* ---- 同じ品番の動画をまとめたカード (本体の VideoList.jsx。「N本」の一覧は ExtVideoRow.jsx) ---- */
 /* 「N本」バッジ: サムネ左上。選択モードのチェックと重ならないよう右へずらす。
    ポスター表示は左上を評価行が使うので左下、プレビューのシークバー(seekBarContainer_: 下端28px)と題名帯(posterTitle_: 約31px)の上 */
 .wlext-group-badge {
@@ -1331,7 +1331,7 @@ a:has(> .wlext-sel-badge) .wlext-group-badge { left: 34px; }
 .wlext-vrow-sub .wlext-star { font-size: 0.8rem; }
 .wlext-vrow-note { color: var(--accent, #007acc); font-weight: bold; }
 
-/* ---- 動画ページの標準モード (standard.js) ---- */
+/* ---- 動画ページの標準モード (本体の ExtStandard.jsx。右欄の一覧は ExtVideoRow.jsx) ---- */
 /* 本家の要素は動かさず、右欄の位置へ重ねる。右欄に出すのは選んでいる項目(data-wlext-tab)の1つだけ */
 body.wlext-std { --wlext-std-w: clamp(320px, 27vw, 460px); --wlext-std-head: 44px; }
 body.wlext-std [data-wlext-std="player"],

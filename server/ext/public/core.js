@@ -169,12 +169,6 @@
     // (v3.2.1 までは、ここに本家 API を包む fetch フックがあった: まとめたカードの手直し・タグの複製・関連動画の差し替え。
     //  今はサーバー (search.js・videoService.js) と本体の画面 (VideoList.jsx・SearchPage.jsx) が行う)
 
-    // 表示動画名を使うかどうか (表示設定の「動画表示名で表示する」。既定はON)。
-    // 一覧と動画ページの名前は本体の画面 (client/src/utils/formatters.js の videoName) が出す。
-    // ここは拡張の UI (品番でまとめたパートの一覧など) が同じ設定を読むためのもの。
-    WL.useDisplayName = () => {
-        try { return localStorage.getItem('wlext_use_display_name') !== '0'; } catch (e) { return true; }
-    };
 
     /* ---------- ルート検知 ---------- */
     WL._routeCbs = [];

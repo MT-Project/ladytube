@@ -22,8 +22,6 @@ const FEATURE_SCRIPTS = [
     '/ext/assets/videometa.js',
     '/ext/assets/listselect.js',
     '/ext/assets/bookmark.js',
-    '/ext/assets/groupview.js',
-    '/ext/assets/standard.js',
     '/ext/assets/bulkselect.js',
     '/ext/assets/settings.js',
     // ライブラリ: 管理画面の項目とヘッダーの表示

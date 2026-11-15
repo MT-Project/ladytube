@@ -8,6 +8,7 @@ import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
 import CalendarPage from './pages/CalendarPage';
 import ExtPage from './components/ExtPage';
 import { UIProvider } from './contexts/UIContext';
+import { ExtDialogHost } from './components/ExtDialog';
 
 // LadyTube: 拡張から移したページは、開いたときに読む (最初に読む JS を軽くする。vite が別のファイルに分ける)
 const SeriesPage = lazy(() => import('./pages/SeriesPage'));
@@ -42,6 +43,8 @@ function App() {
           <Route path="*" element={<ExtPage />} />
         </Routes>
         </Suspense>
+        {/* LadyTube: 本体の画面のどこからでも開けるダイアログ (utils/extDialog.js の openExtDialog) */}
+        <ExtDialogHost />
       </UIProvider>
     </BrowserRouter>
   );

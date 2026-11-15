@@ -4,12 +4,13 @@
 //  ・標準モードは ヘッダー / 動画 / 右の情報欄 / タイトルの行 だけを1画面に収める
 //  ・右の情報欄は上の矢印か項目名で切り替え、欄の中だけスクロールする
 //      サムネイル = 本体のスクリーンショット欄 (カバーも) / 動画情報 = 本体の詳細欄 / イメージリスト = 本体のイメージリスト
-//      (開いている間だけ項目が出る) / 同じシリーズ・関連動画 = 拡張が描く一覧 (standard.js の WL.renderStd*)
+//      (開いている間だけ項目が出る) / 同じシリーズ・関連動画 = ExtVideoRow.jsx の ExtStdSeries / ExtStdRelated (v3.2.1 までは拡張の standard.js)
 // 本体の要素は動かさず、womanlive-ext.css の body.wlext-std の規則で右欄の位置へ重ねる。目印は WatchPage が付ける
 // data-wlext-std。狭い画面 (幅1000px未満) とフルスクリーン中はシアターモードのまま。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, RectangleHorizontal, PanelRight } from 'lucide-react';
+import { ExtStdRelated, ExtStdSeries } from './ExtVideoRow';
 
 const TAB_KEY = 'wlext_std_tab';
 const WIDE = '(min-width: 1000px)';
@@ -45,14 +46,6 @@ export function ExtLayoutButton({ className, standard, onToggle }) {
     );
 }
 
-// 拡張 (standard.js) の一覧を描く関数。拡張は defer で読むので、まだなら読み終わってから呼ぶ
-function withExt(fn) {
-    if (window.WLExt && window.WLExt.renderStdSeries) { fn(window.WLExt); return () => { }; }
-    const run = () => { if (window.WLExt && window.WLExt.renderStdSeries) fn(window.WLExt); };
-    window.addEventListener('DOMContentLoaded', run, { once: true });
-    return () => window.removeEventListener('DOMContentLoaded', run);
-}
-
 export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, nextVideoId }) {
     const wide = useWide();
     const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement);
@@ -86,6 +79,11 @@ export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, 
     // 右欄の見出しと一覧は、初めて標準モードにしたときに作り、あとは CSS で出し入れする
     const [built, setBuilt] = useState(false);
     if (active && !built) setBuilt(true);
+    // 「同じシリーズ」「関連」は、選んだときにその動画で描く (同じ動画のあいだは描き直さない)
+    const [seriesFor, setSeriesFor] = useState(null);
+    const [relatedFor, setRelatedFor] = useState(null);   // { vid, ids, next }
+    if (active && curTab === 'series' && seriesFor !== vid) setSeriesFor(vid);
+    if (active && curTab === 'related' && (!relatedFor || relatedFor.vid !== vid)) setRelatedFor({ vid, ids: relatedIds || [], next: nextVideoId });
 
     // body のクラスと選んでいる項目は CSS が見る
     useLayoutEffect(() => {
@@ -116,20 +114,7 @@ export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, 
         return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', layout); };
     }, [active, curTab, vid, imageListOpen]);
 
-    // 選んでいる項目が拡張の一覧なら、その動画で描く (同じ動画で描き終わっていれば描き直さない)
-    const chipsRef = useRef(null), seriesRef = useRef(null), relatedRef = useRef(null);
-    const relatedKey = (relatedIds || []).join(',');
-    useEffect(() => {
-        if (!active || (curTab !== 'series' && curTab !== 'related')) return;
-        const pane = curTab === 'series' ? seriesRef.current : relatedRef.current;
-        if (!pane || pane.dataset.vid === vid) return;
-        return withExt((W) => {
-            if (pane.dataset.vid === vid) return;
-            pane.dataset.vid = vid;
-            if (curTab === 'series') W.renderStdSeries(pane, vid);
-            else W.renderStdRelated(pane, vid, { relatedIds: relatedKey ? relatedKey.split(',').map(Number) : [], nextVideoId });
-        });
-    }, [active, curTab, vid, relatedKey, nextVideoId, built]);
+    const chipsRef = useRef(null);
 
     // 選んでいる項目名が見えるように横へ送る
     useEffect(() => {
@@ -150,8 +135,10 @@ export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, 
                 </div>
                 <div className="wlext-std-arrow" title="次の項目" onClick={() => step(1)}><ChevronRight size={18} /></div>
             </div>
-            <div className="wlext-std-pane" data-pane="series" ref={seriesRef} />
-            <div className="wlext-std-pane" data-pane="related" ref={relatedRef} />
+            <div className="wlext-std-pane" data-pane="series">{seriesFor && <ExtStdSeries key={seriesFor} vid={seriesFor} />}</div>
+            <div className="wlext-std-pane" data-pane="related">
+                {relatedFor && <ExtStdRelated key={relatedFor.vid} ids={relatedFor.ids} nextVideoId={relatedFor.next} />}
+            </div>
         </>,
         document.body
     );
