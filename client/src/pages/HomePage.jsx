@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { css } from '@linaria/core';
 import { api } from '../services/api';
@@ -10,9 +10,11 @@ import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import InitGuid from './InitGuid';
 import { Search, QrCode, X, Image, Calendar, Folder } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { Icon } from '../components/ExtIcon';
 import ExtSlot from '../components/ExtSlot';
+
+// LadyTube: QR コードの部品は、ダイアログを開いたときに読む (最初に読む JS を軽くする)
+const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCodeSVG })));
 
 // LadyTube: 拡張のページへのリンク (v3.1.14 までの server/ext/public/homelinks.js)。拡張のページなので <a> でページごと開く。
 // 個人用モジュールなどのリンクは WLExt.homeLinks に足すと、これらの後ろ (QRコードの前) に並ぶ (ExtSlot。本体のクラスは className で渡す)
@@ -544,6 +546,7 @@ export default function HomePage() {
                         )}
 
                         <div className={styles.qrContainer}>
+                            <Suspense fallback={null}>
                             {qrUrls.length > 0 ? (
                                 qrUrls.map((url, idx) => (
                                     <div key={idx} className={styles.qrItem}>
@@ -560,6 +563,7 @@ export default function HomePage() {
                                     <LoadingDots />
                                 </div>
                             )}
+                            </Suspense>
                         </div>
 
                         {qrUrls.length === 1 && (

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
@@ -6,18 +7,21 @@ import SettingsPage from './pages/SettingsPage';
 import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
 import CalendarPage from './pages/CalendarPage';
 import ExtPage from './components/ExtPage';
-import SeriesPage from './pages/SeriesPage';
-import TagsPage from './pages/TagsPage';
-import PerformersPage from './pages/PerformersPage';
-import MakersPage from './pages/MakersPage';
-import BookmarksPage from './pages/BookmarksPage';
-import PerformerPage from './pages/PerformerPage';
 import { UIProvider } from './contexts/UIContext';
+
+// LadyTube: 拡張から移したページは、開いたときに読む (最初に読む JS を軽くする。vite が別のファイルに分ける)
+const SeriesPage = lazy(() => import('./pages/SeriesPage'));
+const TagsPage = lazy(() => import('./pages/TagsPage'));
+const PerformersPage = lazy(() => import('./pages/PerformersPage'));
+const MakersPage = lazy(() => import('./pages/MakersPage'));
+const BookmarksPage = lazy(() => import('./pages/BookmarksPage'));
+const PerformerPage = lazy(() => import('./pages/PerformerPage'));
 
 function App() {
   return (
     <BrowserRouter>
       <UIProvider>
+        <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchPage />} />
@@ -37,6 +41,7 @@ function App() {
           {/* LadyTube: 拡張・個人用モジュールのページ (WLExt.extPages。中身は拡張・個人用モジュールの各ファイル) */}
           <Route path="*" element={<ExtPage />} />
         </Routes>
+        </Suspense>
       </UIProvider>
     </BrowserRouter>
   );
