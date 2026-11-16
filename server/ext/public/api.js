@@ -79,9 +79,7 @@
         switchLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id) + '/switch', jsonOpts('POST', {})),
         deleteLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' }),
 
-        // 設定 / カバー
-        getExtSettings: () => req('/ext/api/settings'),
-        saveExtSettings: (s) => req('/ext/api/settings', jsonOpts('POST', s)),
+        // カバー
         coverUrl: (id) => '/ext/api/video/' + id + '/cover',
 
         // DMM(FANZA) 商品検索
@@ -94,10 +92,6 @@
 
         // コマ送り (フレームレート)
         frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
-
-        // メンテナンス (参照されていない拡張データ)
-        maintenanceOrphans: () => req('/ext/api/maintenance/orphans'),
-        maintenanceCleanup: () => req('/ext/api/maintenance/cleanup', jsonOpts('POST', {})),
 
         // メタデータの一括置換
         replaceKinds: () => req('/ext/api/metadata/replace-kinds'),
@@ -124,9 +118,6 @@
         setTagThumbFromScreenshot: (name, screenshotId) => req('/ext/api/tag/thumb/from-screenshot', jsonOpts('POST', { name, screenshotId })),
         getPerformerTags: () => req('/ext/api/performer-tags'),
         savePerformerTags: (tags) => req('/ext/api/performer-tags', jsonOpts('PUT', { tags })),
-        getTagRules: () => req('/ext/api/performer-tag-rules'),
-        saveTagRules: (rules) => req('/ext/api/performer-tag-rules', jsonOpts('PUT', { rules })),
-        applyTagRules: (sync) => req('/ext/api/performer-tag-rules/apply', jsonOpts('POST', { sync })),
         getPerformer: (id) => req('/ext/api/performer/' + id),
         updatePerformer: (id, p) => req('/ext/api/performer/' + id, jsonOpts('PUT', p)),
         performerImageUrl: (id, bust) => '/ext/api/performer/' + id + '/image' + (bust ? ('?t=' + bust) : ''),
@@ -145,13 +136,6 @@
 
         // 関連動画 (拡張: メタデータ類似度)
         relatedVideos: (id) => req('/ext/api/video/' + id + '/related'),
-        getRelatedWeights: () => req('/ext/api/related/weights'),
-        saveRelatedWeights: (weights) => req('/ext/api/related/weights', jsonOpts('PUT', { weights })),
-        rebuildRelated: () => req('/ext/api/related/rebuild', jsonOpts('POST', {})),
-
-        // バックアップ
-        backupExport: () => req('/ext/api/backup/export'),
-        backupImport: (data) => req('/ext/api/backup/import', jsonOpts('POST', { data })),
 
         // 動画タグ プリセット (本体の /api/tags を利用。実タグのみ。# 見出しは含めない)
         getVideoPresetTags: () => req('/api/tags').then(a => Array.isArray(a) ? a.map(t => (t && t.name) || t).filter(Boolean) : []),
@@ -159,10 +143,5 @@
         // 動画タグ プリセットのグループレイアウト (# 見出し入り。ext 側に保持)
         getVideoTagLayout: () => req('/ext/api/video-tag-layout'),
         saveVideoTagLayout: (layout) => req('/ext/api/video-tag-layout', jsonOpts('PUT', { layout })),
-        // 動画単体のタグ 取得/設定
-
-        // 既存 API (フォルダ参照に流用)
-        fsList: (p) => req('/api/fs/list?path=' + encodeURIComponent(p)),
-        fsResolve: (base, target) => req('/api/fs/resolve?base=' + encodeURIComponent(base) + '&target=' + encodeURIComponent(target)),
     };
 })();

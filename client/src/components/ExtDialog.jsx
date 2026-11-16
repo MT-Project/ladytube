@@ -27,6 +27,12 @@ export function ExtDialog({ title, onClose, onSave, saveLabel, danger, children 
     );
 }
 
+// 確かめるだけのダイアログ (拡張の WL.dialog(title, body, { onSave, saveLabel, danger }) と同じ使い方)。
+// openExtDialog(ExtConfirm, { title, body, saveLabel, danger, onSave: async (close) => ... }) で開く
+export function ExtConfirm({ title, body, saveLabel, danger, onSave, onClose }) {
+    return <ExtDialog title={title} onClose={onClose} onSave={() => onSave(onClose)} saveLabel={saveLabel} danger={danger}>{body}</ExtDialog>;
+}
+
 export function ExtDialogHost() {
     const cur = useSyncExternalStore(subscribeExtDialog, extDialogSnapshot);
     if (!cur) return null;
