@@ -1,59 +1,17 @@
 /* =============================================================
-   WomanLive 拡張 - API クライアント
+   WomanLive 拡張 - API クライアント (拡張と private が使う WL.api / WL._rawFetch)
    ============================================================= */
 (function () {
     'use strict';
     window.WLExt = window.WLExt || {};
     const WL = window.WLExt;
 
-    // ---- ライブラリ (サーバーが HTML に埋め込んだ「この画面のライブラリ」) ----
-    // 同じオリジンへのリクエストすべてに印を付け、サーバーの使用中ライブラリと食い違ったら読み直す。
-    // 動画の id はライブラリごとに振られるので、切り替え前の画面のまま操作させない。
-    // (書き込みはサーバー側でも拒否する → routes/library.js)
-    const LIB = window.WLExtLibrary || null;
-    WL.library = LIB;
-    if (LIB) {
-        const nativeFetch = window.fetch.bind(window);
-        let reloading = false;
-        WL.onLibraryChanged = function () {
-            if (reloading) return;
-            reloading = true;
-            const box = document.createElement('div');
-            box.className = 'wlext-lib-overlay';
-            box.textContent = 'ライブラリが切り替わりました。読み直しています…';
-            (document.body || document.documentElement).appendChild(box);
-            setTimeout(() => location.replace('/'), 600);   // 今の URL の id は前のライブラリのもの
-        };
-        const sameOrigin = (url) => { try { return new URL(url, location.href).origin === location.origin; } catch (e) { return false; } };
-        window.fetch = function (input, init) {
-            const url = typeof input === 'string' ? input : (input && input.url) || String(input);
-            if (!sameOrigin(url)) return nativeFetch(input, init);
-            const headers = new Headers((init && init.headers) || (input instanceof Request ? input.headers : undefined));
-            headers.set('X-WLExt-Library', LIB.id);
-            return nativeFetch(input, Object.assign({}, init, { headers })).then(r => {
-                const now = r.headers.get('X-WLExt-Library');
-                if (now && now !== LIB.id) WL.onLibraryChanged();
-                return r;
-            });
-        };
-        // 別の端末で切り替えられたとき: 画面に戻ったら確かめる
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') window.fetch('/ext/api/libraries/current').catch(() => { });
-        });
-        // 検索履歴だけはライブラリ別にする (既定ライブラリは今までのキーのまま)
-        if (LIB.id !== 'default') {
-            const KEYS = ['search_history'];
-            const P = Storage.prototype, g = P.getItem, s = P.setItem, rm = P.removeItem;
-            const k2 = (k) => (KEYS.includes(k) ? k + '@' + LIB.id : k);
-            P.getItem = function (k) { return g.call(this, k2(k)); };
-            P.setItem = function (k, v) { return s.call(this, k2(k), v); };
-            P.removeItem = function (k) { return rm.call(this, k2(k)); };
-        }
-    }
+    // 使用中のライブラリ (サーバーが HTML に埋め込んだもの)。通信への印付けと、切り替わったときの読み直しは
+    // 本体の client/src/utils/library.js が window.fetch を包んで行う (v3.2.1 まではここ)。
+    WL.library = window.WLExtLibrary || null;
 
-    // 拡張のフックを通さない素の fetch を保持 (core.js が window.fetch を差し替えるため)
-    // ライブラリの印付けは通す (上で差し替えたもの)。
-    const rawFetch = window.fetch.bind(window);
+    // 拡張と private の通信。呼んだ時点の window.fetch (本体がライブラリの印を付けるもの) を使う
+    const rawFetch = (...a) => window.fetch(...a);
     WL._rawFetch = rawFetch;
 
     async function req(url, opts) {

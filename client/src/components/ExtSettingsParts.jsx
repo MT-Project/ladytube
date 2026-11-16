@@ -1,6 +1,6 @@
 // LadyTube: 管理画面 (SettingsPage.jsx) の拡張の部品 (v3.1.15 までの server/ext/public/settings.js・library.js の差し込みと settingsnav.js)。
 //  ・ExtSettingsSection: 拡張機能の項目を、この位置に置く。カバー画像・DMM・タグの自動付与・関連動画・メンテナンス・バックアップは
-//    ExtSettingsSections.jsx の部品 (v3.2.1 までは拡張の settings.js)。ライブラリは拡張が作る項目 (window.WLExt.settingsSections.library)。
+//    ExtSettingsSections.jsx の部品 (v3.2.1 までは拡張の settings.js)、ライブラリは ExtLibrary.jsx の ExtLibrarySettings (v3.2.1 までは library.js)。
 //    name を付けないと、個人用モジュールなどが WLExt.settingsExtras に足した項目を、足した順にすべて置く (管理画面の末尾)。
 //    項目は本体の項目と同じ親の直下に並べる (ExtSettingsNav がその並びを見る)。目印に見えない <template> を残し、その前に差し込む。
 //  ・ExtMetaReplace: 本体の「タグ置換」の代わりの「メタデータ置換」(タグのほか、ジャンル・出演者・シリーズなども置換できる)。
@@ -12,13 +12,14 @@ import { createPortal } from 'react-dom';
 import { Tag } from 'lucide-react';
 import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
+import { ExtLibrarySettings } from './ExtLibrary';
 import { ExtConfirm } from './ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
 import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtTagRuleSettings } from './ExtSettingsSections';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 
-const SECTIONS = { cover: ExtCoverSettings, dmm: ExtDmmSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
+const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, dmm: ExtDmmSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
 
 export function ExtSettingsSection({ name }) {
     const Section = SECTIONS[name];

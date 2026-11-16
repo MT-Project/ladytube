@@ -282,10 +282,10 @@ export function ExtTagRuleSettings() {
     );
 }
 
-/* ---------- 簡易フォルダピッカ ---------- */
+/* ---------- 簡易フォルダピッカ (ライブラリの取り込み ExtLibrary.jsx も使う) ---------- */
 // 本家の /api/fs/list は絶対パスを返すので、そのまま降りる。/api/fs/resolve は path.join(base, target) するため、
 // 絶対パスを渡すと "D:\" + "D:\Cover" = "D:\D:\Cover" と、ドライブレターが二重に入る (「上へ」にだけ使う)
-function FolderPicker({ onSelect, onClose }) {
+export function FolderPicker({ onSelect, onClose }) {
     const [cur, setCur] = useState('/');
     const [items, setItems] = useState(null);   // null = 読み込み中 / [{ name, path }] / { error }
     useEffect(() => {
@@ -321,5 +321,3 @@ function FolderPicker({ onSelect, onClose }) {
 }
 const openFolderPicker = (onSelect) => openExtDialog(FolderPicker, { onSelect });
 
-// 拡張のライブラリの項目 (library.js) の取り込みも「参照...」で使う (library.js を移したら消す)
-if (window.WLExt) window.WLExt.openFolderPicker = openFolderPicker;

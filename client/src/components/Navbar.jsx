@@ -8,7 +8,7 @@ import { api } from '../services/api';
 import { theme } from '../theme';
 import { useUI } from '../contexts/UIContext';
 import { ExtHelpButton, ExtMenuButton } from './ExtNavParts';
-import ExtSlot from './ExtSlot';
+import { ExtLibraryPill } from './ExtLibraryPill';
 
 // Linaria styles
 const styles = {
@@ -299,8 +299,8 @@ export default function Navbar() {
                             <img src="/Logo-icon-192.png" alt="LadyTube" className="lt-logo-icon" />
                         </span>
                     </Link>
-                    {/* LadyTube: 使用中のライブラリ名 (押すと切り替え。ライブラリが2つ以上のときだけ。server/ext/public/library.js) */}
-                    <ExtSlot from="libraryPill" />
+                    {/* LadyTube: 使用中のライブラリ名 (押すと切り替え。ライブラリが2つ以上のときだけ。ExtLibraryPill.jsx) */}
+                    <ExtLibraryPill />
                 </div>
 
                 {/* Center: Search Bar */}
