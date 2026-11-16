@@ -186,27 +186,10 @@
     // (v3.2.1 までは、ここに DOM 監視 WL.onEnsure / WL.requestEnsure があった。#root の変化のたびに、登録された関数を呼んで
     //  本体の画面へ差し込み直していた。差し込みはすべて本体の画面・差し込み口に移り、登録する所が無くなったので消した)
 
-    /* ---------- ライトボックス ---------- */
-    WL.lightbox = function (src, opts) {
-        opts = opts || {};
-        const img = h('img', { src });
-        const actions = h('div', { class: 'wlext-lightbox-actions' });
-        if (opts.onEdit) {
-            actions.appendChild(h('button', { class: 'wlext-btn wlext-btn-primary', onClick: (e) => { e.stopPropagation(); close(); opts.onEdit(); } }, '画像を変更'));
-        }
-        if (opts.onReset) {
-            actions.appendChild(h('button', { class: 'wlext-btn', onClick: (e) => { e.stopPropagation(); close(); opts.onReset(); } }, 'デフォルトに戻す'));
-        }
-        actions.appendChild(h('button', { class: 'wlext-btn', onClick: (e) => { e.stopPropagation(); close(); } }, '閉じる'));
-        const box = h('div', { class: 'wlext-lightbox', onClick: () => close() }, [img, actions]);
-        function close() { box.remove(); document.removeEventListener('keydown', onKey); }
-        function onKey(e) { if (e.key === 'Escape') close(); }
-        document.addEventListener('keydown', onKey);
-        document.body.appendChild(box);
-        return close;
-    };
+    // (v3.2.1 までは、ここにライトボックス WL.lightbox があった。今は本体の client/src/components/ExtImageDialogs.jsx)
 
     /* ---------- 画像クロッパ (任意アスペクト比) ---------- */
+    // 本体の画面は client/src/components/ExtImageDialogs.jsx の ExtCropDialog を使う。ここは private のジャンル一覧のために残す (private が写すまで)
     // WL.cropDialog(dataUrl, onDone, { aspect:[w,h], outW, hint, fit })
     // 出演者画像(正方形)と同じ操作感で、指定比率に切り取って onDone(dataURL(PNG), view) を返す。
     // fit:'contain' は最初に画像全体を枠の中央に収める (余白は透明)。拡大すると切り取りになる。

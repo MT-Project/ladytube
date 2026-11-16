@@ -23,6 +23,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
 import { toast } from '../utils/toast';
+import { lightbox } from '../utils/imageDialogs';
 
 const SS_KEY = 'wlext_ss_size';
 const SS_MIN = 80, SS_MAX = 640, SS_DEFAULT = 160;   // 160px(本体の既定) の半分から横 640px まで
@@ -77,7 +78,7 @@ export function CoverCard({ videoId }) {
     if (missing) return null;
     const url = '/ext/api/video/' + id + '/cover';
     return (
-        <div key={gen} className="wlext-cover-card" title="カバー画像 (クリックで拡大)" onClick={() => window.WLExt.lightbox(url)}>
+        <div key={gen} className="wlext-cover-card" title="カバー画像 (クリックで拡大)" onClick={() => lightbox(url)}>
             <img alt="カバー画像" src={url} onError={() => { noCover.add(id); setMissing(true); }} />
             <div className="wlext-cover-badge">カバー</div>
         </div>

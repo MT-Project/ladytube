@@ -18,6 +18,7 @@ import { extApi } from '../services/extApi';
 import { formatAgeYm, formatDuration, formatYmd } from '../utils/formatters';
 import { toDateInput } from '../utils/videoMeta';
 import ExtPresetTagDialog from '../components/ExtPresetTagDialog';
+import { cropDialog, lightbox } from '../utils/imageDialogs';
 
 const muted = { color: 'var(--text-secondary,#888)' };
 const isEmpty = (v) => v === null || v === undefined || v === '';
@@ -134,7 +135,6 @@ function VideoCard({ v }) {
 }
 
 function PerformerView({ id }) {
-    const WL = window.WLExt;
     const [perf, setPerf] = useState(null);       // null = 読み込み中 / false = 見つからない
     const [title, setTitle] = useState('出演者');
     const [img, setImg] = useState(() => ({ v: Date.now(), broken: false }));   // v は写真の URL に付ける印
@@ -169,7 +169,7 @@ function PerformerView({ id }) {
         input.addEventListener('change', () => {
             const file = input.files && input.files[0]; if (!file) return;
             const reader = new FileReader();
-            reader.onload = () => WL.cropDialog(reader.result, async (dataUrl) => {
+            reader.onload = () => cropDialog(reader.result, async (dataUrl) => {
                 try {
                     await extApi.setPerformerImage(id, dataUrl);
                     setPerf(p => ({ ...p, has_image: true }));
@@ -195,7 +195,7 @@ function PerformerView({ id }) {
         <ExtListPage title={title}>
             <div className="wlext-pp-header">
                 <div className="wlext-pp-image" title="画像をクリックで拡大"
-                    onClick={() => { if (perf.has_image) WL.lightbox(extApi.performerImageUrl(id, Date.now()), { onEdit: pickAndCrop }); else pickAndCrop(); }}>
+                    onClick={() => { if (perf.has_image) lightbox(extApi.performerImageUrl(id, Date.now()), { onEdit: pickAndCrop }); else pickAndCrop(); }}>
                     {perf.has_image && !img.broken
                         ? <img alt={perf.name} src={extApi.performerImageUrl(id, img.v)} onError={() => setImg(x => ({ ...x, broken: true }))} />
                         : '👤'}

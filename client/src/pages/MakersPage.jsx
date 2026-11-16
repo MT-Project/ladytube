@@ -18,6 +18,7 @@ import { openExtDialog } from '../utils/extDialog';
 import { storedSort, colorFor } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
+import { cropDialog } from '../utils/imageDialogs';
 
 const SORTS = [['name', 'メーカー名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const STORE = 'wlext_sort_makers';
@@ -60,13 +61,12 @@ function isAnimated(dataUrl) {
 
 // 手元の画像を選び、1:1 に切り取って (そのままなら全体を中央に) 登録する。onDone(変えた項目)
 function pickImage(m, onDone) {
-    const WL = window.WLExt;
     const input = document.createElement('input');
     input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
     input.addEventListener('change', () => {
         const file = input.files && input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => WL.cropDialog(reader.result, async (dataUrl, view) => {
+        reader.onload = () => cropDialog(reader.result, async (dataUrl, view) => {
             const anim = isAnimated(reader.result);
             try {
                 await extApi.setMakerImage(m.name, anim ? reader.result : dataUrl, anim ? view : null);
@@ -249,7 +249,6 @@ function CatchCopy({ m, update }) {
 }
 
 function MakerRow({ m, update, openMenu }) {
-    const WL = window.WLExt;
     const v = m.imageView;   // アニメーション画像は元のまま保存してあるので、登録時の表示範囲をここで当てる
     const title = '「' + m.name + '」で検索';
     const labels = m.labels || [];

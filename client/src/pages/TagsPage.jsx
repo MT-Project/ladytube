@@ -11,6 +11,7 @@ import { storedSort, colorFor } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { loadVideoTagPresets, parseTagGroups } from '../utils/tagPresets';
+import { cropDialog } from '../utils/imageDialogs';
 
 const SORTS = [['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']];
 const STORE = 'wlext_sort_tags';
@@ -50,13 +51,12 @@ function sectionsFor(list, presets, order) {
 
 // 手元の画像を選び、16:9 に切り取って登録する
 function pickAndCrop(name, onChanged) {
-    const WL = window.WLExt;
     const input = document.createElement('input');
     input.type = 'file'; input.accept = 'image/*'; input.style.display = 'none';
     input.addEventListener('change', () => {
         const file = input.files && input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => WL.cropDialog(reader.result, async (dataUrl) => {
+        reader.onload = () => cropDialog(reader.result, async (dataUrl) => {
             try { await extApi.setTagThumb(name, dataUrl); onChanged(true); toast('サムネイルを登録しました', 'success'); }
             catch (e) { toast('登録に失敗: ' + e.message, 'error'); }
         }, { aspect: [16, 9], outW: 640, title: 'タグサムネイルを切り取り', hint: 'ドラッグで位置調整・スライダーで拡大。推奨比率 16:9（640×360）で切り取ります。' });
@@ -67,7 +67,6 @@ function pickAndCrop(name, onChanged) {
 
 // サムネイルの編集: そのタグの動画のスクリーンショット (9枚) から選ぶ。下に 既定に戻す / 決定 / 他の画像へ更新 / ローカルから選択
 function ThumbEditor({ tag, onClose, onChanged }) {
-    const WL = window.WLExt;
     const [shots, setShots] = useState(null);   // null = 読み込み中 / { error } / 配列
     const [round, setRound] = useState(0);      // 「他の画像へ更新」で増やす
     const [picked, setPicked] = useState(null);
@@ -77,7 +76,7 @@ function ThumbEditor({ tag, onClose, onChanged }) {
         let alive = true;
         extApi.tagScreenshots(tag.name, 9).then(s => { if (alive) setShots(s); }, e => { if (alive) setShots({ error: e.message }); });
         return () => { alive = false; };
-    }, [WL, tag.name, round]);
+    }, [tag.name, round]);
     useEffect(() => {
         const onKey = (e) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', onKey);
@@ -134,7 +133,6 @@ function ThumbEditor({ tag, onClose, onChanged }) {
 }
 
 function TagCard({ tag, sel, onEdit, onThumbError }) {
-    const WL = window.WLExt;
     return (
         <ExtListCard to={'/search?q=' + encodeURIComponent('@tag:"' + tag.name + '"')} className="wlext-series-card wlext-tag-card"
             title={'「' + tag.name + '」で検索'} sel={sel} id={tag.name} name={tag.name}>
