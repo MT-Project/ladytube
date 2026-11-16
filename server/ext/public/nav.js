@@ -3,9 +3,10 @@
    ・モノクロ(lucide風)アイコン (本家ホーム/ヘッダーと同系統)
    ・拡張ページ共通ヘッダー (本家ヘッダーと同じ構成: ロゴ/検索/操作)
    ・ヘッダーのメニュー(ハンバーガー)とドロップダウン
-   ・本体のヘッダーの「？」とメニューは本体 (client/src/components/ExtNavParts.jsx) が描き、ここの WL.help* / WL.toggleNavMenu を呼ぶ
+   ・本体のヘッダーの「？」とメニューは本体 (client/src/components/ExtNavParts.jsx。v3.2.1 まではここを呼んでいた)。
+     ここのヘッダーとメニューは、拡張の書き方のページ (今は個人用のジャンル一覧だけ) の WL.pageHeader が使う
    ・個人用モジュールなどは WL.navMenuExtras に「項目を作る関数 (close) => 要素」を足すと、メニューの「QRコード」の上に並ぶ
-     (ホームの homeLinks と同じ位置。押したら close() を呼ぶ)
+     (ホームの homeLinks と同じ位置。押したら close() を呼ぶ。本体のメニューも同じものを並べる)
    ・テーマ(ダーク/ライト)切替を本家と同じ仕組みで再現
    ============================================================= */
 (function () {
@@ -144,8 +145,6 @@
         window.addEventListener('resize', closeMenu);
     }
     function toggleMenu(anchor) { if (menuEl) closeMenu(); else openMenu(anchor); }
-    // 本体のヘッダー (client/src/components/ExtNavParts.jsx の ExtMenuButton) も押されたらこれを呼ぶ
-    WL.toggleNavMenu = toggleMenu;
 
     function makeMenuBtn() {
         const btn = h('button', { class: 'wlext-action wlext-menu-btn', type: 'button', title: 'メニュー' });
@@ -234,10 +233,10 @@
     }
     function hideHelp() { if (helpPop) helpPop.style.display = 'none'; helpPinned = false; }
 
-    // ボタンの動き。本体のヘッダー (ExtNavParts.jsx の ExtHelpButton) も同じものを呼ぶ
-    WL.helpEnter = (btn) => { clearTimeout(helpTimer); showHelp(btn); };
-    WL.helpLeave = () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); };
-    WL.helpClick = (btn) => {
+    // ボタンの動き (本体のヘッダーの「？」は ExtNavParts.jsx の ExtHelpButton が同じ動きをする)
+    const helpEnter = (btn) => { clearTimeout(helpTimer); showHelp(btn); };
+    const helpLeave = () => { if (helpPinned) return; helpTimer = setTimeout(hideHelp, 200); };
+    const helpClick = (btn) => {
         const open = helpPop && helpPop.style.display === 'block';
         if (helpPinned && open) hideHelp();
         else { helpPinned = true; showHelp(btn); }
@@ -246,9 +245,9 @@
         const btn = h('button', { class: 'wlext-action wlext-help-btn', type: 'button', title: (spec && spec.tooltip) || '検索のヘルプ' });
         if (spec) btn._wlHelp = spec;
         btn.innerHTML = iconSvg('help', 20, 2);
-        btn.addEventListener('mouseenter', () => WL.helpEnter(btn));
-        btn.addEventListener('mouseleave', () => WL.helpLeave());
-        btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); WL.helpClick(btn); });
+        btn.addEventListener('mouseenter', () => helpEnter(btn));
+        btn.addEventListener('mouseleave', () => helpLeave());
+        btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); helpClick(btn); });
         return btn;
     }
     WL.makeHelpBtn = makeHelpBtn;
