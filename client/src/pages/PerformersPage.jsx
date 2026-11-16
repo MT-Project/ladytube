@@ -6,7 +6,9 @@
 import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
-import { storedSort } from '../utils/formatters';
+import { storedSort, parseYmd } from '../utils/formatters';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const SORTS = [
     ['rating', '評価', 'desc'], ['videoCount', '出演数', 'desc'], ['furigana', 'ふりがな', 'asc'], ['height', '身長', 'asc'], ['weight', '体重', 'asc'],
@@ -17,7 +19,7 @@ const muted = { color: 'var(--text-secondary,#888)' };
 
 function numOrNull(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
 function ageMonths(birthday) {
-    const d = window.WLExt.parseDate(birthday); if (!d) return null;
+    const d = parseYmd(birthday); if (!d) return null;
     const now = new Date();
     let m = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
     if (now.getDate() < d.getDate()) m--;
@@ -70,9 +72,9 @@ function metaLine(p, sort) {
 async function cleanupUnused(multiLib, onDone) {
     const WL = window.WLExt;
     let pv;
-    try { pv = await WL.api.cleanupUnusedPerformers(true); }
-    catch (e) { WL.toast('取得に失敗: ' + e.message, 'error'); return; }
-    if (!pv.count) { WL.toast('関連動画のない出演者はいません', 'success'); return; }
+    try { pv = await extApi.cleanupUnusedPerformers(true); }
+    catch (e) { toast('取得に失敗: ' + e.message, 'error'); return; }
+    if (!pv.count) { toast('関連動画のない出演者はいません', 'success'); return; }
     WL.dialog('関連動画のない出演者を削除',
         WL.h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } },
             '関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'
@@ -81,8 +83,8 @@ async function cleanupUnused(multiLib, onDone) {
         {
             saveLabel: '削除する',
             onSave: async (close) => {
-                try { const r = await WL.api.cleanupUnusedPerformers(false); WL.toast(r.deleted + ' 名を削除しました', 'success'); close(); onDone(); }
-                catch (e) { WL.toast('削除に失敗: ' + e.message, 'error'); }
+                try { const r = await extApi.cleanupUnusedPerformers(false); toast(r.deleted + ' 名を削除しました', 'success'); close(); onDone(); }
+                catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
             },
         });
 }
@@ -97,7 +99,7 @@ function PerformerCard({ p, sort, sel }) {
             sel={sel} id={String(p.id)} name={name}>
             <div className="wlext-plist-img">
                 {p.has_image && !broken
-                    ? <img alt={p.name} loading="lazy" src={window.WLExt.api.performerImageUrl(p.id)} onError={() => setBroken(true)} />
+                    ? <img alt={p.name} loading="lazy" src={extApi.performerImageUrl(p.id)} onError={() => setBroken(true)} />
                     : '👤'}
                 <div className="wlext-series-count" title={(p.videoCount || 0) + '本'}>{String(p.videoCount || 0)}</div>
             </div>
@@ -124,7 +126,7 @@ export default function PerformersPage() {
     const sel = { mode, setMode, selected, setSelected };
 
     useEffect(() => {
-        window.WLExt.api.performersAll().then(setAll, e => setError(e.message));
+        extApi.performersAll().then(setAll, e => setError(e.message));
     }, []);
 
     if (error) return <ExtListPage title="出演者一覧"><div>{'読み込みに失敗しました: ' + error}</div></ExtListPage>;
@@ -132,7 +134,7 @@ export default function PerformersPage() {
 
     const allTags = [...new Set(all.flatMap(p => p.tags))].sort(window.WLExt.nameCompare);
     const list = all.filter(p => (!tag || p.tags.includes(tag)) && (!dupOnly || p.dup) && (!hereOnly || p.videoCount > 0)).sort(compare(order));
-    const reload = () => window.WLExt.api.performersAll().then(setAll, () => { });
+    const reload = () => extApi.performersAll().then(setAll, () => { });
     return (
         <ExtListPage title="出演者一覧">
             <ExtPageTitle icon="users" text={'出演者一覧（' + all.length + '名）'} />

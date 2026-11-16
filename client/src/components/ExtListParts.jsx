@@ -11,6 +11,7 @@ import { ExtDialog } from './ExtDialog';
 import { extSend } from '../services/extApi';
 import { closeExtDialog, extDialogSnapshot, openExtDialog } from '../utils/extDialog';
 import { theme } from '../theme';
+import { toast } from '../utils/toast';
 
 const page = css`
     min-height: 100vh;
@@ -97,7 +98,6 @@ function ListMenu({ kind, kindLabel, selected, onClose }) {
 function ListDeleteDialog({ kind, kindLabel: label, selected, onClose }) {
     const names = [...selected.values()];
     const remove = async () => {
-        const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
         try {
             const r = await extSend('POST', '/ext/api/metadata/delete', { kind, targets: [...selected.keys()] });
             toast(r.deleted + '件の' + label + 'を削除しました（動画 ' + r.videos + '件を更新）', 'success');

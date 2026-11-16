@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import UIOverlay from '../components/UIOverlay';
+// LadyTube: 部品の外 (拡張から移した画面の関数など) からも通知を出せるように渡す
+import { setToastSink } from '../utils/toast';
 
 const UIContext = createContext();
 
@@ -114,6 +116,9 @@ export const UIProvider = ({ children }) => {
             setToasts(prev => prev.filter(t => t.id !== id));
         }, 3000);
     }, []);
+
+    // LadyTube: utils/toast.js の toast() もこの通知を出す
+    useEffect(() => { setToastSink(showToast); return () => setToastSink(null); }, [showToast]);
 
     // Dialog Actions
     const confirm = useCallback((message, options = {}) => {

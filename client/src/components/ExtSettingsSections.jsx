@@ -7,8 +7,8 @@ import { ExtConfirm, ExtDialog } from './ExtDialog';
 import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
+import { toast } from '../utils/toast';
 
-const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
 const resultStyle = { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' };
 

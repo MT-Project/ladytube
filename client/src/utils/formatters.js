@@ -126,3 +126,11 @@ export function storedSort(storeKey, defs, initial) {
     } catch { /* 戻せなければ既定のまま */ }
     return initial;
 }
+
+// LadyTube: 画像が無いカード (タグ・メーカー) の既定の背景。名前から決めるので毎回同じ色 (v3.2.1 までは拡張の WL.colorFor)
+export function colorFor(s) {
+    let n = 0;
+    s = String(s || '');
+    for (let i = 0; i < s.length; i++) n = (n * 31 + s.charCodeAt(i)) >>> 0;
+    return 'hsl(' + (n % 360) + ', 42%, 40%)';
+}

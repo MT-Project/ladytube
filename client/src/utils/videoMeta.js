@@ -5,9 +5,9 @@
 // (拡張の確認画面で反映したときも同じイベントが来る)。
 import { extGet, extSend } from '../services/extApi';
 import { parseYmd } from './formatters';
+import { toast } from './toast';
 
 const cache = () => (window.WLExt._meta = window.WLExt._meta || {});
-const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
 
 export const cachedMeta = (vid) => cache()[vid];
 

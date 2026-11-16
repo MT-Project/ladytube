@@ -13,7 +13,9 @@ import { Link } from 'react-router-dom';
 import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { Icon } from '../components/ExtIcon';
-import { storedSort } from '../utils/formatters';
+import { storedSort, colorFor } from '../utils/formatters';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const SORTS = [['name', 'メーカー名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const STORE = 'wlext_sort_makers';
@@ -65,11 +67,11 @@ function pickImage(m, onDone) {
         reader.onload = () => WL.cropDialog(reader.result, async (dataUrl, view) => {
             const anim = isAnimated(reader.result);
             try {
-                await WL.api.setMakerImage(m.name, anim ? reader.result : dataUrl, anim ? view : null);
+                await extApi.setMakerImage(m.name, anim ? reader.result : dataUrl, anim ? view : null);
                 onDone({ hasImage: true, imageView: anim ? view : null, v: Date.now() });
-                WL.toast('メーカー画像を登録しました', 'success');
+                toast('メーカー画像を登録しました', 'success');
             }
-            catch (e) { WL.toast('登録に失敗: ' + e.message, 'error'); }
+            catch (e) { toast('登録に失敗: ' + e.message, 'error'); }
         }, {
             aspect: [1, 1], outW: 600, fit: 'contain', title: 'メーカー画像を登録',
             hint: 'そのまま登録すると画像全体を中央に表示します。拡大すると正方形に切り取れます（ドラッグで位置調整）。',
@@ -101,13 +103,13 @@ function editDialog(m, onDone) {
     WL.dialog('メーカー情報を編集 — ' + m.name, body, {
         onSave: async (close) => {
             try {
-                await WL.api.saveMaker({
+                await extApi.saveMaker({
                     name: m.name, furigana: inFuri.value, catch_copy: inCatch.value, list_url: inUrl.value, site_url: inSite.value,
                 });
                 onDone({ furigana: inFuri.value.trim(), catchCopy: inCatch.value.trim(), listUrl: inUrl.value.trim(), siteUrl: inSite.value.trim() });
-                WL.toast('メーカー情報を保存しました', 'success');
+                toast('メーカー情報を保存しました', 'success');
                 close();
-            } catch (e) { WL.toast('保存に失敗: ' + e.message, 'error'); }
+            } catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
         },
     });
 }
@@ -115,10 +117,10 @@ function editDialog(m, onDone) {
 /* ---------- FANZA からのメーカー情報取得 ---------- */
 async function fetchInfo(m, onDone) {
     const WL = window.WLExt;
-    WL.toast('FANZAでメーカーを検索中...');
+    toast('FANZAでメーカーを検索中...');
     let data;
-    try { data = await WL.api.dmmMakerSearch(m.name); }
-    catch (e) { WL.toast(e.message || '検索に失敗しました', 'error'); return; }
+    try { data = await extApi.dmmMakerSearch(m.name); }
+    catch (e) { toast(e.message || '検索に失敗しました', 'error'); return; }
     if (data.exact && data.exact.length === 1) showFetchPreview(m, data.exact[0], onDone);
     else showFetchSelect(m, data, onDone);
 }
@@ -146,7 +148,7 @@ function showFetchSelect(m, data, onDone) {
     async function research() {
         const q = input.value.trim(); if (!q) return;
         listEl.innerHTML = ''; listEl.appendChild(msg('検索中...'));
-        try { paint(await WL.api.dmmMakerSearch(q)); }
+        try { paint(await extApi.dmmMakerSearch(q)); }
         catch (e) { listEl.innerHTML = ''; listEl.appendChild(msg('検索に失敗しました: ' + e.message)); }
     }
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') research(); });
@@ -181,11 +183,11 @@ function showFetchPreview(m, item, onDone) {
         saveLabel: '設定する',
         onSave: async (close) => {
             try {
-                await WL.api.saveMaker({ name: m.name, furigana: item.ruby || '', list_url: item.listUrl || '' });
+                await extApi.saveMaker({ name: m.name, furigana: item.ruby || '', list_url: item.listUrl || '' });
                 onDone({ furigana: item.ruby || '', listUrl: item.listUrl || '' });
-                WL.toast('メーカー情報を設定しました', 'success');
+                toast('メーカー情報を設定しました', 'success');
                 close();
-            } catch (e) { WL.toast('設定に失敗: ' + e.message, 'error'); }
+            } catch (e) { toast('設定に失敗: ' + e.message, 'error'); }
         },
     });
 }
@@ -240,8 +242,8 @@ function CatchCopy({ m, update }) {
         const v = input.current.value.trim();
         setEditing(false);
         if (!save || v === (m.catchCopy || '')) return;
-        try { await window.WLExt.api.saveMaker({ name: m.name, catch_copy: v }); update({ catchCopy: v }); }
-        catch (e) { window.WLExt.toast('保存に失敗: ' + e.message, 'error'); }
+        try { await extApi.saveMaker({ name: m.name, catch_copy: v }); update({ catchCopy: v }); }
+        catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
     return (
         <input ref={input} className="wlext-input wlext-maker-catch-input" defaultValue={m.catchCopy || ''} placeholder="キャッチコピー"
@@ -257,9 +259,9 @@ function MakerRow({ m, update, openMenu }) {
     const labels = m.labels || [];
     return (
         <div className="wlext-maker-row">
-            <Link to={makerHref(m.name)} className="wlext-maker-img" title={title} style={m.hasImage ? undefined : { background: WL.colorFor(m.name) }}>
+            <Link to={makerHref(m.name)} className="wlext-maker-img" title={title} style={m.hasImage ? undefined : { background: colorFor(m.name) }}>
                 {m.hasImage
-                    ? <img loading="lazy" alt={m.name} src={WL.api.makerImageUrl(m.name, m.v)} onError={() => update({ hasImage: false })}
+                    ? <img loading="lazy" alt={m.name} src={extApi.makerImageUrl(m.name, m.v)} onError={() => update({ hasImage: false })}
                         style={v ? {
                             position: 'absolute', objectFit: 'fill', maxWidth: 'none', width: (100 / v.w) + '%', height: (100 / v.h) + '%',
                             left: (-v.x / v.w * 100) + '%', top: (-v.y / v.h * 100) + '%',
@@ -325,7 +327,7 @@ export default function MakersPage() {
     const closeMenu = useCallback(() => setMenu(null), []);
 
     useEffect(() => {
-        window.WLExt.api.makersList().then(l => {
+        extApi.makersList().then(l => {
             const v = Date.now();
             setList(l.map(m => ({ ...m, v })));
         }, e => setError(e.message));

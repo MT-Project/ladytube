@@ -79,9 +79,6 @@
         switchLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id) + '/switch', jsonOpts('POST', {})),
         deleteLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' }),
 
-        // カバー
-        coverUrl: (id) => '/ext/api/video/' + id + '/cover',
-
         // DMM(FANZA) 商品検索
         dmmSearch: (id) => req('/ext/api/dmm/search?id=' + encodeURIComponent(id)),
         dmmApply: (id, item) => req('/ext/api/dmm/apply', jsonOpts('POST', { id, item })),
@@ -90,52 +87,17 @@
         // 動画メタ
         getMeta: (id) => req('/ext/api/video/' + id + '/meta'),
 
-        // コマ送り (フレームレート)
-        frameInfo: (id) => req('/ext/api/video/' + id + '/frameinfo'),
-
-        // メタデータの一括置換
-        replaceKinds: () => req('/ext/api/metadata/replace-kinds'),
-        replaceMetadata: (kind, before, after) => req('/ext/api/metadata/replace', jsonOpts('POST', { kind, before, after })),
         // 一覧ページからの一括削除 (targets は performer なら id、それ以外は名前)
         deleteMetadataValues: (kind, targets) => req('/ext/api/metadata/delete', jsonOpts('POST', { kind, targets })),
 
-        // 出演者
-        performersAll: () => req('/ext/api/performers/all'),
-        cleanupUnusedPerformers: (dryRun) => req('/ext/api/performers/cleanup-unused', jsonOpts('POST', { dryRun })),
-
-        // メーカー一覧 / メーカー情報
-        makersList: () => req('/ext/api/makers'),
+        // メーカー情報 (private のメーカー情報の取得も使う)
         saveMaker: (m) => req('/ext/api/maker', jsonOpts('PUT', m)),
-        makerImageUrl: (name, bust) => '/ext/api/maker/image?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
         setMakerImage: (name, dataUrl, view) => req('/ext/api/maker/image', jsonOpts('POST', { name, image: dataUrl, view })),
 
-        // タグ一覧 / タグサムネイル
-        tagsList: () => req('/ext/api/tags'),
-        tagThumbUrl: (name, bust) => '/ext/api/tag/thumb?name=' + encodeURIComponent(name) + (bust ? ('&t=' + bust) : ''),
-        setTagThumb: (name, dataUrl) => req('/ext/api/tag/thumb', jsonOpts('POST', { name, image: dataUrl })),
-        deleteTagThumb: (name) => req('/ext/api/tag/thumb?name=' + encodeURIComponent(name), { method: 'DELETE' }),
-        tagScreenshots: (name, limit) => req('/ext/api/tag/screenshots?name=' + encodeURIComponent(name) + (limit ? '&limit=' + limit : '')),
-        setTagThumbFromScreenshot: (name, screenshotId) => req('/ext/api/tag/thumb/from-screenshot', jsonOpts('POST', { name, screenshotId })),
-        getPerformerTags: () => req('/ext/api/performer-tags'),
-        savePerformerTags: (tags) => req('/ext/api/performer-tags', jsonOpts('PUT', { tags })),
+        // 出演者 (private の出演者情報の取得も使う)
         getPerformer: (id) => req('/ext/api/performer/' + id),
         updatePerformer: (id, p) => req('/ext/api/performer/' + id, jsonOpts('PUT', p)),
-        performerImageUrl: (id, bust) => '/ext/api/performer/' + id + '/image' + (bust ? ('?t=' + bust) : ''),
         setPerformerImage: (id, dataUrl) => req('/ext/api/performer/' + id + '/image', jsonOpts('POST', { image: dataUrl })),
-        performerVideos: (id) => req('/ext/api/performer/' + id + '/videos'),
-        performerScreenshots: (id, sort) => req('/ext/api/performer/' + id + '/screenshots' + (sort ? '?sort=' + sort : '')),
-
-        // ブックマーク
-        bmFolders: () => req('/ext/api/bookmark/folders'),
-        bmCreateFolder: (name) => req('/ext/api/bookmark/folders', jsonOpts('POST', { name })),
-        bmRenameFolder: (id, name) => req('/ext/api/bookmark/folders/' + id, jsonOpts('PUT', { name })),
-        bmDeleteFolder: (id) => req('/ext/api/bookmark/folders/' + id, { method: 'DELETE' }),
-
-        // スクリーンショット枚数
-        ssCounts: (ids) => req('/ext/api/screenshots/counts?ids=' + ids.join(',')),
-
-        // 関連動画 (拡張: メタデータ類似度)
-        relatedVideos: (id) => req('/ext/api/video/' + id + '/related'),
 
         // 動画タグ プリセット (本体の /api/tags を利用。実タグのみ。# 見出しは含めない)
         getVideoPresetTags: () => req('/api/tags').then(a => Array.isArray(a) ? a.map(t => (t && t.name) || t).filter(Boolean) : []),

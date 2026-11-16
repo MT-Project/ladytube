@@ -13,8 +13,8 @@ import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { setBookmarked } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
+import { toast } from '../utils/toast';
 
-const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
 const muted = { fontSize: '0.8rem', color: 'var(--text-secondary,#888)' };
 
 // 操作のあと: 選択を解いて (done)、一覧を取り直させる

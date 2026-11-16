@@ -22,6 +22,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
+import { toast } from '../utils/toast';
 
 const SS_KEY = 'wlext_ss_size';
 const SS_MIN = 80, SS_MAX = 640, SS_DEFAULT = 160;   // 160px(本体の既定) の半分から横 640px まで
@@ -171,7 +172,7 @@ export function FrameStep({ videoId, videoRef, containerRef }) {
         if (!info.native || !info.fps) {
             if (!notified.current && window.WLExt) {
                 notified.current = true;
-                window.WLExt.toast(info.native ? 'フレームレートを取得できないためコマ送りできません' : 'この動画は変換再生のためコマ送りできません', 'error');
+                toast(info.native ? 'フレームレートを取得できないためコマ送りできません' : 'この動画は変換再生のためコマ送りできません', 'error');
             }
             return;
         }

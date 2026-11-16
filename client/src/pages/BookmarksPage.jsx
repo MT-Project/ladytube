@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const muted = { color: 'var(--text-secondary,#888)' };
@@ -34,8 +36,8 @@ function nameDialog(title, saveLabel, value, save, onDone, emptyToast) {
         saveLabel,
         onSave: async (close) => {
             const name = input.value.trim();
-            if (!name) { if (emptyToast) WL.toast('フォルダ名を入力してください', 'error'); return; }
-            try { await save(name); close(); onDone(); } catch (e) { WL.toast(saveLabel + 'に失敗: ' + e.message, 'error'); }
+            if (!name) { if (emptyToast) toast('フォルダ名を入力してください', 'error'); return; }
+            try { await save(name); close(); onDone(); } catch (e) { toast(saveLabel + 'に失敗: ' + e.message, 'error'); }
         },
     });
     setTimeout(() => input.focus(), 50);
@@ -45,7 +47,7 @@ function deleteDialog(s, onDone) {
     const WL = window.WLExt;
     WL.dialog('フォルダを削除', WL.h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } }, '「' + s.name + '」を削除します（中のブックマークも削除されます。動画自体は削除されません）。よろしいですか？'), {
         saveLabel: '削除する',
-        onSave: async (close) => { try { await WL.api.bmDeleteFolder(s.id); close(); onDone(); } catch (e) { WL.toast('削除に失敗: ' + e.message, 'error'); } },
+        onSave: async (close) => { try { await extApi.bmDeleteFolder(s.id); close(); onDone(); } catch (e) { toast('削除に失敗: ' + e.message, 'error'); } },
     });
 }
 
@@ -68,7 +70,7 @@ function FolderCard({ s, reload }) {
                     : <span style={{ ...muted, fontSize: '0.75rem' }}>評価なし</span>}
             </div>
             <div className="wlext-bm-actions">
-                <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => window.WLExt.api.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
+                <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => extApi.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
                 <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}>🗑削除</span>
             </div>
         </div>
@@ -81,13 +83,13 @@ export default function BookmarksPage() {
     const [order, setOrder] = useState({ sort: 'name', dir: 'asc' });
 
     useEffect(() => {
-        window.WLExt.api.bmFolders().then(setList, e => setError(e.message));
+        extApi.bmFolders().then(setList, e => setError(e.message));
     }, []);
 
     if (error) return <ExtListPage title="ブックマーク"><div>{'読み込みに失敗しました: ' + error}</div></ExtListPage>;
     if (!list) return <ExtListPage title="ブックマーク"><div style={muted}>読み込み中...</div></ExtListPage>;
 
-    const reload = () => window.WLExt.api.bmFolders().then(setList, () => { });
+    const reload = () => extApi.bmFolders().then(setList, () => { });
     const sorted = list.slice().sort(compare(order));
     return (
         <ExtListPage title="ブックマーク">
@@ -95,7 +97,7 @@ export default function BookmarksPage() {
             <div className="wlext-plist-controls">
                 <ExtSortRow defs={SORTS} order={order} onChange={setOrder} />
                 <div className="wlext-plist-sortrow">
-                    <button className="wlext-btn" onClick={() => nameDialog('フォルダを追加', '追加', null, (name) => window.WLExt.api.bmCreateFolder(name), reload, true)}>＋ フォルダを追加</button>
+                    <button className="wlext-btn" onClick={() => nameDialog('フォルダを追加', '追加', null, (name) => extApi.bmCreateFolder(name), reload, true)}>＋ フォルダを追加</button>
                 </div>
             </div>
             <div className="wlext-series-grid">

@@ -8,8 +8,8 @@ import { ExtDialog } from './ExtDialog';
 import { ExtStarsEdit } from './ExtCardParts';
 import { extGet, extSend } from '../services/extApi';
 import { metaToPayload, saveMeta, toDateInput } from '../utils/videoMeta';
+import { toast } from '../utils/toast';
 
-const toast = (msg, type) => window.WLExt?.toast?.(msg, type);
 const Field = ({ label, children }) => <div className="wlext-field"><label>{label}</label>{children}</div>;
 const Chip = ({ text, onRemove }) => <span className="wlext-chip">{text}<span className="x" onClick={onRemove}>×</span></span>;
 

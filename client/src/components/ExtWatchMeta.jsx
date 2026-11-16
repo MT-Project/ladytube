@@ -8,15 +8,19 @@
 // (private の metasearch.js などが WL._meta と差し込み口 WL.metaSearch / WL.showMetaPreview を使うため)。
 // 詳細情報は WatchPage が loadMeta で読み、保存したあとは window に wlext-meta-updated ({ id, meta }) が来る。
 // 拡張の関数 (window.WLExt) は、詳細情報が届いたあと (= 拡張は読み込み済み) か、押されたときにだけ呼ぶ。
-// 検索や出演者へのリンクは以前と同じくページごと読み直す (WL.searchBy / WL.openPerformer)。中クリックは data-wlext-href を core.js が拾う。
+// 検索や出演者へのリンクは読み直さずに移る (v3.2.1 までは拡張の WL.searchBy / WL.openPerformer でページごと読み直していた)。
+// 中クリックは data-wlext-href を拡張の core.js が拾う (ボタンを中に持つチップがあり <a> にできないため)。
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { ExtMetaEditDialog } from './ExtMetaEdit';
 import { formatYmd, formatYmAgo, formatAgeYm } from '../utils/formatters';
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
 import { openExtDialog } from '../utils/extDialog';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const WL = () => window.WLExt;
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
@@ -32,15 +36,17 @@ export function ExtRating({ videoId, value }) {
 
 // 除外検索ボタン: 虫メガネ＋マイナス。包含検索 (accent 色) と区別するため赤系 (womanlive-ext.css)
 function ExcludeBtn({ token, label }) {
+    const navigate = useNavigate();
     return (
         <span className="wlext-exclude-btn" title={'「' + label + '」を除外して検索'} data-wlext-href={searchHref(token)}
-            onClick={(e) => { e.stopPropagation(); WL().searchBy(token); }}>
+            onClick={(e) => { e.stopPropagation(); navigate(searchHref(token)); }}>
             <Icon name="zoom-out" size={14} />
         </span>
     );
 }
 function LinkVal({ text, token }) {
-    return <span className="wlext-link" title={'「' + text + '」で検索'} data-wlext-href={searchHref(token)} onClick={() => WL().searchBy(token)}>{text}</span>;
+    const navigate = useNavigate();
+    return <span className="wlext-link" title={'「' + text + '」で検索'} data-wlext-href={searchHref(token)} onClick={() => navigate(searchHref(token))}>{text}</span>;
 }
 // 包含リンク + 除外ボタン
 function ValEx({ text, field }) {
@@ -53,16 +59,18 @@ function ValEx({ text, field }) {
 }
 function PerformerImage({ p }) {
     const [failed, setFailed] = useState(false);
+    const navigate = useNavigate();
     return (
-        <div className="wlext-performer-img" title="出演者ページを開く" data-wlext-href={'/performer/' + p.id} onClick={() => WL().openPerformer(p.id)}>
+        <div className="wlext-performer-img" title="出演者ページを開く" data-wlext-href={'/performer/' + p.id} onClick={() => navigate('/performer/' + p.id)}>
             {p.has_image && !failed
-                ? <img alt={p.name} src={WL().api.performerImageUrl(p.id)} onError={() => setFailed(true)} />
+                ? <img alt={p.name} src={extApi.performerImageUrl(p.id)} onError={() => setFailed(true)} />
                 : '👤'}
         </div>
     );
 }
 
 export function ExtMetaBlock({ meta }) {
+    const navigate = useNavigate();
     const rows = [];
     const row = (key, val) => rows.push(<div key={key + ':k'} className="wlext-key">{key}:</div>, <div key={key + ':v'} className="wlext-val">{val}</div>);
     if (meta.release_date) row('公開日', <>{formatYmd(meta.release_date)}<span className="wlext-release-ago">{formatYmAgo(meta.release_date)}</span></>);
@@ -79,7 +87,7 @@ export function ExtMetaBlock({ meta }) {
                 <div className="wlext-genres">
                     {meta.genres.map(name => (
                         <span key={name} className="wlext-genre-chip" title={'「' + name + '」で検索'} data-wlext-href={searchHref('@genre:"' + name + '"')}
-                            onClick={() => WL().searchBy('@genre:"' + name + '"')}>
+                            onClick={() => navigate(searchHref('@genre:"' + name + '"'))}>
                             <span>{name}</span>
                             <ExcludeBtn token={'@notgenre:"' + name + '"'} label={name} />
                         </span>
@@ -95,7 +103,7 @@ export function ExtMetaBlock({ meta }) {
                                 <PerformerImage p={p} />
                                 <div className="wlext-performer-name-row">
                                     <span className="wlext-performer-name" title={'「' + p.name + '」で検索'} data-wlext-href={searchHref('@performer:' + p.id)}
-                                        onClick={() => WL().searchBy('@performer:' + p.id)}>{p.name}</span>
+                                        onClick={() => navigate(searchHref('@performer:' + p.id))}>{p.name}</span>
                                     <ExcludeBtn token={'@notperformer:' + p.id} label={p.name} />
                                 </div>
                                 {age && <div className="wlext-performer-age">{age}</div>}
@@ -118,7 +126,7 @@ export function ExtWatchFabs({ videoId }) {
     const vid = String(videoId);
     const editMeta = () => {
         const meta = cachedMeta(vid);
-        if (!meta) { WL()?.toast?.('詳細情報を読み込み中です'); return; }
+        if (!meta) { toast('詳細情報を読み込み中です'); return; }
         openExtDialog(ExtMetaEditDialog, { vid, meta });
     };
     return createPortal(

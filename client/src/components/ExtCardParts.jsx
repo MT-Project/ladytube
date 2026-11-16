@@ -8,9 +8,10 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Icon } from './ExtIcon';
 import { ExtDialog } from './ExtDialog';
-import { extGet, extSend } from '../services/extApi';
+import { extGet, extSend, extApi } from '../services/extApi';
 import { isBookmarked, setBookmarked, subscribeBookmarks } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
+import { toast } from '../utils/toast';
 
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 
@@ -93,7 +94,7 @@ function askSsCount(id) {
     ssTimer = setTimeout(() => {
         const ids = ssQueue;
         ssQueue = []; ssTimer = null;
-        window.WLExt.api.ssCounts(ids).then(res => {
+        extApi.ssCounts(ids).then(res => {
             const counts = (res && res.counts) || {};
             ids.forEach(i => { ssCounts[i] = counts[i] != null ? counts[i] : 0; });
             ssListeners.forEach(f => f());
@@ -111,7 +112,7 @@ export function ExtBookmarkDialog({ vid, folders: initial, onClose }) {
         try {
             await extSend(f.in ? 'DELETE' : 'POST', '/ext/api/bookmark/video/' + vid, { folderId: f.id });
             changed(folders.map(x => x.id === f.id ? { ...x, in: !f.in } : x));
-        } catch (e) { window.WLExt?.toast?.('更新に失敗: ' + e.message, 'error'); }
+        } catch (e) { toast('更新に失敗: ' + e.message, 'error'); }
     };
     const add = async () => {
         const n = input.current.value.trim(); if (!n) return;
@@ -120,7 +121,7 @@ export function ExtBookmarkDialog({ vid, folders: initial, onClose }) {
             await extSend('POST', '/ext/api/bookmark/video/' + vid, { folderId: nf.id });
             input.current.value = '';
             changed([...folders, { id: nf.id, name: nf.name, in: true }]);
-        } catch (e) { window.WLExt?.toast?.('フォルダ追加に失敗: ' + e.message, 'error'); }
+        } catch (e) { toast('フォルダ追加に失敗: ' + e.message, 'error'); }
     };
     return (
         <ExtDialog title="ブックマーク" onClose={onClose}>
@@ -146,7 +147,7 @@ export function ExtBookmarkDialog({ vid, folders: initial, onClose }) {
 async function openBookmarkDialog(vid) {
     let data;
     try { data = await extGet('/ext/api/bookmark/video/' + vid); }
-    catch (e) { window.WLExt?.toast?.('読み込みに失敗: ' + e.message, 'error'); return; }
+    catch (e) { toast('読み込みに失敗: ' + e.message, 'error'); return; }
     openExtDialog(ExtBookmarkDialog, { vid, folders: data.folders || [] });
 }
 

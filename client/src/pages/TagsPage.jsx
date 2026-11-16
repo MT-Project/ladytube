@@ -7,7 +7,9 @@ import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { Icon } from '../components/ExtIcon';
-import { storedSort } from '../utils/formatters';
+import { storedSort, colorFor } from '../utils/formatters';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const SORTS = [['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']];
 const STORE = 'wlext_sort_tags';
@@ -54,8 +56,8 @@ function pickAndCrop(name, onChanged) {
         const file = input.files && input.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = () => WL.cropDialog(reader.result, async (dataUrl) => {
-            try { await WL.api.setTagThumb(name, dataUrl); onChanged(true); WL.toast('サムネイルを登録しました', 'success'); }
-            catch (e) { WL.toast('登録に失敗: ' + e.message, 'error'); }
+            try { await extApi.setTagThumb(name, dataUrl); onChanged(true); toast('サムネイルを登録しました', 'success'); }
+            catch (e) { toast('登録に失敗: ' + e.message, 'error'); }
         }, { aspect: [16, 9], outW: 640, title: 'タグサムネイルを切り取り', hint: 'ドラッグで位置調整・スライダーで拡大。推奨比率 16:9（640×360）で切り取ります。' });
         reader.readAsDataURL(file);
     });
@@ -72,7 +74,7 @@ function ThumbEditor({ tag, onClose, onChanged }) {
 
     useEffect(() => {
         let alive = true;
-        WL.api.tagScreenshots(tag.name, 9).then(s => { if (alive) setShots(s); }, e => { if (alive) setShots({ error: e.message }); });
+        extApi.tagScreenshots(tag.name, 9).then(s => { if (alive) setShots(s); }, e => { if (alive) setShots({ error: e.message }); });
         return () => { alive = false; };
     }, [WL, tag.name, round]);
     useEffect(() => {
@@ -86,16 +88,16 @@ function ThumbEditor({ tag, onClose, onChanged }) {
         if (picked == null) return;
         setBusy(true);
         try {
-            await WL.api.setTagThumbFromScreenshot(tag.name, picked);
+            await extApi.setTagThumbFromScreenshot(tag.name, picked);
             onChanged(true);
-            WL.toast('サムネイルを登録しました', 'success');
+            toast('サムネイルを登録しました', 'success');
             onClose();
-        } catch (e) { WL.toast('登録に失敗: ' + e.message, 'error'); setBusy(false); }
+        } catch (e) { toast('登録に失敗: ' + e.message, 'error'); setBusy(false); }
     };
     const reset = async () => {
         onClose();
-        try { await WL.api.deleteTagThumb(tag.name); onChanged(false); WL.toast('既定のサムネイルに戻しました', 'success'); }
-        catch (e) { WL.toast('リセットに失敗: ' + e.message, 'error'); }
+        try { await extApi.deleteTagThumb(tag.name); onChanged(false); toast('既定のサムネイルに戻しました', 'success'); }
+        catch (e) { toast('リセットに失敗: ' + e.message, 'error'); }
     };
     const msg = (text) => <div className="wlext-ss-pick-msg">{text}</div>;
     const empty = Array.isArray(shots) && !shots.length;
@@ -135,9 +137,9 @@ function TagCard({ tag, sel, onEdit, onThumbError }) {
     return (
         <ExtListCard to={'/search?q=' + encodeURIComponent('@tag:"' + tag.name + '"')} className="wlext-series-card wlext-tag-card"
             title={'「' + tag.name + '」で検索'} sel={sel} id={tag.name} name={tag.name}>
-            <div className="wlext-video-thumb wlext-tag-thumb" style={tag.hasThumb ? undefined : { background: WL.colorFor(tag.name) }}>
+            <div className="wlext-video-thumb wlext-tag-thumb" style={tag.hasThumb ? undefined : { background: colorFor(tag.name) }}>
                 {tag.hasThumb
-                    ? <img loading="lazy" alt={tag.name} src={WL.api.tagThumbUrl(tag.name, tag.v)} onError={onThumbError} />
+                    ? <img loading="lazy" alt={tag.name} src={extApi.tagThumbUrl(tag.name, tag.v)} onError={onThumbError} />
                     : <div className="wlext-tag-thumb-label">{tag.name}</div>}
                 <div className="wlext-series-count" title={tag.count + '本'}>{String(tag.count)}</div>
                 {/* 選択モード中はカードと同じく選択を切り替える (押したことをカードへ伝える) */}
@@ -164,7 +166,7 @@ export default function TagsPage() {
     useEffect(() => {
         const WL = window.WLExt;
         Promise.all([
-            WL.api.tagsList(),
+            extApi.tagsList(),
             WL.loadVideoTagPresets().catch(() => []),   // プリセットが読めなくても一覧は出す
         ]).then(([tags, p]) => {
             const v = Date.now();

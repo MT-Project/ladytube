@@ -9,14 +9,13 @@ import { Link, useParams } from 'react-router-dom';
 import { ExtListPage } from '../components/ExtListParts';
 import { ExtStarsEdit } from '../components/ExtCardParts';
 import ExtSlot from '../components/ExtSlot';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
+import { formatAgeYm, formatDuration, formatYmd } from '../utils/formatters';
+import { toDateInput } from '../utils/videoMeta';
 
 const muted = { color: 'var(--text-secondary,#888)' };
 const isEmpty = (v) => v === null || v === undefined || v === '';
-
-function toDateInput(s) {
-    const d = window.WLExt.parseDate(s); if (!d) return '';
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
 
 // 見出しの氏名・ふりがな。押すと入力欄に替え、Enter / 外す で保存、Esc で取り消し
 function HeaderEdit({ as, className, value, empty, big, onSave }) {
@@ -116,7 +115,7 @@ function VideoCard({ v }) {
                 {v.has_thumbnail
                     ? <img src={'/api/video/' + v.id + '/thumbnail?s=' + (v.thumbnail_size || 0)} loading="lazy" alt={title} />
                     : <div className="noimg">NO IMAGE</div>}
-                <div className="wlext-video-dur">{window.WLExt.formatDuration(v.duration)}</div>
+                <div className="wlext-video-dur">{formatDuration(v.duration)}</div>
             </div>
             <div className="wlext-video-title" title={title}>{title}</div>
         </Link>
@@ -132,7 +131,7 @@ function PerformerView({ id }) {
     const [shots, setShots] = useState({ mode: 'recent', list: null });
 
     useEffect(() => {
-        const api = window.WLExt.api;
+        const api = extApi;
         let alive = true;
         api.getPerformer(id).then(p => {
             if (!alive) return;
@@ -151,7 +150,7 @@ function PerformerView({ id }) {
     const save = async (patch) => {
         const next = { ...perf, ...patch };
         setPerf(next);
-        try { await WL.api.updatePerformer(id, next); } catch (e) { WL.toast('保存に失敗: ' + e.message, 'error'); }
+        try { await extApi.updatePerformer(id, next); } catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
     const pickAndCrop = () => {
         const input = document.createElement('input');
@@ -161,11 +160,11 @@ function PerformerView({ id }) {
             const reader = new FileReader();
             reader.onload = () => WL.cropDialog(reader.result, async (dataUrl) => {
                 try {
-                    await WL.api.setPerformerImage(id, dataUrl);
+                    await extApi.setPerformerImage(id, dataUrl);
                     setPerf(p => ({ ...p, has_image: true }));
                     setImg({ v: Date.now(), broken: false });
-                    WL.toast('画像を登録しました', 'success');
-                } catch (e) { WL.toast('画像の登録に失敗: ' + e.message, 'error'); }
+                    toast('画像を登録しました', 'success');
+                } catch (e) { toast('画像の登録に失敗: ' + e.message, 'error'); }
             }, { aspect: [1, 1], outW: 600, title: '画像を切り取り', hint: 'ドラッグで位置調整・スライダーで拡大し、正方形に切り取ります。' });
             reader.readAsDataURL(file);
         });
@@ -173,21 +172,21 @@ function PerformerView({ id }) {
     };
     const loadShots = (mode) => {
         setShots({ mode, list: null });
-        WL.api.performerScreenshots(id, mode === 'random' ? 'random' : '').then(list => setShots({ mode, list }), () => setShots({ mode, list: false }));
+        extApi.performerScreenshots(id, mode === 'random' ? 'random' : '').then(list => setShots({ mode, list }), () => setShots({ mode, list: false }));
     };
 
     const field = (key) => ({ value: perf[key] || '', type: 'text', onSave: (v) => save({ [key]: v }) });
     const plain = (key) => <ValueCell text={isEmpty(perf[key]) ? '未設定' : perf[key]} empty={isEmpty(perf[key])} edit={field(key)} />;
     const { bust: b, cup: c, waist: w, hip: hp, birthday } = perf;
     const hasSize = b || c || w || hp;
-    const age = birthday ? WL.ageYM(birthday, new Date()) : '';
+    const age = birthday ? formatAgeYm(birthday) : '';
     return (
         <ExtListPage title={title}>
             <div className="wlext-pp-header">
                 <div className="wlext-pp-image" title="画像をクリックで拡大"
-                    onClick={() => { if (perf.has_image) WL.lightbox(WL.api.performerImageUrl(id, Date.now()), { onEdit: pickAndCrop }); else pickAndCrop(); }}>
+                    onClick={() => { if (perf.has_image) WL.lightbox(extApi.performerImageUrl(id, Date.now()), { onEdit: pickAndCrop }); else pickAndCrop(); }}>
                     {perf.has_image && !img.broken
-                        ? <img alt={perf.name} src={WL.api.performerImageUrl(id, img.v)} onError={() => setImg(x => ({ ...x, broken: true }))} />
+                        ? <img alt={perf.name} src={extApi.performerImageUrl(id, img.v)} onError={() => setImg(x => ({ ...x, broken: true }))} />
                         : '👤'}
                 </div>
                 <div className="wlext-pp-info">
@@ -208,7 +207,7 @@ function PerformerView({ id }) {
                         <Row label="血液型">{plain('blood_type')}</Row>
                         {/* 誕生日は現在の年齢を併記。折り返さないよう全幅 */}
                         <Row label="誕生日" style={{ gridColumn: '1 / -1' }}>
-                            <ValueCell text={birthday ? (WL.fmtDate(birthday) + (age ? ' (' + age + ')' : '')) : '未設定'} empty={!birthday}
+                            <ValueCell text={birthday ? (formatYmd(birthday) + (age ? ' (' + age + ')' : '')) : '未設定'} empty={!birthday}
                                 edit={{ value: toDateInput(birthday || ''), type: 'date', onSave: (v) => save({ birthday: v }) }} />
                         </Row>
                     </div>
@@ -216,8 +215,8 @@ function PerformerView({ id }) {
                     <ChipRow label="出演者タグ" values={perf.tags || []} onEdit={() => WL.presetTagDialog({
                         title: '出演者タグを設定',
                         current: perf.tags || [],
-                        loadPresets: () => WL.api.getPerformerTags(),
-                        savePresets: (arr) => WL.api.savePerformerTags(arr),
+                        loadPresets: () => extApi.getPerformerTags(),
+                        savePresets: (arr) => extApi.savePerformerTags(arr),
                         onSave: (selected) => save({ tags: selected }),
                     })} />
                 </div>

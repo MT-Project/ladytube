@@ -13,6 +13,8 @@ import { Tag } from 'lucide-react';
 import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
 import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtTagRuleSettings } from './ExtSettingsSections';
+import { toast } from '../utils/toast';
+import { extApi } from '../services/extApi';
 
 const SECTIONS = { cover: ExtCoverSettings, dmm: ExtDmmSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
 
@@ -39,8 +41,8 @@ export function ExtMetaReplace({ cls }) {
         const WL = window.WLExt; if (!WL) return;
         const before = beforeRef.current, after = afterRef.current;
         const b = before.value.trim(), a = after.value.trim();
-        if (!b || !a) { WL.toast('置換対象と置換後の両方を入力してください', 'error'); return; }
-        if (b === a) { WL.toast('置換対象と置換後が同じです', 'error'); return; }
+        if (!b || !a) { toast('置換対象と置換後の両方を入力してください', 'error'); return; }
+        if (b === a) { toast('置換対象と置換後が同じです', 'error'); return; }
         const kind = selRef.current.value, l = selectedLabel();
         const body = WL.h('div', null, [
             WL.h('div', { style: { marginBottom: '0.5rem' } }, '置換すると元に戻せません。置換していいですか？'),
@@ -50,11 +52,11 @@ export function ExtMetaReplace({ cls }) {
             saveLabel: '置換', danger: true,
             onSave: async (close) => {
                 try {
-                    const r = await WL.api.replaceMetadata(kind, b, a);
-                    WL.toast(r.changed + ' 件の' + l + 'を置換しました', 'success');
+                    const r = await extApi.replaceMetadata(kind, b, a);
+                    toast(r.changed + ' 件の' + l + 'を置換しました', 'success');
                     before.value = ''; after.value = '';
                     close();
-                } catch (e) { WL.toast('置換に失敗しました: ' + e.message, 'error'); }
+                } catch (e) { toast('置換に失敗しました: ' + e.message, 'error'); }
             }
         });
     };
