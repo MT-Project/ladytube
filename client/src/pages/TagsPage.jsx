@@ -10,6 +10,7 @@ import { Icon } from '../components/ExtIcon';
 import { storedSort, colorFor } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
+import { loadVideoTagPresets, parseTagGroups } from '../utils/tagPresets';
 
 const SORTS = [['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']];
 const STORE = 'wlext_sort_tags';
@@ -39,7 +40,7 @@ function sectionsFor(list, presets, order) {
         });
         if (items.length) sections.push({ label, items });
         node.children.forEach(c => walk(c, label ? label + ' / ' + c.name : c.name));
-    })(WL.parseTagGroups(presets), '');
+    })(parseTagGroups(presets), '');
     const hasGroups = sections.some(s => s.label);
     const rest = list.filter(t => !used.has(t)).sort((a, b) => WL.nameCompare(a.name, b.name));
     if (rest.length) sections.push({ label: hasGroups ? 'プリセット外' : '', items: rest });
@@ -164,10 +165,9 @@ export default function TagsPage() {
     const sel = { mode, setMode, selected, setSelected };
 
     useEffect(() => {
-        const WL = window.WLExt;
         Promise.all([
             extApi.tagsList(),
-            WL.loadVideoTagPresets().catch(() => []),   // プリセットが読めなくても一覧は出す
+            loadVideoTagPresets().catch(() => []),   // プリセットが読めなくても一覧は出す
         ]).then(([tags, p]) => {
             const v = Date.now();
             setList(tags.map(t => ({ ...t, v })));

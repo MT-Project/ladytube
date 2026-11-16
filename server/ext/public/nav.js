@@ -192,13 +192,6 @@
             helpRow('@notmaker:"名前"', '除外（notseries / notlabel / notgenre / notdirector / notperformer）')
         ];
     }
-    // プリセット編集(タグのグループ化)のヘルプ。プリセット編集ダイアログのタイトル右から開く。
-    function buildPresetHelpContent() {
-        return [
-            h('div', { class: 'wlext-help-title' }, 'プリセット編集のヘルプ'),
-            h('div', { class: 'wlext-help-note' }, '行頭に #（または全角 ＃） を付けるとグループ見出しになります。 ## 名前 でさらに下位グループ（ネスト）となります。見出しと次の見出しの間のタグがそのグループに属します。')
-        ];
-    }
     function ensureHelpPop() {
         if (helpPop) return helpPop;
         helpPop = h('div', { class: 'wlext-help-pop' });
@@ -251,7 +244,6 @@
         return btn;
     }
     WL.makeHelpBtn = makeHelpBtn;
-    WL.presetHelpBtn = () => makeHelpBtn({ key: 'preset', build: buildPresetHelpContent, tooltip: 'プリセット編集のヘルプ' });
 
     document.addEventListener('click', (e) => {
         if (helpPop && helpPop.style.display === 'block' &&

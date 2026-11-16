@@ -98,12 +98,5 @@
         getPerformer: (id) => req('/ext/api/performer/' + id),
         updatePerformer: (id, p) => req('/ext/api/performer/' + id, jsonOpts('PUT', p)),
         setPerformerImage: (id, dataUrl) => req('/ext/api/performer/' + id + '/image', jsonOpts('POST', { image: dataUrl })),
-
-        // 動画タグ プリセット (本体の /api/tags を利用。実タグのみ。# 見出しは含めない)
-        getVideoPresetTags: () => req('/api/tags').then(a => Array.isArray(a) ? a.map(t => (t && t.name) || t).filter(Boolean) : []),
-        saveVideoPresetTags: (tags) => req('/api/tags/bulk', jsonOpts('PUT', { tags })),
-        // 動画タグ プリセットのグループレイアウト (# 見出し入り。ext 側に保持)
-        getVideoTagLayout: () => req('/ext/api/video-tag-layout'),
-        saveVideoTagLayout: (layout) => req('/ext/api/video-tag-layout', jsonOpts('PUT', { layout })),
     };
 })();

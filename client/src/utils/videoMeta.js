@@ -6,6 +6,9 @@
 import { extGet, extSend } from '../services/extApi';
 import { parseYmd } from './formatters';
 import { toast } from './toast';
+import { loadVideoTagPresets, saveVideoTagPresets } from './tagPresets';
+import { openExtDialog } from './extDialog';
+import ExtPresetTagDialog from '../components/ExtPresetTagDialog';
 
 const cache = () => (window.WLExt._meta = window.WLExt._meta || {});
 
@@ -55,16 +58,15 @@ export function toDateInput(s) {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-// タグ編集 (本体のタグ編集の代わり。グループ対応のダイアログは拡張の WL.presetTagDialog)。保存したらページを読み直す
+// タグ編集 (本体のタグ編集の代わり。グループ対応のダイアログは ExtPresetTagDialog.jsx)。保存したらページを読み直す
 export async function openTagEditor(vid) {
-    const WL = window.WLExt;
     let current = [];
     try { const r = await extGet('/ext/api/video/' + vid + '/tags'); current = r.tags || []; } catch { /* 読めなければ空から */ }
-    WL.presetTagDialog({
+    openExtDialog(ExtPresetTagDialog, {
         title: 'タグを編集',
         current,
-        loadPresets: () => WL.loadVideoTagPresets(),
-        savePresets: (arr) => WL.saveVideoTagPresets(arr),
+        loadPresets: loadVideoTagPresets,
+        savePresets: saveVideoTagPresets,
         onSave: async (selected) => {
             try {
                 await extSend('PUT', '/ext/api/video/' + vid + '/tags', { tags: selected });

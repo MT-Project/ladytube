@@ -4,7 +4,7 @@
 // 操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
-// タグ追加のダイアログは拡張の部品 (WL.presetTagDialog) で組む。詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog。
+// タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog。
 import { useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
@@ -14,6 +14,8 @@ import { extGet, extSend } from '../services/extApi';
 import { setBookmarked } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
 import { toast } from '../utils/toast';
+import ExtPresetTagDialog from './ExtPresetTagDialog';
+import { loadVideoTagPresets, saveVideoTagPresets } from '../utils/tagPresets';
 
 const muted = { fontSize: '0.8rem', color: 'var(--text-secondary,#888)' };
 
@@ -59,13 +61,12 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
 
 /* ---------- タグ追加 ---------- */
 function doTags(ids, done) {
-    const WL = window.WLExt;
-    WL.presetTagDialog({
+    openExtDialog(ExtPresetTagDialog, {
         title: 'タグを追加（' + ids.length + '件）',
         current: [],
         // グループ対応の動画タグプリセット (動画単体ページと共用)
-        loadPresets: () => WL.loadVideoTagPresets(),
-        savePresets: (arr) => WL.saveVideoTagPresets(arr),
+        loadPresets: loadVideoTagPresets,
+        savePresets: saveVideoTagPresets,
         onSave: async (tags) => {
             if (!tags.length) { toast('追加するタグを選んでください', 'error'); return; }
             try { const r = await extSend('POST', '/ext/api/bulk/tags', { ids, tags }); toast(r.count + '件にタグを追加しました', 'success'); afterAction(done); }

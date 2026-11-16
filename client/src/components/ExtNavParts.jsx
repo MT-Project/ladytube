@@ -1,5 +1,6 @@
 // LadyTube: 本体のヘッダー (Navbar.jsx) に置く拡張のボタン (v3.2.1 までは中身を拡張の server/ext/public/nav.js が出していた)。
-//  ・ExtHelpButton: 検索ボタンの右の「？」。PC はホバー、タッチはタップで検索のヘルプを出す (押すと出したままにする)
+//  ・ExtHelpButton: 検索ボタンの右の「？」。PC はホバー、タッチはタップで検索のヘルプを出す (押すと出したままにする)。
+//    content を渡すと別のヘルプ (タグ選択のダイアログのプリセット編集のヘルプ。ExtPresetTagDialog.jsx)
 //  ・ExtMenuButton: 右上のメニュー (ハンバーガー)。管理画面以外で、本体の歯車 (管理) の代わりに置く。
 //    差し込み口 WL.navMenuExtras に足した「項目を作る関数 (close) => 要素」は「QRコード」の上に並ぶ (押したら close() を呼ぶ)
 // 見た目は womanlive-ext.css の .wlext-help-* / .wlext-navmenu-*。拡張の書き方のページ (private のジャンル一覧) の
@@ -37,7 +38,8 @@ const HELP = <>
     <HelpRow code={'@notmaker:"名前"'} desc="除外（notseries / notlabel / notgenre / notdirector / notperformer）" />
 </>;
 
-export function ExtHelpButton() {
+// content: ポップオーバーの中身 (既定は検索のヘルプ)。tooltip: ボタンの説明
+export function ExtHelpButton({ content = HELP, tooltip = '検索のヘルプ' }) {
     const btn = useRef(null), pop = useRef(null), timer = useRef(0);
     const [open, setOpen] = useState(false);
     const [pinned, setPinned] = useState(false);
@@ -64,7 +66,7 @@ export function ExtHelpButton() {
     useEffect(() => () => clearTimeout(timer.current), []);
     return (
         <>
-            <button ref={btn} className="wlext-action wlext-help-btn" type="button" title="検索のヘルプ"
+            <button ref={btn} className="wlext-action wlext-help-btn" type="button" title={tooltip}
                 onMouseEnter={() => { clearTimeout(timer.current); setOpen(true); }}
                 onMouseLeave={leave}
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); if (pinned && open) hide(); else { setPinned(true); setOpen(true); } }}>
@@ -72,7 +74,7 @@ export function ExtHelpButton() {
             </button>
             {open && createPortal(
                 <div ref={pop} className="wlext-help-pop" style={{ display: 'block' }}
-                    onMouseEnter={() => clearTimeout(timer.current)} onMouseLeave={leave}>{HELP}</div>,
+                    onMouseEnter={() => clearTimeout(timer.current)} onMouseLeave={leave}>{content}</div>,
                 document.body
             )}
         </>

@@ -17,6 +17,7 @@ import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { formatAgeYm, formatDuration, formatYmd } from '../utils/formatters';
 import { toDateInput } from '../utils/videoMeta';
+import ExtPresetTagDialog from '../components/ExtPresetTagDialog';
 
 const muted = { color: 'var(--text-secondary,#888)' };
 const isEmpty = (v) => v === null || v === undefined || v === '';
@@ -222,7 +223,7 @@ function PerformerView({ id }) {
                         </Row>
                     </div>
                     <ChipRow label="別名" values={perf.aliases || []} onEdit={() => openExtDialog(MultiDialog, { label: '別名', arr: perf.aliases || [], onSave: (arr) => save({ aliases: arr }) })} />
-                    <ChipRow label="出演者タグ" values={perf.tags || []} onEdit={() => WL.presetTagDialog({
+                    <ChipRow label="出演者タグ" values={perf.tags || []} onEdit={() => openExtDialog(ExtPresetTagDialog, {
                         title: '出演者タグを設定',
                         current: perf.tags || [],
                         loadPresets: () => extApi.getPerformerTags(),
