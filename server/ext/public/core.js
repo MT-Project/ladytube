@@ -36,11 +36,7 @@
     WL.debounce = debounce;
     WL.escapeHtml = escapeHtml;
 
-    /* ---------- 名前ソート (サーバーの ext_namekey と同一ロジック) ---------- */
-    // namekey.js (UMD) を core より前に読み込み、ここで WL に公開する。
-    const NK = window.WLNameKey || { nameKey: (s) => String(s == null ? '' : s), nameCompare: (a, b) => String(a).localeCompare(String(b), 'ja') };
-    WL.nameKey = NK.nameKey;
-    WL.nameCompare = NK.nameCompare;
+    // (名前の並べ替え WL.nameKey / WL.nameCompare は、本体の client/src/utils/namekey.js が渡す。定義は server/ext/namekey.mjs)
 
     /* ---------- 一覧 共通部品 ---------- */
     // 画像が無いカード(タグ/ジャンル/メーカー)の既定背景。名前から色を決めるので毎回同じ色になる。

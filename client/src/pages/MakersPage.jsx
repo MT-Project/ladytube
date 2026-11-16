@@ -19,6 +19,7 @@ import { storedSort, colorFor } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { cropDialog } from '../utils/imageDialogs';
+import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'メーカー名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const STORE = 'wlext_sort_makers';
@@ -31,7 +32,6 @@ const labelHref = (label) => searchHref('@label:"' + label + '"');
 const noLabelHref = (maker) => searchHref('@maker:"' + maker + '" label:none');
 
 function compare(order) {
-    const nameCompare = window.WLExt.nameCompare;
     const dir = order.dir === 'asc' ? 1 : -1;
     return (a, b) => {
         const byName = nameCompare(a.furigana || a.name, b.furigana || b.name);

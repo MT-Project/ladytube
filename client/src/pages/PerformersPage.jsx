@@ -10,6 +10,7 @@ import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { ExtConfirm } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
+import { nameCompare } from '../utils/namekey';
 
 const SORTS = [
     ['rating', '評価', 'desc'], ['videoCount', '出演数', 'desc'], ['furigana', 'ふりがな', 'asc'], ['height', '身長', 'asc'], ['weight', '体重', 'asc'],
@@ -44,7 +45,6 @@ function sortVal(p, sort) {
 }
 // 未設定は向きによらず末尾
 function compare(order) {
-    const nameCompare = window.WLExt.nameCompare;
     const dir = order.dir === 'asc' ? 1 : -1;
     return (a, b) => {
         const va = sortVal(a, order.sort), vb = sortVal(b, order.sort);
@@ -130,7 +130,7 @@ export default function PerformersPage() {
     if (error) return <ExtListPage title="出演者一覧"><div>{'読み込みに失敗しました: ' + error}</div></ExtListPage>;
     if (!all) return <ExtListPage title="出演者一覧"><div style={muted}>読み込み中...</div></ExtListPage>;
 
-    const allTags = [...new Set(all.flatMap(p => p.tags))].sort(window.WLExt.nameCompare);
+    const allTags = [...new Set(all.flatMap(p => p.tags))].sort(nameCompare);
     const list = all.filter(p => (!tag || p.tags.includes(tag)) && (!dupOnly || p.dup) && (!hereOnly || p.videoCount > 0)).sort(compare(order));
     const reload = () => extApi.performersAll().then(setAll, () => { });
     return (

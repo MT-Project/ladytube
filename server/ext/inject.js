@@ -14,7 +14,6 @@ const DIST_INDEX = path.join(__dirname, '..', '..', 'client', 'dist', 'index.htm
 // あえて defer を付けずに先頭で実行させる。各機能はコールバック登録のみなので defer でよい。
 const EARLY_SCRIPTS = [
     '/ext/assets/api.js',
-    '/ext/assets/namekey.js',
     '/ext/assets/core.js',
 ];
 const FEATURE_SCRIPTS = [

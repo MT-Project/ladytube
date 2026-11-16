@@ -12,6 +12,7 @@ import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { loadVideoTagPresets, parseTagGroups } from '../utils/tagPresets';
 import { cropDialog } from '../utils/imageDialogs';
+import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']];
 const STORE = 'wlext_sort_tags';
@@ -20,11 +21,10 @@ const muted = { color: 'var(--text-secondary,#888)' };
 // 並びの区切り [{ label, items }]。プリセット順は、タグのプリセットの並びで # のグループごとに分け
 // (入れ子は「親 / 子」)、プリセットに無いタグは末尾へ (グループがあるときだけ「プリセット外」の見出し)
 function sectionsFor(list, presets, order) {
-    const WL = window.WLExt;
     if (order.sort !== 'preset') {
         const dir = order.dir === 'asc' ? 1 : -1;
         const items = list.slice().sort((a, b) => {
-            const byName = WL.nameCompare(a.name, b.name);
+            const byName = nameCompare(a.name, b.name);
             if (order.sort === 'name') return byName * dir;
             return ((a.count || 0) - (b.count || 0)) * dir || byName;
         });
@@ -43,7 +43,7 @@ function sectionsFor(list, presets, order) {
         node.children.forEach(c => walk(c, label ? label + ' / ' + c.name : c.name));
     })(parseTagGroups(presets), '');
     const hasGroups = sections.some(s => s.label);
-    const rest = list.filter(t => !used.has(t)).sort((a, b) => WL.nameCompare(a.name, b.name));
+    const rest = list.filter(t => !used.has(t)).sort((a, b) => nameCompare(a.name, b.name));
     if (rest.length) sections.push({ label: hasGroups ? 'プリセット外' : '', items: rest });
     if (order.dir === 'desc') { sections.reverse(); sections.forEach(s => s.items.reverse()); }
     return sections;

@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
 import WatchPage from './pages/WatchPage';
-import SettingsPage from './pages/SettingsPage';
 import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
 import CalendarPage from './pages/CalendarPage';
 import ExtPage from './components/ExtPage';
@@ -17,6 +16,8 @@ const PerformersPage = lazy(() => import('./pages/PerformersPage'));
 const MakersPage = lazy(() => import('./pages/MakersPage'));
 const BookmarksPage = lazy(() => import('./pages/BookmarksPage'));
 const PerformerPage = lazy(() => import('./pages/PerformerPage'));
+// LadyTube: 管理画面も開いたときに読む (拡張機能の項目を足して大きくなったため)
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function App() {
   return (

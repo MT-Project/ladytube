@@ -7,6 +7,8 @@
 // 拡張は defer で読むので、まだなら読み終わってから (DOMContentLoaded) 探す。
 import { useLayoutEffect } from 'react';
 import { matchPath, useLocation } from 'react-router-dom';
+// LadyTube: 拡張の書き方のページが使う名前の並べ替えを window.WLExt に渡す
+import '../utils/namekey';
 
 export default function ExtPage() {
     const { pathname } = useLocation();

@@ -9,12 +9,12 @@ import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { ExtConfirm, ExtDialog } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
+import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const muted = { color: 'var(--text-secondary,#888)' };
 
 function compare(order) {
-    const nameCompare = window.WLExt.nameCompare;
     const dir = order.dir === 'asc' ? 1 : -1;
     return (a, b) => {
         const byName = nameCompare(a.name || '', b.name || '');

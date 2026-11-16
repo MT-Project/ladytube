@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { storedSort } from '../utils/formatters';
+import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const STORE = 'wlext_sort_series';
@@ -13,7 +14,7 @@ const muted = { color: 'var(--text-secondary,#888)' };
 function compare(order) {
     const dir = order.dir === 'asc' ? 1 : -1;
     return (a, b) => {
-        const byName = window.WLExt.nameCompare(a.name, b.name);
+        const byName = nameCompare(a.name, b.name);
         if (order.sort === 'name') return byName * dir;
         if (order.sort === 'count') return ((a.count || 0) - (b.count || 0)) * dir || byName;
         // 評価: 未評価 (null) は向きによらず末尾

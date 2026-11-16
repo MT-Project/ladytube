@@ -5,7 +5,7 @@
 // 不要になった場合はこれらのテーブルを DROP すれば元に戻ります。
 // =============================================================
 const db = require('../db');
-const { nameKey } = require('./public/namekey');
+const { nameKey } = require('./namekey.mjs');   // 本体の画面 (client/src/utils/namekey.js) と同じもの
 const library = require('./library');
 
 let initialized = false;
