@@ -37,9 +37,7 @@
         switchLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id) + '/switch', jsonOpts('POST', {})),
         deleteLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' }),
 
-        // DMM(FANZA) 商品検索
-        dmmSearch: (id) => req('/ext/api/dmm/search?id=' + encodeURIComponent(id)),
-        dmmApply: (id, item) => req('/ext/api/dmm/apply', jsonOpts('POST', { id, item })),
+        // DMM(FANZA) メーカー検索 (private のメーカー情報の取得)
         dmmMakerSearch: (name) => req('/ext/api/dmm/makers?name=' + encodeURIComponent(name)),
 
         // 動画メタ

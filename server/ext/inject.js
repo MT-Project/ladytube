@@ -18,7 +18,6 @@ const EARLY_SCRIPTS = [
 ];
 const FEATURE_SCRIPTS = [
     '/ext/assets/nav.js',
-    '/ext/assets/videometa.js',
     '/ext/assets/listselect.js',
     // ライブラリ: 管理画面の項目とヘッダーの表示
     '/ext/assets/library.js',

@@ -4,8 +4,8 @@
 //  ・ExtWatchFabs: 右下の丸ボタン (ブックマーク / 動画情報を検索 / タグを編集 / 詳細情報を編集)。本体のタグ編集ボタンの代わり。
 //    ブックマークは ExtCardParts.jsx の ExtBookmarkButton (v3.1.15 までは bookmark.js が body に足していた)
 // 詳細情報の読み書きとタグ編集は utils/videoMeta.js、編集ダイアログは ExtMetaEdit.jsx (v3.2.1 までは videometa.js)。
-// 「動画情報を検索」(FANZA の検索と確認画面) は拡張の videometa.js のまま
-// (private の metasearch.js などが WL._meta と差し込み口 WL.metaSearch / WL.showMetaPreview を使うため)。
+// 「動画情報を検索」(FANZA の検索と確認画面) は utils/metaSearch.jsx と ExtMetaSearch.jsx (v3.2.1 までは videometa.js)。
+// private の metasearch.js などが WL._meta と WL.metaSearch / WL.showMetaPreview / WL.dmmSearch を使う。
 // 詳細情報は WatchPage が loadMeta で読み、保存したあとは window に wlext-meta-updated ({ id, meta }) が来る。
 // 拡張の関数 (window.WLExt) は、詳細情報が届いたあと (= 拡張は読み込み済み) か、押されたときにだけ呼ぶ。
 // 検索や出演者へのリンクは読み直さずに移る (v3.2.1 までは拡張の WL.searchBy / WL.openPerformer でページごと読み直していた)。
@@ -18,6 +18,7 @@ import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { ExtMetaEditDialog } from './ExtMetaEdit';
 import { formatYmd, formatYmAgo, formatAgeYm } from '../utils/formatters';
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
+import { openMetaSearch } from '../utils/metaSearch';
 import { openExtDialog } from '../utils/extDialog';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
@@ -134,7 +135,7 @@ export function ExtWatchFabs({ videoId }) {
             {/* 位置は CSS で決まる (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集) */}
             <ExtBookmarkButton id={videoId} fab />
             {/* 説明は検索を差し替えたもの (WL.metaSearchTitle) があればそれ。拡張は defer で読むが、ここは動画を読み込んでから描くので間に合う */}
-            <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={() => WL()?.openMetaSearch?.(vid)}>
+            <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={() => openMetaSearch(vid)}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
             <button className="wlext-tag-fab" title="タグを編集" onClick={() => openTagEditor(vid)}><Icon name="tag" size={22} /></button>
