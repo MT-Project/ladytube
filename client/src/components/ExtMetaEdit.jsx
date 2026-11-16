@@ -1,43 +1,18 @@
 // LadyTube: 詳細情報の編集ダイアログ (openExtDialog で開く。見た目は womanlive-ext.css の .wlext-field・.wlext-chips・.wlext-suggest)。
 //  ・ExtMetaEditDialog: 動画ページの「詳細情報を編集」(ExtWatchMeta.jsx)。v3.2.1 までは拡張の videometa.js
 //  ・ExtBulkMetaDialog: 検索画面の一括操作 / ⋮ の「詳細情報編集」(ExtVideoMenu.jsx)。入力した項目だけ上書きし、表示動画名は無い
-// 入力欄の部品は拡張の core.js の WL.chipInput (監督・ジャンル) / WL.performerInput (出演者) / WL.starsEl と同じ形と動き。
+// 入力欄は ExtChipInput.jsx (監督・ジャンル) とここの PerformerInput (出演者)。拡張の WL.chipInput / WL.performerInput と同じ形と動き。
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
 import { ExtStarsEdit } from './ExtCardParts';
+import { Chip, ChipInput } from './ExtChipInput';
+import { useChips } from '../utils/chips';
 import { extGet, extSend } from '../services/extApi';
 import { metaToPayload, saveMeta, toDateInput } from '../utils/videoMeta';
 import { toast } from '../utils/toast';
 
 const Field = ({ label, children }) => <div className="wlext-field"><label>{label}</label>{children}</div>;
-const Chip = ({ text, onRemove }) => <span className="wlext-chip">{text}<span className="x" onClick={onRemove}>×</span></span>;
-
-// 文字の複数値 (Enter か「,」で足す。空のまま Backspace で最後を消す)。values() は打ちかけの文字も足して返す
-function useChips(initial) {
-    const [values, setValues] = useState(initial);
-    const input = useRef(null);
-    const all = () => { const t = input.current.value.trim(); return t && !values.includes(t) ? [...values, t] : values.slice(); };
-    return { values, setValues, input, all };
-}
-function ChipInput({ chips, placeholder }) {
-    const { values, setValues, input } = chips;
-    const onKeyDown = (e) => {
-        const el = e.currentTarget;
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const t = el.value.trim();
-            if (t && !values.includes(t)) setValues([...values, t]);
-            el.value = '';
-        } else if (e.key === 'Backspace' && !el.value && values.length) setValues(values.slice(0, -1));
-    };
-    return (
-        <div className="wlext-chips" onClick={() => input.current.focus()}>
-            {values.map((v, i) => <Chip key={v} text={v} onRemove={() => setValues(values.filter((_, j) => j !== i))} />)}
-            <input ref={input} className="wlext-chip-input" placeholder={placeholder} onKeyDown={onKeyDown} />
-        </div>
-    );
-}
 
 // 出演者 ({ id, name } の並び)。打つと候補を出し、無ければ「＋「名前」を新規追加」(Enter でも同じ) で出演者を作って足す
 function PerformerInput({ values, setValues }) {

@@ -2,13 +2,14 @@
 // 並び替え: 評価 / 出演数 / ふりがな / 身長 / 体重 / バスト / カップ数 / ウェスト / ヒップ / 年齢 (身長などは補助の行に値を出す)。
 // 絞り込み: タグ / 別名・氏名が重複する出演者 / このライブラリに出演作がある出演者 (ライブラリが複数あるときだけ。既定でオン)。
 // v3.2.1 までは拡張の server/ext/public/performerlist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
-// API・確認のダイアログ・通知・日付の読み取りは拡張の WL.* (api.js・core.js。React より先に読まれる)
 import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { storedSort, parseYmd } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
+import { ExtConfirm } from '../components/ExtDialog';
+import { openExtDialog } from '../utils/extDialog';
 
 const SORTS = [
     ['rating', '評価', 'desc'], ['videoCount', '出演数', 'desc'], ['furigana', 'ふりがな', 'asc'], ['height', '身長', 'asc'], ['weight', '体重', 'asc'],
@@ -70,23 +71,20 @@ function metaLine(p, sort) {
 
 // 関連動画の無い出演者をまとめて消す (先に数を問い合わせ、確認してから)
 async function cleanupUnused(multiLib, onDone) {
-    const WL = window.WLExt;
     let pv;
     try { pv = await extApi.cleanupUnusedPerformers(true); }
     catch (e) { toast('取得に失敗: ' + e.message, 'error'); return; }
     if (!pv.count) { toast('関連動画のない出演者はいません', 'success'); return; }
-    WL.dialog('関連動画のない出演者を削除',
-        WL.h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } },
-            '関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'
+    openExtDialog(ExtConfirm, {
+        title: '関連動画のない出演者を削除', saveLabel: '削除する',
+        body: <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>{'関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'
             + (multiLib ? '\n出演者は全ライブラリ共通のため、どのライブラリの動画にも登録されていない人だけが対象です。' : '')
-            + '\nこの操作は元に戻せません。よろしいですか？'),
-        {
-            saveLabel: '削除する',
-            onSave: async (close) => {
-                try { const r = await extApi.cleanupUnusedPerformers(false); toast(r.deleted + ' 名を削除しました', 'success'); close(); onDone(); }
-                catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
-            },
-        });
+            + '\nこの操作は元に戻せません。よろしいですか？'}</div>,
+        onSave: async (close) => {
+            try { const r = await extApi.cleanupUnusedPerformers(false); toast(r.deleted + ' 名を削除しました', 'success'); close(); onDone(); }
+            catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
+        },
+    });
 }
 
 function PerformerCard({ p, sort, sel }) {

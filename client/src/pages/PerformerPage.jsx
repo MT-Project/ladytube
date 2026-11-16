@@ -3,12 +3,16 @@
 // 写真は押すと拡大 (無ければ画像を選んで正方形に切り取る)。スクリーンショットは「最近」8件か「ランダム」(押すたびに抽選)。
 // 差し込み口 WL.performerExtras に「部品を作る関数 (id) => 要素」を足すと、ページを開くたびに置く (ExtSlot。丸ボタンなどは position: fixed で)。
 // v3.2.1 までは拡張の server/ext/public/performer.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
-// API・ダイアログ・ライトボックス・切り取り・通知・日付は拡張の WL.* (api.js・core.js。React より先に読まれる)
+// ダイアログは ExtDialog。ライトボックス・切り取り・出演者タグの選択は拡張の WL.* (core.js。React より先に読まれる)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ExtListPage } from '../components/ExtListParts';
 import { ExtStarsEdit } from '../components/ExtCardParts';
 import ExtSlot from '../components/ExtSlot';
+import { ExtDialog } from '../components/ExtDialog';
+import { ChipInput } from '../components/ExtChipInput';
+import { useChips } from '../utils/chips';
+import { openExtDialog } from '../utils/extDialog';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { formatAgeYm, formatDuration, formatYmd } from '../utils/formatters';
@@ -69,28 +73,34 @@ function ValueCell({ text, empty, edit, onOpen }) {
 
 const Row = ({ label, children, style }) => <div className="wlext-pp-row" style={style}><span className="k">{label}</span>{children}</div>;
 
-function threeSizeDialog(perf, save) {
-    const WL = window.WLExt, h = WL.h;
-    const fld = (label, inp) => h('div', { class: 'wlext-field' }, [h('label', null, label), inp]);
-    const ib = h('input', { class: 'wlext-input', value: perf.bust || '' });
-    const ic = h('input', { class: 'wlext-input', value: perf.cup || '' });
-    const iw = h('input', { class: 'wlext-input', value: perf.waist || '' });
-    const ih = h('input', { class: 'wlext-input', value: perf.hip || '' });
-    const body = h('div', { class: 'wlext-row2' }, [fld('バスト', ib), fld('カップ数', ic), fld('ウェスト', iw), fld('ヒップ', ih)]);
-    WL.dialog('スリーサイズを編集', body, {
-        onSave: async (close) => {
-            await save({ bust: ib.value.trim(), cup: ic.value.trim(), waist: iw.value.trim(), hip: ih.value.trim() });
-            close();
-        },
-    });
+const Field = ({ label, children }) => <div className="wlext-field"><label>{label}</label>{children}</div>;
+
+function ThreeSizeDialog({ perf, save, onClose }) {
+    const bust = useRef(null), cup = useRef(null), waist = useRef(null), hip = useRef(null);
+    const ok = async () => {
+        await save({ bust: bust.current.value.trim(), cup: cup.current.value.trim(), waist: waist.current.value.trim(), hip: hip.current.value.trim() });
+        onClose();
+    };
+    return (
+        <ExtDialog title="スリーサイズを編集" onClose={onClose} onSave={ok}>
+            <div className="wlext-row2">
+                <Field label="バスト"><input ref={bust} className="wlext-input" defaultValue={perf.bust || ''} /></Field>
+                <Field label="カップ数"><input ref={cup} className="wlext-input" defaultValue={perf.cup || ''} /></Field>
+                <Field label="ウェスト"><input ref={waist} className="wlext-input" defaultValue={perf.waist || ''} /></Field>
+                <Field label="ヒップ"><input ref={hip} className="wlext-input" defaultValue={perf.hip || ''} /></Field>
+            </div>
+        </ExtDialog>
+    );
 }
 
-function multiDialog(label, arr, onSave) {
-    const WL = window.WLExt;
-    const chips = WL.chipInput(arr, label + 'を入力してEnter');
-    WL.dialog(label + 'を編集', WL.h('div', { class: 'wlext-field' }, chips.el), {
-        onSave: async (close) => { await onSave(chips.getValues()); close(); },
-    });
+// 別名などの複数値 (Enter か「,」で足す)
+function MultiDialog({ label, arr, onSave, onClose }) {
+    const chips = useChips(arr);
+    return (
+        <ExtDialog title={label + 'を編集'} onClose={onClose} onSave={async () => { await onSave(chips.all()); onClose(); }}>
+            <div className="wlext-field"><ChipInput chips={chips} placeholder={label + 'を入力してEnter'} /></div>
+        </ExtDialog>
+    );
 }
 
 // 別名・出演者タグの行 (チップと「✎編集」)
@@ -202,7 +212,7 @@ function PerformerView({ id }) {
                         <Row label="体重">{plain('weight')}</Row>
                         <Row label="スリーサイズ">
                             <ValueCell text={hasSize ? ((b || '?') + (c ? ' (' + c + ')' : '') + '/' + (w || '?') + '/' + (hp || '?')) : '未設定'} empty={!hasSize}
-                                onOpen={() => threeSizeDialog(perf, save)} />
+                                onOpen={() => openExtDialog(ThreeSizeDialog, { perf, save })} />
                         </Row>
                         <Row label="血液型">{plain('blood_type')}</Row>
                         {/* 誕生日は現在の年齢を併記。折り返さないよう全幅 */}
@@ -211,7 +221,7 @@ function PerformerView({ id }) {
                                 edit={{ value: toDateInput(birthday || ''), type: 'date', onSave: (v) => save({ birthday: v }) }} />
                         </Row>
                     </div>
-                    <ChipRow label="別名" values={perf.aliases || []} onEdit={() => multiDialog('別名', perf.aliases || [], (arr) => save({ aliases: arr }))} />
+                    <ChipRow label="別名" values={perf.aliases || []} onEdit={() => openExtDialog(MultiDialog, { label: '別名', arr: perf.aliases || [], onSave: (arr) => save({ aliases: arr }) })} />
                     <ChipRow label="出演者タグ" values={perf.tags || []} onEdit={() => WL.presetTagDialog({
                         title: '出演者タグを設定',
                         current: perf.tags || [],

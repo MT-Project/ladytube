@@ -6,13 +6,15 @@
 // ・⋮ … メーカー情報の編集 / FANZA からの取得。差し込み口 WL.makerMenuExtras に「項目を作る関数 (maker, close) => 要素」を
 //   足すと、その下に並ぶ (maker は一覧の1行のデータ { name, listUrl, siteUrl, catchCopy, ... }。押したら close() を呼ぶ)
 // v3.2.1 までは拡張の server/ext/public/makerlist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
-// API・ダイアログ・切り取り・通知は拡張の WL.* (api.js・core.js。React より先に読まれる)
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+// ダイアログは ExtDialog (openExtDialog で開く)。画像の切り取りは拡張の WL.cropDialog (core.js)
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { Icon } from '../components/ExtIcon';
+import { ExtDialog } from '../components/ExtDialog';
+import { openExtDialog } from '../utils/extDialog';
 import { storedSort, colorFor } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
@@ -81,115 +83,109 @@ function pickImage(m, onDone) {
     document.body.appendChild(input); input.click(); setTimeout(() => input.remove(), 1000);
 }
 
-/* ---------- メーカー情報の編集 (ダイアログは拡張の WL.dialog) ---------- */
-function editDialog(m, onDone) {
-    const WL = window.WLExt, h = WL.h;
-    const inFuri = h('input', { class: 'wlext-input', value: m.furigana || '', placeholder: 'めーかーめい' });
-    const inCatch = h('input', { class: 'wlext-input', value: m.catchCopy || '' });
-    const inUrl = h('input', { class: 'wlext-input', value: m.listUrl || '', placeholder: 'https://...' });
-    const inSite = h('input', { class: 'wlext-input', value: m.siteUrl || '', placeholder: 'https://...' });
-    const field = (label, node) => h('div', { class: 'wlext-field' }, [h('label', null, label), node]);
+/* ---------- メーカー情報の編集 ---------- */
+const Field = ({ label, children }) => <div className="wlext-field"><label>{label}</label>{children}</div>;
+const hint = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: mb });
 
-    const body = h('div', null, [
-        h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: '0.6rem' } },
-            'メーカー名は動画のメタデータそのものです。名前を変えるときは設定画面の「メタデータの置換」を使ってください。'),
-        field('メーカー名', h('div', { class: 'wlext-maker-readonly' }, m.name)),
-        field('ふりがな', inFuri),
-        field('キャッチコピー', inCatch),
-        field('リストページURL (FANZA)', inUrl),
-        field('公式サイトURL', inSite),
-    ]);
-
-    WL.dialog('メーカー情報を編集 — ' + m.name, body, {
-        onSave: async (close) => {
-            try {
-                await extApi.saveMaker({
-                    name: m.name, furigana: inFuri.value, catch_copy: inCatch.value, list_url: inUrl.value, site_url: inSite.value,
-                });
-                onDone({ furigana: inFuri.value.trim(), catchCopy: inCatch.value.trim(), listUrl: inUrl.value.trim(), siteUrl: inSite.value.trim() });
-                toast('メーカー情報を保存しました', 'success');
-                close();
-            } catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
-        },
-    });
+function MakerEditDialog({ m, onDone, onClose }) {
+    const furi = useRef(null), cc = useRef(null), url = useRef(null), site = useRef(null);
+    const save = async () => {
+        const v = { furigana: furi.current.value, catchCopy: cc.current.value, listUrl: url.current.value, siteUrl: site.current.value };
+        try {
+            await extApi.saveMaker({ name: m.name, furigana: v.furigana, catch_copy: v.catchCopy, list_url: v.listUrl, site_url: v.siteUrl });
+            onDone({ furigana: v.furigana.trim(), catchCopy: v.catchCopy.trim(), listUrl: v.listUrl.trim(), siteUrl: v.siteUrl.trim() });
+            toast('メーカー情報を保存しました', 'success');
+            onClose();
+        } catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
+    };
+    return (
+        <ExtDialog title={'メーカー情報を編集 — ' + m.name} onClose={onClose} onSave={save}>
+            <div>
+                <div style={hint('0.6rem')}>メーカー名は動画のメタデータそのものです。名前を変えるときは設定画面の「メタデータの置換」を使ってください。</div>
+                <Field label="メーカー名"><div className="wlext-maker-readonly">{m.name}</div></Field>
+                <Field label="ふりがな"><input ref={furi} className="wlext-input" defaultValue={m.furigana || ''} placeholder="めーかーめい" /></Field>
+                <Field label="キャッチコピー"><input ref={cc} className="wlext-input" defaultValue={m.catchCopy || ''} /></Field>
+                <Field label="リストページURL (FANZA)"><input ref={url} className="wlext-input" defaultValue={m.listUrl || ''} placeholder="https://..." /></Field>
+                <Field label="公式サイトURL"><input ref={site} className="wlext-input" defaultValue={m.siteUrl || ''} placeholder="https://..." /></Field>
+            </div>
+        </ExtDialog>
+    );
 }
+const editDialog = (m, onDone) => openExtDialog(MakerEditDialog, { m, onDone });
 
 /* ---------- FANZA からのメーカー情報取得 ---------- */
 async function fetchInfo(m, onDone) {
-    const WL = window.WLExt;
     toast('FANZAでメーカーを検索中...');
     let data;
     try { data = await extApi.dmmMakerSearch(m.name); }
     catch (e) { toast(e.message || '検索に失敗しました', 'error'); return; }
-    if (data.exact && data.exact.length === 1) showFetchPreview(m, data.exact[0], onDone);
-    else showFetchSelect(m, data, onDone);
+    if (data.exact && data.exact.length === 1) openExtDialog(MakerPreviewDialog, { m, item: data.exact[0], onDone });
+    else openExtDialog(MakerSelectDialog, { m, data, onDone });
 }
 
+const Msg = ({ children }) => <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary,#888)' }}>{children}</div>;
+
 // 完全一致しなかったとき: 候補から選ばせる (名前を変えて再検索もできる)
-function showFetchSelect(m, data, onDone) {
-    const WL = window.WLExt, h = WL.h;
-    const input = h('input', { class: 'wlext-input', value: m.name, placeholder: 'メーカー名' });
-    const listEl = h('div', { class: 'wlext-dmm-select' });
-    const msg = (t) => h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#888)' } }, t);
-
-    function paint(d) {
-        listEl.innerHTML = '';
-        const items = (d.exact && d.exact.length ? d.exact : d.candidates) || [];
-        if (!items.length) { listEl.appendChild(msg('候補が見つかりませんでした。名前を変えて検索してください。')); return; }
-        items.forEach(it => listEl.appendChild(
-            h('div', { class: 'wlext-dmm-select-item', onClick: () => { close(); showFetchPreview(m, it, onDone); } },
-                h('div', { class: 'wlext-dmm-select-info' }, [
-                    h('div', { class: 'wlext-dmm-select-title' }, it.name),
-                    h('div', { class: 'wlext-dmm-select-sub' }, it.ruby || '(読み仮名なし)'),
-                ]))));
-        if (d.limited) listEl.appendChild(msg('候補が多いため上位' + items.length + '件のみ表示しています。'));
-    }
-
-    async function research() {
-        const q = input.value.trim(); if (!q) return;
-        listEl.innerHTML = ''; listEl.appendChild(msg('検索中...'));
-        try { paint(await extApi.dmmMakerSearch(q)); }
-        catch (e) { listEl.innerHTML = ''; listEl.appendChild(msg('検索に失敗しました: ' + e.message)); }
-    }
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') research(); });
-
-    const body = h('div', null, [
-        h('div', { class: 'wlext-field' }, [
-            h('label', null, 'メーカー名で検索（Enterで再検索）'),
-            h('div', { class: 'wlext-inline' }, [input, h('button', { class: 'wlext-btn', onClick: research }, '検索')]),
-        ]),
-        listEl,
-    ]);
-    const close = WL.dialog('メーカーを選択してください', body, {});
-    paint(data);
+function MakerSelectDialog({ m, data: initial, onDone, onClose }) {
+    const [data, setData] = useState(initial);   // 検索の結果 / { msg }
+    const input = useRef(null);
+    const research = async () => {
+        const q = input.current.value.trim(); if (!q) return;
+        setData({ msg: '検索中...' });
+        try { setData(await extApi.dmmMakerSearch(q)); }
+        catch (e) { setData({ msg: '検索に失敗しました: ' + e.message }); }
+    };
+    const items = data.msg ? [] : ((data.exact && data.exact.length ? data.exact : data.candidates) || []);
+    return (
+        <ExtDialog title="メーカーを選択してください" onClose={onClose}>
+            <div>
+                <Field label="メーカー名で検索（Enterで再検索）">
+                    <div className="wlext-inline">
+                        <input ref={input} className="wlext-input" defaultValue={m.name} placeholder="メーカー名" onKeyDown={(e) => { if (e.key === 'Enter') research(); }} />
+                        <button className="wlext-btn" onClick={research}>検索</button>
+                    </div>
+                </Field>
+                <div className="wlext-dmm-select">
+                    {data.msg ? <Msg>{data.msg}</Msg>
+                        : !items.length ? <Msg>候補が見つかりませんでした。名前を変えて検索してください。</Msg>
+                            : <>
+                                {items.map((it, i) => (
+                                    <div key={i} className="wlext-dmm-select-item" onClick={() => openExtDialog(MakerPreviewDialog, { m, item: it, onDone })}>
+                                        <div className="wlext-dmm-select-info">
+                                            <div className="wlext-dmm-select-title">{it.name}</div>
+                                            <div className="wlext-dmm-select-sub">{it.ruby || '(読み仮名なし)'}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {data.limited && <Msg>{'候補が多いため上位' + items.length + '件のみ表示しています。'}</Msg>}
+                            </>}
+                </div>
+            </div>
+        </ExtDialog>
+    );
 }
 
 // 反映前の確認 (動画情報・出演者情報の取得と同じ流れ)
-function showFetchPreview(m, item, onDone) {
-    const WL = window.WLExt, h = WL.h;
-    const grid = h('div', { class: 'wlext-detail-grid', style: { fontSize: '0.85rem' } });
-    const addRow = (k, v) => { grid.appendChild(h('div', { class: 'wlext-key' }, k)); grid.appendChild(h('div', { class: 'wlext-val' }, v || '(なし)')); };
-    addRow('メーカー名 (FANZA)', item.name);
-    addRow('読み仮名', item.ruby);
-    addRow('リストページURL', item.listUrl);
-
-    const body = h('div', null, [
-        h('div', { style: { fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: '0.7rem' } },
-            '「' + m.name + '」に、読み仮名(ふりがな)とリストページURLを設定します。メーカー名そのものは変更しません。'),
-        grid,
-    ]);
-
-    WL.dialog('この内容で設定しますか？', body, {
-        saveLabel: '設定する',
-        onSave: async (close) => {
-            try {
-                await extApi.saveMaker({ name: m.name, furigana: item.ruby || '', list_url: item.listUrl || '' });
-                onDone({ furigana: item.ruby || '', listUrl: item.listUrl || '' });
-                toast('メーカー情報を設定しました', 'success');
-                close();
-            } catch (e) { toast('設定に失敗: ' + e.message, 'error'); }
-        },
-    });
+function MakerPreviewDialog({ m, item, onDone, onClose }) {
+    const save = async () => {
+        try {
+            await extApi.saveMaker({ name: m.name, furigana: item.ruby || '', list_url: item.listUrl || '' });
+            onDone({ furigana: item.ruby || '', listUrl: item.listUrl || '' });
+            toast('メーカー情報を設定しました', 'success');
+            onClose();
+        } catch (e) { toast('設定に失敗: ' + e.message, 'error'); }
+    };
+    const rows = [['メーカー名 (FANZA)', item.name], ['読み仮名', item.ruby], ['リストページURL', item.listUrl]];
+    return (
+        <ExtDialog title="この内容で設定しますか？" onClose={onClose} onSave={save} saveLabel="設定する">
+            <div>
+                <div style={hint('0.7rem')}>{'「' + m.name + '」に、読み仮名(ふりがな)とリストページURLを設定します。メーカー名そのものは変更しません。'}</div>
+                <div className="wlext-detail-grid" style={{ fontSize: '0.85rem' }}>
+                    {rows.map(([k, v]) => <Fragment key={k}><div className="wlext-key">{k}</div><div className="wlext-val">{v || '(なし)'}</div></Fragment>)}
+                </div>
+            </div>
+        </ExtDialog>
+    );
 }
 
 /* ---------- ⋮ メニュー (リスト表示の動画メニューと同じ見た目・配置) ---------- */

@@ -1,13 +1,14 @@
 // LadyTube: ブックマーク (/bookmarks)。ブックマークのフォルダをサムネイル・本数・平均評価で並べる。
 // 並び替え: フォルダ名 / 動画本数 / 評価 (保存しない)。フォルダの追加・名称変更・削除。サムネイルか名前を押すとそのフォルダを検索。
 // v3.2.1 までは拡張の server/ext/public/bookmarklist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
-// API・ダイアログ・通知は拡張の WL.* (api.js・core.js。React より先に読まれる)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
+import { ExtConfirm, ExtDialog } from '../components/ExtDialog';
+import { openExtDialog } from '../utils/extDialog';
 
 const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const muted = { color: 'var(--text-secondary,#888)' };
@@ -29,24 +30,28 @@ function compare(order) {
 }
 
 // フォルダ名を1つ入れるダイアログ (追加・名称変更)。save(name) が済んだら閉じて onDone
-function nameDialog(title, saveLabel, value, save, onDone, emptyToast) {
-    const WL = window.WLExt, h = WL.h;
-    const input = h('input', value == null ? { class: 'wlext-input', placeholder: 'フォルダ名' } : { class: 'wlext-input', value });
-    WL.dialog(title, h('div', { class: 'wlext-field' }, [h('label', null, 'フォルダ名'), input]), {
-        saveLabel,
-        onSave: async (close) => {
-            const name = input.value.trim();
-            if (!name) { if (emptyToast) toast('フォルダ名を入力してください', 'error'); return; }
-            try { await save(name); close(); onDone(); } catch (e) { toast(saveLabel + 'に失敗: ' + e.message, 'error'); }
-        },
-    });
-    setTimeout(() => input.focus(), 50);
+function NameDialog({ title, saveLabel, value, save, onDone, emptyToast, onClose }) {
+    const input = useRef(null);
+    useEffect(() => { const t = setTimeout(() => input.current?.focus(), 50); return () => clearTimeout(t); }, []);
+    const ok = async () => {
+        const name = input.current.value.trim();
+        if (!name) { if (emptyToast) toast('フォルダ名を入力してください', 'error'); return; }
+        try { await save(name); onClose(); onDone(); } catch (e) { toast(saveLabel + 'に失敗: ' + e.message, 'error'); }
+    };
+    return (
+        <ExtDialog title={title} onClose={onClose} onSave={ok} saveLabel={saveLabel}>
+            <div className="wlext-field"><label>フォルダ名</label>
+                {value == null ? <input ref={input} className="wlext-input" placeholder="フォルダ名" /> : <input ref={input} className="wlext-input" defaultValue={value} />}
+            </div>
+        </ExtDialog>
+    );
 }
+const nameDialog = (title, saveLabel, value, save, onDone, emptyToast) => openExtDialog(NameDialog, { title, saveLabel, value, save, onDone, emptyToast });
 
 function deleteDialog(s, onDone) {
-    const WL = window.WLExt;
-    WL.dialog('フォルダを削除', WL.h('div', { style: { fontSize: '0.9rem', lineHeight: '1.6' } }, '「' + s.name + '」を削除します（中のブックマークも削除されます。動画自体は削除されません）。よろしいですか？'), {
-        saveLabel: '削除する',
+    openExtDialog(ExtConfirm, {
+        title: 'フォルダを削除', saveLabel: '削除する',
+        body: <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>{'「' + s.name + '」を削除します（中のブックマークも削除されます。動画自体は削除されません）。よろしいですか？'}</div>,
         onSave: async (close) => { try { await extApi.bmDeleteFolder(s.id); close(); onDone(); } catch (e) { toast('削除に失敗: ' + e.message, 'error'); } },
     });
 }

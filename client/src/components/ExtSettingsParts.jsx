@@ -12,6 +12,8 @@ import { createPortal } from 'react-dom';
 import { Tag } from 'lucide-react';
 import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
+import { ExtConfirm } from './ExtDialog';
+import { openExtDialog } from '../utils/extDialog';
 import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtTagRuleSettings } from './ExtSettingsSections';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
@@ -38,18 +40,17 @@ export function ExtMetaReplace({ cls }) {
     }, []);
     const selectedLabel = () => { const s = selRef.current; return ((s && s.options[s.selectedIndex]) || {}).text || ''; };
     const run = () => {
-        const WL = window.WLExt; if (!WL) return;
         const before = beforeRef.current, after = afterRef.current;
         const b = before.value.trim(), a = after.value.trim();
         if (!b || !a) { toast('置換対象と置換後の両方を入力してください', 'error'); return; }
         if (b === a) { toast('置換対象と置換後が同じです', 'error'); return; }
         const kind = selRef.current.value, l = selectedLabel();
-        const body = WL.h('div', null, [
-            WL.h('div', { style: { marginBottom: '0.5rem' } }, '置換すると元に戻せません。置換していいですか？'),
-            WL.h('div', { style: { fontSize: '0.9rem' } }, l + '：' + b + ' → ' + a)
-        ]);
-        WL.dialog('メタデータ置換', body, {
-            saveLabel: '置換', danger: true,
+        openExtDialog(ExtConfirm, {
+            title: 'メタデータ置換', saveLabel: '置換', danger: true,
+            body: <div>
+                <div style={{ marginBottom: '0.5rem' }}>置換すると元に戻せません。置換していいですか？</div>
+                <div style={{ fontSize: '0.9rem' }}>{l + '：' + b + ' → ' + a}</div>
+            </div>,
             onSave: async (close) => {
                 try {
                     const r = await extApi.replaceMetadata(kind, b, a);
