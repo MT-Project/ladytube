@@ -1,7 +1,8 @@
 // =============================================================
 // HTML 注入ミドルウェア
 // 既存の client/dist/index.html を「ディスク上は変更せず」、配信時に
-// 拡張用の <link>/<script> を <head> へ差し込みます。
+// 使用中のライブラリ (window.WLExtLibrary) を <head> へ差し込みます。
+// (v3.2.1 までは拡張の画面の <script>/<link> も差し込んでいた。今は本体の client/src にある)
 // /watch/:id や /performer/:id など、SPA のページ遷移すべてに適用されます。
 // =============================================================
 const fs = require('fs');
@@ -11,12 +12,6 @@ const library = require('./library');
 const DIST_INDEX = path.join(__dirname, '..', '..', 'client', 'dist', 'index.html');
 
 module.exports = function createInject() {
-    const cacheBust = Date.now(); // サーバー起動ごとに更新
-    // 拡張の画面の CSS (.wlext-*。本体の画面の部品も使う)。v3.2.1 までは拡張の JS (api.js・core.js・nav.js ほか) も注入していた
-    const injection = `
-  <link rel="stylesheet" href="/ext/assets/womanlive-ext.css?v=${cacheBust}">
-`;
-
     return function injectMiddleware(req, res, next) {
         if (req.method !== 'GET') return next();
 
@@ -37,7 +32,8 @@ module.exports = function createInject() {
                 // 本体の client/src/utils/library.jsx がこれを見て、全リクエストに「どのライブラリの画面か」を付ける。
                 const lib = JSON.stringify(library.clientInfo()).replace(/</g, '\\u003c');
                 html = html.replace('</head>', `
-  <script>window.WLExtLibrary = ${lib};</script>` + injection + '</head>');
+  <script>window.WLExtLibrary = ${lib};</script>
+</head>`);
             }
             res.set('Content-Type', 'text/html; charset=utf-8');
             res.set('Cache-Control', 'no-cache');

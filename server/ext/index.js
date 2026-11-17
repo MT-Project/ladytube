@@ -72,16 +72,7 @@ module.exports = function setupExt(app) {
     // 2. 拡張 API 用の JSON ボディパーサ (画像アップロードのため大きめ)
     app.use('/ext/api', express.json({ limit: '25mb' }));
 
-    // 3. クライアント拡張アセット (js/css) の配信
-    //    inject.js が付ける ?v=<起動時刻> 付きの要求は、起動し直すまで中身が変わらないので長く持たせる
-    //    (ページを開くたびの問い合わせを省く。サーバーを止めずに書き換えたときは Ctrl+F5 で読み直す)
-    app.use('/ext/assets', express.static(path.join(__dirname, 'public'), {
-        etag: true,
-        maxAge: 0,
-        setHeaders: (res) => { if (res.req && res.req.query && res.req.query.v) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); },
-    }));
-
-    // 4. 拡張 API ルート
+    // 3. 拡張 API ルート
     // -- ライブラリ
     app.get('/ext/api/libraries', libraryRoutes.list);
     app.get('/ext/api/libraries/current', libraryRoutes.current);
@@ -196,7 +187,7 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/performer/:id/videos', performers.relatedVideos);
     app.get('/ext/api/performer/:id/screenshots', performers.relatedScreenshots);
 
-    // 5. ページ HTML への拡張スクリプト注入 (静的配信より前に登録)
+    // 4. ページ HTML への使用中のライブラリの埋め込み (静的配信より前に登録。v3.2.1 までは拡張スクリプトの注入も)
     app.use(createInject());
 
     console.log('[LadyTube] 拡張機能を読み込みました (/ext)');
