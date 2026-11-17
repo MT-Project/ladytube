@@ -229,3 +229,41 @@ export function FrameStep({ videoId, videoRef, containerRef }) {
         </>
     );
 }
+
+// 次のパートの自動再生 (v3.6.0): 動画の終わりで本体が「次の動画」の候補を出すとき、Player が一緒に置く。
+//  同じ品番の動画 (/ext/api/video/:id/siblings の parts。ファイル名の自然順) に次があれば、秒読みのあと onGo で移る。
+//  プレイヤーの設定「次のパートを自動再生」(localStorage の wlext_autonext。SettingsDialog.jsx) がオフなら出さない
+const AUTONEXT_SEC = 5;
+export function ExtAutoNext({ videoId, onGo }) {
+    const [next, setNext] = useState(null);
+    const [left, setLeft] = useState(AUTONEXT_SEC);
+    const goRef = useRef(onGo);   // onGo は描くたびに作り直されるので、秒読みの effect の deps に入れない
+    useEffect(() => { goRef.current = onGo; });
+    useEffect(() => {
+        if (localStorage.getItem('wlext_autonext') === '0') return;
+        let stale = false;
+        fetch('/ext/api/video/' + videoId + '/siblings').then(r => (r.ok ? r.json() : null)).then(j => {
+            const parts = (j && j.parts) || [];
+            const i = parts.findIndex(p => String(p.id) === String(videoId));
+            if (!stale && i >= 0 && parts[i + 1]) setNext(parts[i + 1]);
+        }).catch(() => { });
+        return () => { stale = true; };
+    }, [videoId]);
+    useEffect(() => {
+        if (!next) return;
+        if (left <= 0) { goRef.current(next); return; }
+        const t = setTimeout(() => setLeft(left - 1), 1000);
+        return () => clearTimeout(t);
+    }, [next, left]);
+    if (!next) return null;
+    return (
+        <div className="wlext-autonext" onClick={(e) => e.stopPropagation()}>
+            <div className="wlext-autonext-head">{left + ' 秒後に次のパートを再生'}</div>
+            <div className="wlext-autonext-name">{next.ext_display_name || next.filename}</div>
+            <div className="wlext-autonext-btns">
+                <span className="wlext-btn wlext-btn-primary" onClick={() => goRef.current(next)}>今すぐ再生</span>
+                <span className="wlext-btn" onClick={() => setNext(null)}>キャンセル</span>
+            </div>
+        </div>
+    );
+}

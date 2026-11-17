@@ -8,7 +8,7 @@ import PlayerOverlay from './Player/PlayerOverlay';
 import VideoRecommendation from './Player/VideoRecommendation';
 import { useDraggable } from './Player/useDraggable';
 import { useMsePlayback } from './Player/useMsePlayback';
-import { FrameStep } from './ExtWatchParts';
+import { FrameStep, ExtAutoNext } from './ExtWatchParts';
 import { css } from '@linaria/core';
 import { theme } from '../theme';
 import ASS from 'assjs';
@@ -270,6 +270,14 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
         };
     }, [video?.id, subtitlesEnabled]);
 
+    // LadyTube: id を渡すと同じ id の通知を置き換える (再生速度のキーを続けて押したとき、通知を積み重ねない)
+    const showPlayerToast = (message, customContent = null, id = Date.now() + Math.random()) => {
+        setPlayerToasts(prev => [...prev.filter(t => t.id !== id), { id, message, customContent }]);
+        setTimeout(() => {
+            setPlayerToasts(prev => prev.filter(t => t.id !== id));
+        }, 3000);
+    };
+
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
         getCurrentTime: () => {
@@ -279,13 +287,7 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
         seekTo: (time) => {
             handleSeek(time);
         },
-        showToast: (message, customContent = null) => {
-            const id = Date.now() + Math.random();
-            setPlayerToasts(prev => [...prev, { id, message, customContent }]);
-            setTimeout(() => {
-                setPlayerToasts(prev => prev.filter(t => t.id !== id));
-            }, 3000);
-        }
+        showToast: showPlayerToast   // LadyTube: キー操作 (再生速度) からも使うので関数に分けた
     }));
 
     const initializedVideoIdRef = useRef(null);
@@ -451,7 +453,8 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
     // Keyboard Listeners
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName)) return;
+            // LadyTube: SELECT を足した (設定の再生速度などで文字や数字のキーを使うため)
+            if (['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'].includes(document.activeElement.tagName)) return;
             switch (e.code) {
                 case 'Space':
                     e.preventDefault();
@@ -476,11 +479,32 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     e.preventDefault();
                     updateVolume(Math.max(0, volume - 0.1));
                     break;
+                default:
+                    // LadyTube: YouTube と同じキー。F 全画面 / M ミュート / J・L 10秒戻る・進む / K 再生・一時停止 /
+                    //   0〜9 その割合の位置へ / < > 再生速度 (0.25 ずつ、0.5〜3)。Ctrl などとの組み合わせはブラウザに任せる
+                    if (e.ctrlKey || e.altKey || e.metaKey) break;
+                    extKey(e);
             }
+        };
+        const extKey = (e) => {
+            const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+            if (k === 'f') handleFullScreen();
+            else if (k === 'm') toggleMute();
+            else if (k === 'k') togglePlay();
+            else if (k === 'j') { triggerSeekIndicator('left'); handleSeek(Math.max(0, currentTime - 10)); }
+            else if (k === 'l') { if (duration > 0 && currentTime >= duration) return; triggerSeekIndicator('right'); handleSeek(Math.min(duration, currentTime + 10)); }
+            else if (/^[0-9]$/.test(k)) { if (duration > 0) handleSeek(duration * Number(k) / 10); }
+            else if (k === '<' || k === '>') {
+                const v = Math.min(3, Math.max(0.5, Math.round((playbackSpeed + (k === '>' ? 0.25 : -0.25)) * 4) / 4));
+                setPlaybackSpeed(v);
+                showPlayerToast('再生速度 ' + v + 'x', null, 'speed');
+            }
+            else return;
+            e.preventDefault();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [duration, currentTime, volume]);
+    }, [duration, currentTime, volume, isMuted, playbackSpeed]);
 
     const updateVolume = useCallback((newVol) => {
         const v = parseFloat(newVol.toFixed(2));
@@ -1169,6 +1193,8 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     renderExtraControls={renderExtraControls}
                 />
 
+                {/* LadyTube: 次のパートの自動再生 (秒読み。ExtWatchParts.jsx) */}
+                {showRecommendation && onVideoSelect && <ExtAutoNext key={'autonext-' + video.id} videoId={video.id} onGo={onVideoSelect} />}
                 {showRecommendation && (
                     <VideoRecommendation
                         currentVideo={video}

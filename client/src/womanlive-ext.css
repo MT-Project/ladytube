@@ -1102,6 +1102,20 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 }
 .wlext-frame-ind.on { opacity: 1; }
 
+/* ---- 次のパートの自動再生 (ExtWatchParts.jsx の ExtAutoNext。プレイヤーの枠の右下、下のコントロール行の上) ---- */
+.wlext-autonext {
+    position: absolute; right: 1.5rem; bottom: 5.5rem; z-index: 21;
+    width: 18rem; max-width: calc(100% - 2rem); box-sizing: border-box;
+    padding: 0.8rem 1rem; border-radius: 6px;
+    background: rgba(0, 0, 0, 0.8); color: #fff; font-size: 0.85rem;
+}
+.wlext-autonext-head { font-weight: bold; font-variant-numeric: tabular-nums; }
+.wlext-autonext-name { margin: 0.3rem 0 0.7rem; color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-autonext-btns { display: flex; gap: 0.5rem; }
+.wlext-autonext .wlext-btn { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+.wlext-autonext .wlext-btn:not(.wlext-btn-primary):hover { background: rgba(255, 255, 255, 0.15); }
+@media (max-width: 640px) { .wlext-autonext { right: 1rem; bottom: 4.5rem; } }
+
 /* ---- コマ送りオーバーレイ (タッチ端末・一時停止中のみ) ---- */
 /* 本家のコントロール(z-index:20)より下に置き、下部のコントロール行と重ならないよう縦中央に配置 */
 /* 既定は非表示。タッチ端末(主ポインタが coarse)で一時停止中(.on)のときだけ出す。

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { css } from '@linaria/core';
 import { theme } from '../../theme';
 
@@ -123,6 +123,8 @@ const SettingsDialog = ({
     setSubtitlesEnabled
 }) => {
     const dialogRef = useRef(null);
+    // LadyTube: 次のパートの自動再生 (ExtWatchParts.jsx の ExtAutoNext が同じキーを読む。既定はオン)
+    const [autoNext, setAutoNext] = useState(() => localStorage.getItem('wlext_autonext') !== '0');
 
     useEffect(() => {
         if (!showSettings || !dialogRef.current) return;
@@ -150,6 +152,8 @@ const SettingsDialog = ({
         const val = Math.round(s * 10) / 10;
         speedOptions.push(val);
     }
+    // LadyTube: < > のキーは 0.25 ずつ変えるので、1.25 などもその値で出す
+    if (!speedOptions.includes(playbackSpeed)) { speedOptions.push(playbackSpeed); speedOptions.sort((a, b) => a - b); }
 
     // シーク遅延オプション (100ms ~ 400ms, 50ms刻み)
     const seekDebounceOptions = [100, 150, 200, 250, 300, 350, 400];
@@ -223,6 +227,22 @@ const SettingsDialog = ({
                                 style={{ backgroundColor: autoFullScreen ? theme.colors.accent.primary : '#4b5563' }}
                             >
                                 <div className={styles.toggleKnob} style={{ left: autoFullScreen ? '22px' : '2px' }}></div>
+                            </div>
+                        </div>
+
+                        {/* LadyTube: 次のパートの自動再生 */}
+                        <div className={styles.toggleRow}>
+                            <span className={styles.toggleLabel}>次のパートを自動再生</span>
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAutoNext(!autoNext);
+                                    localStorage.setItem('wlext_autonext', autoNext ? '0' : '1');
+                                }}
+                                className={styles.toggle}
+                                style={{ backgroundColor: autoNext ? theme.colors.accent.primary : '#4b5563' }}
+                            >
+                                <div className={styles.toggleKnob} style={{ left: autoNext ? '22px' : '2px' }}></div>
                             </div>
                         </div>
                     </div>
