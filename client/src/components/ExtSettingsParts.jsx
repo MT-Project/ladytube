@@ -87,7 +87,6 @@ export function ExtMetaReplace({ cls }) {
 
 const NAV_OPEN_KEY = 'wlext_setnav_open';
 const NAV_NARROW = '(max-width: 900px), (pointer: coarse)';   // 既定で閉じる・項目を選ぶと閉じる画面 (本文に重ねて出す)
-const EXT_PREFIX = '拡張機能：';
 function navInitialOpen() {
     try {
         const v = localStorage.getItem(NAV_OPEN_KEY);
@@ -96,17 +95,18 @@ function navInitialOpen() {
     } catch { /* 使えなければ既定 */ }
     return !window.matchMedia(NAV_NARROW).matches;
 }
-// 画面に出ている順の項目 [{el, name, ext}]。拡張の項目かどうかは見出しではなくクラスで見る
-// (メタデータ置換は本体の体裁なので、見出しに「拡張機能：」が付かない)
+// 画面に出ている順の項目 [{el, name, badge}]。差し込み口 (WL.settingsExtras) で足す項目は、項目の要素に
+// data-wlext-badge="印の文字" を付けるとメニューの右に印を出す。そのとき見出しの「…：」までは印と同じ意味なので、メニューでは外す
+// (v3.3.1 までは LadyTube の項目と足した項目のすべてに「Ex」の印を出し、見出しの「拡張機能：」を外していた)
 function sectionsOf(container) {
     const out = [];
     for (const el of container.children) {
         const head = el.querySelector('h2, h3');
         if (!head) continue;
+        const badge = el.getAttribute('data-wlext-badge') || '';
         let name = (head.textContent || '').trim();
-        if (name.startsWith(EXT_PREFIX)) name = name.slice(EXT_PREFIX.length).trim();
-        const cls = String(el.className || '');
-        if (name) out.push({ el, name, ext: cls.includes('wlext-') || cls.includes('private-') });
+        if (badge) name = name.replace(/^[^：]*：/, '').trim();
+        if (name) out.push({ el, name, badge });
     }
     return out;
 }
@@ -172,7 +172,7 @@ export function ExtSettingsNav({ containerRef, headerRef }) {
                         {list.map((s, i) => (
                             <div key={i + '|' + s.name} className="wlext-facet-item" title={s.name + ' へ移動'} onClick={() => jumpTo(s.el)}>
                                 <span className="wlext-facet-name">{s.name}</span>
-                                {s.ext && <span className="wlext-facet-count">Ex</span>}
+                                {s.badge && <span className="wlext-facet-count">{s.badge}</span>}
                             </div>
                         ))}
                     </div>

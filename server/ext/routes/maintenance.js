@@ -12,7 +12,7 @@ const NOT_IN_FILES = 'NOT IN (SELECT hash FROM files)';
 
 // ラベルは設定画面にそのまま出す
 const TARGETS = [
-    { key: 'meta', label: '拡張メタデータ', table: 'ext_video_meta', where: `hash ${NOT_IN_FILES}` },
+    { key: 'meta', label: '詳細情報', table: 'ext_video_meta', where: `hash ${NOT_IN_FILES}` },
     { key: 'cover', label: 'カバー画像', table: 'ext_video_cover', where: `hash ${NOT_IN_FILES}` },
     { key: 'bookmark', label: 'ブックマーク', table: 'ext_bookmarks', where: `hash ${NOT_IN_FILES}` },
     // 関連動画キャッシュは、元動画が消えた行と、参照先が消えた行の両方が対象。

@@ -26,7 +26,7 @@ const HELP = <>
     <HelpRow code="<2024/12/31" desc="指定した日以前に登録した動画" />
     <HelpRow code=">30" desc="再生時間が 30 分より長い" />
     <HelpRow code="<10" desc="再生時間が 10 分より短い" />
-    <h4>拡張機能の検索</h4>
+    <h4>項目を指定した検索</h4>
     <div className="wlext-help-note">動画ページや各一覧のリンク・ボタンから自動入力されます（手入力も可）。</div>
     <HelpRow code={'@maker:"名前"'} desc="メーカー名で検索（series / label / genre / director も同様）" />
     <HelpRow code={'@model:"品番"'} desc="品番で検索" />

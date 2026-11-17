@@ -1,4 +1,4 @@
-// LadyTube: 管理画面の「拡張機能：ライブラリ」(一覧・作成・取り込み・名前変更・切り替え・削除。ExtSettingsParts.jsx が置く)。
+// LadyTube: 管理画面の「ライブラリ」(一覧・作成・取り込み・名前変更・切り替え・削除。ExtSettingsParts.jsx が置く)。
 // v3.2.1 までは拡張の server/ext/public/library.js。仕組みは server/ext/library.js、切り替えと通信の印は utils/library.js、
 // 書き込みの拒否は server/ext/routes/library.js、ヘッダーのライブラリ名は ExtLibraryPill.jsx。見た目は womanlive-ext.css の .wlext-lib-*。
 import { useEffect, useRef, useState } from 'react';
@@ -138,7 +138,7 @@ export function ExtLibrarySettings() {
     if (!LIB) return null;
     return (
         <div ref={block} className="wlext-settings-host wlext-settings-section wlext-lib-section">
-            <h3 className="wlext-ext-h3"><Icon name="database" size={16} /><span>拡張機能：ライブラリ</span></h3>
+            <h3 className="wlext-ext-h3"><Icon name="database" size={16} /><span>ライブラリ</span></h3>
             <Note>ライブラリごとに、スキャン対象フォルダ・動画・タグ・評価などのメタデータを別々に持ちます。出演者・公開設定・プリセットタグ・FANZA API・出演者タグは全ライブラリ共通です。切り替えと削除は、サーバーを動かしている PC（localhost）からのみ行えます。</Note>
             <div className="wlext-lib-warning" style={{ display: msgs.length ? '' : 'none' }}>{msgs.join('\n')}</div>
             <div className="wlext-lib-list">

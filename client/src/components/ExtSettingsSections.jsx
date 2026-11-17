@@ -1,5 +1,6 @@
-// LadyTube: 管理画面の拡張機能の項目 (v3.2.1 までは拡張の server/ext/public/settings.js)。
-// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / メンテナンス / バックアップ。
+// LadyTube: 管理画面の LadyTube の項目 (v3.2.1 までは拡張の server/ext/public/settings.js)。
+// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / 参照されていないデータの削除 / バックアップ。
+// 見出しは本体の項目と同じく名前だけ (v3.3.1 までは「拡張機能：」とパズルのアイコン)。
 // 置き場所と並びは SettingsPage.jsx が ExtSettingsSection name="..." で決める (ExtSettingsParts.jsx がここの部品を選ぶ)。
 // 見た目は womanlive-ext.css の .wlext-settings-section・.wlext-rule-*・.wlext-related-*。入力欄は押したときに欄の値を読む。
 import { useEffect, useRef, useState } from 'react';
@@ -14,10 +15,10 @@ import { toast } from '../utils/toast';
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
 const resultStyle = { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' };
 
-function Section({ title, children }) {
+function Section({ title, icon, children }) {
     return (
         <div className="wlext-settings-host wlext-settings-section">
-            <h3 className="wlext-ext-h3"><Icon name="puzzle" size={16} /><span>{'拡張機能：' + title}</span></h3>
+            <h3 className="wlext-ext-h3"><Icon name={icon} size={16} /><span>{title}</span></h3>
             {children}
         </div>
     );
@@ -35,7 +36,7 @@ export function ExtCoverSettings() {
         catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
     return (
-        <Section title="カバー画像">
+        <Section title="カバー画像" icon="image">
             <div style={desc('0.5rem')}>動画ファイル名と同じ名前の画像（例: AAA.mp4 → AAA.jpg）をこのフォルダから探し、動画ページのカバー画像として表示します。</div>
             <div className="wlext-inline">
                 <input ref={input} className="wlext-input" placeholder={'(例) C:\\covers'} defaultValue="" />
@@ -54,7 +55,7 @@ export function ExtDmmSettings() {
         catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
     return (
-        <Section title="DMM(FANZA) 商品検索API">
+        <Section title="DMM(FANZA) 商品検索API" icon="search">
             <div style={desc('0.6rem')}>各動画ページの🔍ボタンで品番からFANZA商品情報を検索し、メタデータへ自動設定します。利用にはご自身のDMMアカウントで取得したAPI IDとアフィリエイトIDが必要です。</div>
             <div className="wlext-field"><label>API ID</label><input ref={api} className="wlext-input" placeholder="API ID" defaultValue="" /></div>
             <div className="wlext-field"><label>アフィリエイトID</label><input ref={aff} className="wlext-input" placeholder="アフィリエイトID (例: xxxxx-999)" defaultValue="" /></div>
@@ -95,8 +96,8 @@ export function ExtMaintenanceSettings() {
         });
     };
     return (
-        <Section title="メンテナンス（参照されていないデータ）">
-            <div style={desc('0.6rem')}>動画ファイルが無くなったあとも残っている拡張機能のデータ（評価などのメタデータ・カバー画像・ブックマーク・関連動画キャッシュ）を削除します。本家の「メンテナンス」のクリーンアップを実行したときも同じ掃除が一緒に走ります。</div>
+        <Section title="参照されていないデータの削除" icon="trash">
+            <div style={desc('0.6rem')}>動画ファイルが無くなったあとも残っている、LadyTube が追加したデータ（評価などの詳細情報・カバー画像・ブックマーク・関連動画キャッシュ）を削除します。上の「メンテナンス」のクリーンアップを実行したときも、同じ掃除が一緒に走ります。</div>
             <div className="wlext-inline">
                 <button className="wlext-btn" onClick={refresh}>件数を確認</button>
                 <button className="wlext-btn" disabled={!state.can} onClick={clean}>削除する</button>
@@ -144,8 +145,8 @@ export function ExtRelatedSettings() {
         } catch (e) { setResult('エラー: ' + e.message); toast('再計算に失敗: ' + e.message, 'error'); }
     };
     return (
-        <Section title="関連動画（重み付け）">
-            <div style={desc('0.6rem')}>動画ページの「関連動画」を、拡張メタデータ（シリーズ・出演者・メーカー等）の一致度で選びます。各項目の点数（重み）を調整できます（0 でその項目は無視）。シリーズ最重視が既定です。保存すると以後の表示に反映され（必要時に再計算）、「全再計算」で全動画を今すぐ計算し直します（横断的な変更も反映）。</div>
+        <Section title="関連動画（重み付け）" icon="layers">
+            <div style={desc('0.6rem')}>動画ページの「関連動画」を、詳細情報（シリーズ・出演者・メーカー等）の一致度で選びます。各項目の点数（重み）を調整できます（0 でその項目は無視）。シリーズ最重視が既定です。保存すると以後の表示に反映され（必要時に再計算）、「全再計算」で全動画を今すぐ計算し直します（横断的な変更も反映）。</div>
             <div ref={grid} className="wlext-related-grid">
                 {RELATED_FIELDS.map(([key, label]) => <label key={key} className="wlext-related-field"><span>{label}</span><input className="wlext-input" type="number" step="1" /></label>)}
             </div>
@@ -197,7 +198,7 @@ export function ExtBackupSettings() {
             title: 'バックアップを復元', saveLabel: '復元する',
             body: <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
                 {multiLib && <div>{'復元先: ライブラリ「' + lib.name + '」'}</div>}
-                <div>現在の拡張機能データ（追加メタ・出演者・ブックマーク等）は、バックアップの内容で置き換えられます。よろしいですか？</div>
+                <div>今の LadyTube が追加したデータ（詳細情報・出演者・ブックマーク等）は、バックアップの内容で置き換えられます。よろしいですか？</div>
                 {multiLib && <div style={{ color: 'var(--status-error,#e51400)' }}>出演者は全ライブラリ共通のため、出演者の復元はすべてのライブラリに反映されます。</div>}
             </div>,
             onSave: async (close) => {
@@ -213,8 +214,8 @@ export function ExtBackupSettings() {
         });
     };
     return (
-        <Section title="バックアップ（追加機能データ）">
-            <div style={desc('0.6rem')}>拡張機能のデータ（動画の追加メタデータ・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体と、標準機能のデータ（タグ・再生回数など）は含みません。</div>
+        <Section title="バックアップ（詳細情報・出演者・ブックマークなど）" icon="archive">
+            <div style={desc('0.6rem')}>LadyTube が追加したデータ（動画の詳細情報・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体と、タグ・再生回数などのデータは含みません。</div>
             <div className="wlext-inline" style={{ marginBottom: '0.6rem' }}><button className="wlext-btn wlext-btn-primary" onClick={doExport}>エクスポート</button></div>
             <input type="file" accept=".json,application/json" onChange={onFile} />
             <div style={{ fontSize: '0.82rem', margin: '0.5rem 0', color: 'var(--text-secondary,#777)' }}>{status}</div>
@@ -259,7 +260,7 @@ export function ExtTagRuleSettings() {
         <select className="wlext-rule-select" defaultValue={value}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
     );
     return (
-        <Section title="出演者タグ 自動付与ルール">
+        <Section title="出演者タグ 自動付与ルール" icon="tag">
             <div style={desc('0.6rem')}>条件に合う出演者へ自動でタグを付けます（例: 身長 ≧ 170 → 高身長）。「適用」で全出演者に一括付与します（出演者情報の取込時にも自動で付与されます）。</div>
             <div ref={host} className="wlext-rules">
                 {rows.map(({ key, rule }) => (
