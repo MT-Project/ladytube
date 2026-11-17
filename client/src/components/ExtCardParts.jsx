@@ -105,33 +105,43 @@ function askSsCount(id) {
 const subscribeSs = (f) => { ssListeners.add(f); return () => ssListeners.delete(f); };
 // ブックマークのダイアログ: フォルダを押すとその場で追加 / 解除、下の欄で新しいフォルダを作って追加 (保存ボタンなし)。
 // v3.2.1 までは拡張の bookmark.js の WL.openBookmarkDialog。folders は開く前に読んだもの ([{ id, name, in }])
+// 押したフォルダは画面の上で選ぶだけで、「OK」で追加と解除をまとめて保存する。キャンセル (✕・Esc・外側も) は選択を捨てる。
+// 「＋追加」のフォルダはその場で作り (キャンセルしても残る)、選んだ状態で並べる (この動画を入れるのは OK のとき)
 export function ExtBookmarkDialog({ vid, folders: initial, onClose }) {
-    const [folders, setFolders] = useState(initial);
+    const [folders, setFolders] = useState(initial);   // in = 保存済み
+    const [on, setOn] = useState(() => new Set(initial.filter(f => f.in).map(f => f.id)));   // 画面での選択
     const input = useRef(null);
-    const changed = (list) => { setFolders(list); setBookmarked(vid, list.some(f => f.in)); };
-    const toggle = async (f) => {
-        try {
-            await extSend(f.in ? 'DELETE' : 'POST', '/ext/api/bookmark/video/' + vid, { folderId: f.id });
-            changed(folders.map(x => x.id === f.id ? { ...x, in: !f.in } : x));
-        } catch (e) { toast('更新に失敗: ' + e.message, 'error'); }
-    };
+    const toggle = (id, add) => setOn(prev => { const s = new Set(prev); if (add ?? !s.has(id)) s.add(id); else s.delete(id); return s; });
     const add = async () => {
         const n = input.current.value.trim(); if (!n) return;
         try {
             const nf = await extSend('POST', '/ext/api/bookmark/folders', { name: n });
-            await extSend('POST', '/ext/api/bookmark/video/' + vid, { folderId: nf.id });
             input.current.value = '';
-            changed([...folders, { id: nf.id, name: nf.name, in: true }]);
+            setFolders(prev => [...prev, { id: nf.id, name: nf.name, in: false }]);
+            toggle(nf.id, true);
         } catch (e) { toast('フォルダ追加に失敗: ' + e.message, 'error'); }
     };
+    // 途中で失敗したら、そこまでの保存を画面に残して閉じない (もう一度 OK で残りを保存する)
+    const save = async () => {
+        let cur = folders;
+        try {
+            for (const f of folders) {
+                if (f.in === on.has(f.id)) continue;
+                await extSend(f.in ? 'DELETE' : 'POST', '/ext/api/bookmark/video/' + vid, { folderId: f.id });
+                cur = cur.map(x => x.id === f.id ? { ...x, in: !f.in } : x);
+            }
+        } catch (e) { toast('更新に失敗: ' + e.message, 'error'); return; }
+        finally { setFolders(cur); setBookmarked(vid, cur.some(f => f.in)); }
+        onClose();
+    };
     return (
-        <ExtDialog title="ブックマーク" onClose={onClose}>
+        <ExtDialog title="ブックマーク" onClose={onClose} onSave={save} saveLabel="OK">
             <div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: '0.5rem' }}>フォルダをタップで追加/解除します。</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary,#888)', marginBottom: '0.5rem' }}>フォルダを選んで「OK」で保存します。</div>
                 <div className="wlext-bm-dlg-list">
                     {folders.length ? folders.map(f => (
-                        <div key={f.id} className={'wlext-bm-dlg-item' + (f.in ? ' on' : '')} onClick={() => toggle(f)}>
-                            <span className="name">{f.name}</span><span className="chk">{f.in ? '✓' : ''}</span>
+                        <div key={f.id} className={'wlext-bm-dlg-item' + (on.has(f.id) ? ' on' : '')} onClick={() => toggle(f.id)}>
+                            <span className="name">{f.name}</span><span className="chk">{on.has(f.id) ? '✓' : ''}</span>
                         </div>
                     )) : <div style={{ color: 'var(--text-secondary,#888)', fontSize: '0.85rem', padding: '0.5rem' }}>フォルダがありません。下の欄から追加してください。</div>}
                 </div>

@@ -82,36 +82,50 @@ async function doBookmark(ids) {
     openExtDialog(BulkBookmarkDialog, { ids, folders });
 }
 
+// 1本のときの ExtBookmarkDialog (ExtCardParts.jsx) と同じく、フォルダは選ぶだけで「OK」で追加する (外す操作は無い)。
+// 「＋追加」のフォルダはその場で作り (キャンセルしても残る)、選んだ状態で並べる
 function BulkBookmarkDialog({ ids, folders: initial, onClose }) {
     const [folders, setFolders] = useState(initial);
+    const [on, setOn] = useState(() => new Set());
     const input = useRef(null);
-    const addTo = async (folderId) => {
-        const r = await extSend('POST', '/ext/api/bulk/bookmark', { ids, folderId });
-        ids.forEach(id => setBookmarked(id, true));
-        return r;
-    };
-    const pick = async (f) => {
-        try { const r = await addTo(f.id); toast('「' + f.name + '」に ' + r.count + '件追加しました', 'success'); }
-        catch (e) { toast('失敗: ' + e.message, 'error'); }
-    };
+    const toggle = (id, add) => setOn(prev => { const s = new Set(prev); if (add ?? !s.has(id)) s.add(id); else s.delete(id); return s; });
     const add = async () => {
         const name = input.current.value.trim(); if (!name) return;
         try {
             const nf = await extSend('POST', '/ext/api/bookmark/folders', { name });
-            const r = await addTo(nf.id);
-            setFolders([...folders, { id: nf.id, name: nf.name, count: r.count }]);
             input.current.value = '';
-            toast('「' + nf.name + '」に追加しました', 'success');
-        } catch (e) { toast('失敗: ' + e.message, 'error'); }
+            setFolders(prev => [...prev, { id: nf.id, name: nf.name, count: 0 }]);
+            toggle(nf.id, true);
+        } catch (e) { toast('フォルダ追加に失敗: ' + e.message, 'error'); }
+    };
+    // 途中で失敗したら、追加できたフォルダの選択を外して閉じない (もう一度 OK で残りを追加する)
+    const save = async () => {
+        const picked = folders.filter(f => on.has(f.id));
+        const done = [];
+        try {
+            for (const f of picked) {
+                const r = await extSend('POST', '/ext/api/bulk/bookmark', { ids, folderId: f.id });
+                done.push({ f, count: r.count });
+            }
+        } catch (e) { toast('失敗: ' + e.message, 'error'); return; }
+        finally {
+            if (done.length) {
+                ids.forEach(id => setBookmarked(id, true));
+                setOn(prev => { const s = new Set(prev); done.forEach(d => s.delete(d.f.id)); return s; });
+            }
+        }
+        if (done.length === 1) toast('「' + done[0].f.name + '」に ' + done[0].count + '件追加しました', 'success');
+        else if (done.length) toast(done.map(d => '「' + d.f.name + '」').join('') + 'に追加しました', 'success');
+        onClose();
     };
     return (
-        <ExtDialog title="ブックマークに一括追加" onClose={onClose}>
+        <ExtDialog title="ブックマークに一括追加" onClose={onClose} onSave={save} saveLabel="OK">
             <div>
-                <div style={{ ...muted, marginBottom: '0.5rem' }}>{'選択した ' + ids.length + '件を追加するフォルダをタップしてください。'}</div>
+                <div style={{ ...muted, marginBottom: '0.5rem' }}>{'選択した ' + ids.length + '件を追加するフォルダを選んで「OK」を押してください。'}</div>
                 <div className="wlext-bm-dlg-list">
                     {folders.length ? folders.map(f => (
-                        <div key={f.id} className="wlext-bm-dlg-item" onClick={() => pick(f)}>
-                            <span className="name">{f.name}</span><span className="chk">＋</span>
+                        <div key={f.id} className={'wlext-bm-dlg-item' + (on.has(f.id) ? ' on' : '')} onClick={() => toggle(f.id)}>
+                            <span className="name">{f.name}</span><span className="chk">{on.has(f.id) ? '✓' : ''}</span>
                         </div>
                     )) : <div style={{ color: 'var(--text-secondary,#888)', fontSize: '0.85rem', padding: '0.5rem' }}>フォルダがありません。下で追加してください。</div>}
                 </div>
