@@ -8,6 +8,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ExtListPage } from '../components/ExtListParts';
 import { ExtStarsEdit } from '../components/ExtCardParts';
+import { Icon } from '../components/ExtIcon';
 import ExtSlot from '../components/ExtSlot';
 import { ExtDialog } from '../components/ExtDialog';
 import { ChipInput } from '../components/ExtChipInput';
@@ -105,14 +106,14 @@ function MultiDialog({ label, arr, onSave, onClose }) {
     );
 }
 
-// 別名・出演者タグの行 (チップと「✎編集」)
+// 別名・出演者タグの行 (チップと「編集」)
 function ChipRow({ label, values, onEdit }) {
     return (
         <div>
             <Row label={label}>
                 <div className="v">
                     <span className="wlext-pp-tags">{values.map((a, i) => <span key={i} className="wlext-pp-tag">{a}</span>)}</span>
-                    <span className="wlext-link" style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }} onClick={onEdit}>✎編集</span>
+                    <span className="wlext-link" style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }} onClick={onEdit}><Icon name="pencil" size={12} />編集</span>
                 </div>
             </Row>
         </div>
@@ -226,7 +227,7 @@ function PerformerView({ id }) {
                     onClick={() => { if (perf.has_image) lightbox(extApi.performerImageUrl(id, Date.now()), { onEdit: pickAndCrop }); else pickAndCrop(); }}>
                     {perf.has_image && !img.broken
                         ? <img alt={perf.name} src={extApi.performerImageUrl(id, img.v)} onError={() => setImg(x => ({ ...x, broken: true }))} />
-                        : '👤'}
+                        : <Icon name="user" size="1.2em" sw={1.5} />}
                 </div>
                 <div className="wlext-pp-info">
                     <div className="wlext-pp-namerow">

@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
+import { Icon } from '../components/ExtIcon';
 import { storedSort, parseYmd } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
@@ -99,7 +100,7 @@ function PerformerCard({ p, sort, sel }) {
             <div className="wlext-plist-img">
                 {p.has_image && !broken
                     ? <img alt={p.name} loading="lazy" src={extApi.performerImageUrl(p.id)} onError={() => setBroken(true)} />
-                    : '👤'}
+                    : <Icon name="user" size="1.2em" sw={1.5} />}
                 <div className="wlext-series-count" title={(p.videoCount || 0) + '本'}>{String(p.videoCount || 0)}</div>
             </div>
             <div className="wlext-plist-name">{name}</div>
@@ -155,7 +156,7 @@ export default function PerformersPage() {
                     )}
                 </div>
                 <div className="wlext-plist-sortrow">
-                    <button className="wlext-btn" onClick={() => cleanupUnused(multiLib, reload)}>🗑 関連動画のない出演者を一括削除</button>
+                    <button className="wlext-btn" onClick={() => cleanupUnused(multiLib, reload)}><Icon name="trash" size={14} />関連動画のない出演者を一括削除</button>
                 </div>
             </div>
             <div className="wlext-plist-count">{list.length + ' 名'}</div>

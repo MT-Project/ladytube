@@ -76,7 +76,7 @@ function PerformerImage({ p }) {
         <div className="wlext-performer-img" title="出演者ページを開く" data-wlext-href={'/performer/' + p.id} onClick={() => navigate('/performer/' + p.id)}>
             {p.has_image && !failed
                 ? <img alt={p.name} src={extApi.performerImageUrl(p.id)} onError={() => setFailed(true)} />
-                : '👤'}
+                : <Icon name="user" size="1.2em" sw={1.5} />}
         </div>
     );
 }

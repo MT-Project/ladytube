@@ -56,7 +56,7 @@ export function ExtDmmSettings() {
     };
     return (
         <Section title="DMM(FANZA) 商品検索API" icon="search">
-            <div style={desc('0.6rem')}>各動画ページの🔍ボタンで品番からFANZA商品情報を検索し、メタデータへ自動設定します。利用にはご自身のDMMアカウントで取得したAPI IDとアフィリエイトIDが必要です。</div>
+            <div style={desc('0.6rem')}>各動画ページの「動画情報を検索」ボタンで品番からFANZA商品情報を検索し、メタデータへ自動設定します。利用にはご自身のDMMアカウントで取得したAPI IDとアフィリエイトIDが必要です。</div>
             {!isLocalPC && <div style={desc('0.6rem')}>{'API ID とアフィリエイトID の表示と変更は、' + PC_ONLY + '。'}</div>}
             <div className="wlext-field"><label>API ID</label><input ref={api} className="wlext-input" placeholder={isLocalPC ? 'API ID' : ''} defaultValue="" disabled={!isLocalPC} /></div>
             <div className="wlext-field"><label>アフィリエイトID</label><input ref={aff} className="wlext-input" placeholder={isLocalPC ? 'アフィリエイトID (例: xxxxx-999)' : ''} defaultValue="" disabled={!isLocalPC} /></div>

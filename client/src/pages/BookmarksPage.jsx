@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExtListPage, ExtNameList, ExtPageTitle, ExtSortRow, ExtViewToggle } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
+import { Icon } from '../components/ExtIcon';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { ExtConfirm, ExtDialog } from '../components/ExtDialog';
@@ -65,8 +66,8 @@ const folderUrl = (s) => '/search?q=' + encodeURIComponent('@' + searchToken('bo
 function FolderActions({ s, reload }) {
     return (
         <div className="wlext-bm-actions">
-            <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => extApi.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
-            <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}>🗑削除</span>
+            <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => extApi.bmRenameFolder(s.id, name), reload, false)}><Icon name="pencil" size={12} />名称変更</span>
+            <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}><Icon name="trash" size={12} />削除</span>
         </div>
     );
 }
@@ -119,7 +120,7 @@ export default function BookmarksPage() {
                     <button className="wlext-btn" onClick={() => nameDialog('フォルダを追加', '追加', null, (name) => extApi.bmCreateFolder(name), reload, true)}>＋ フォルダを追加</button>
                 </div>
             </div>
-            {!sorted.length ? <div style={muted}>ブックマークフォルダがありません。「＋ フォルダを追加」または各動画の🔖ボタンから作成できます。</div>
+            {!sorted.length ? <div style={muted}>ブックマークフォルダがありません。「＋ フォルダを追加」または各動画のブックマークのボタンから作成できます。</div>
                 : view === 'names'
                     ? <ExtNameList items={sorted.map(s => ({
                         id: s.id, name: s.name || '(無題)', count: s.count, title: '開く', to: folderUrl(s),

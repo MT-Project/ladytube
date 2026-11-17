@@ -51,10 +51,10 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
             <div ref={menu} className={'wlext-sel-menu' + (anchor ? ' wlext-sel-menu-anchored' : '')}>
                 {head && <div className="wlext-sel-menu-head">{head}</div>}
                 <div className="wlext-sel-menu-item" onClick={run(doTags)}><Icon name="tag" size={15} /><span>タグ追加</span></div>
-                <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}>✎ 詳細情報編集</div>
+                <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="pencil" size={15} /><span>詳細情報編集</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
                 <div ref={del} className={'wlext-sel-menu-item danger' + (isLocalPC ? '' : ' disabled')} title={isLocalPC ? '' : '動画の削除は、' + PC_ONLY}
-                    onClick={run((ids, done) => (isLocalPC ? openExtDialog(DeleteDialog, { ids, done }) : toast('動画の削除は、' + PC_ONLY, 'error')))}>🗑 動画の削除</div>
+                    onClick={run((ids, done) => (isLocalPC ? openExtDialog(DeleteDialog, { ids, done }) : toast('動画の削除は、' + PC_ONLY, 'error')))}><Icon name="trash" size={15} /><span>動画の削除</span></div>
             </div>
         </>,
         document.body
@@ -161,7 +161,7 @@ function DeleteDialog({ ids, done, onClose }) {
     return (
         <ExtDialog title="動画の削除" onClose={onClose} onSave={remove} saveLabel="削除する" danger>
             <div style={{ fontSize: '0.9rem', lineHeight: '1.7' }}>
-                <div style={{ ...red, marginBottom: '0.4rem' }}>{'⚠ 選択した ' + ids.length + '件の動画を削除します'}</div>
+                <div style={{ ...red, marginBottom: '0.4rem' }}>{'選択した ' + ids.length + '件の動画を削除します'}</div>
                 <div>元の動画ファイルはごみ箱へ送ります。関連するスクリーンショット・カバー画像・追加情報・ブックマークは削除され、動画をごみ箱から戻しても元に戻りません。</div>
                 {noTrash > 0 && <div style={{ ...red, marginTop: '0.4rem' }}>{(noTrash === ids.length ? '' : 'このうち ' + noTrash + '件は、') + 'ごみ箱が使えない場所（ネットワークや USB メモリなど）にあるので、動画ファイルも完全に削除されます。'}</div>}
                 <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>よろしいですか？</div>

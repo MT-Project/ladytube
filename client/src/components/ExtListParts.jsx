@@ -127,7 +127,7 @@ function ListDeleteDialog({ kind, kindLabel: label, selected, onClose }) {
     return (
         <ExtDialog title={label + 'の削除'} onClose={onClose} onSave={remove} saveLabel="削除する" danger>
             <div style={{ fontSize: '0.9rem', lineHeight: '1.7' }}>
-                <div style={{ color: 'var(--status-error,#e51400)', fontWeight: 'bold', marginBottom: '0.4rem' }}>{'⚠ 選択した ' + names.length + '件の' + label + 'を削除します'}</div>
+                <div style={{ color: 'var(--status-error,#e51400)', fontWeight: 'bold', marginBottom: '0.4rem' }}>{'選択した ' + names.length + '件の' + label + 'を削除します'}</div>
                 <div className="wlext-sel-del-names">{names.join('、')}</div>
                 <div style={{ marginTop: '0.5rem' }}>{'すべての動画のメタデータから' + label + 'を取り除きます。動画そのものは削除しません。'}</div>
                 <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>この操作は元に戻せません。よろしいですか？</div>
