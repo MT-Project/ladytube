@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { ExtMetaEditDialog } from './ExtMetaEdit';
-import { formatYmd, formatYmAgo, formatAgeYm } from '../utils/formatters';
+import { formatYmd, formatYmAgo, formatAgeYm, searchToken } from '../utils/formatters';
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
 import { openMetaSearch } from '../utils/metaSearch';
 import { openExtDialog } from '../utils/extDialog';
@@ -64,8 +64,8 @@ function LinkVal({ text, token }) {
 function ValEx({ text, field }) {
     return (
         <span className="wlext-val-pair">
-            <LinkVal text={text} token={'@' + field + ':"' + text + '"'} />
-            <ExcludeBtn token={'@not' + field + ':"' + text + '"'} label={text} />
+            <LinkVal text={text} token={'@' + searchToken(field, text)} />
+            <ExcludeBtn token={'@' + searchToken('not' + field, text)} label={text} />
         </span>
     );
 }
@@ -87,7 +87,7 @@ export function ExtMetaBlock({ meta }) {
     const row = (key, val) => rows.push(<div key={key + ':k'} className="wlext-key">{key}:</div>, <div key={key + ':v'} className="wlext-val">{val}</div>);
     if (meta.release_date) row('公開日', <>{formatYmd(meta.release_date)}<span className="wlext-release-ago">{formatYmAgo(meta.release_date)}</span></>);
     if (meta.file_name) row('動画ファイル名', meta.file_name);
-    if (meta.model_no) row('品番', <LinkVal text={meta.model_no} token={'@model:"' + meta.model_no + '"'} />);
+    if (meta.model_no) row('品番', <LinkVal text={meta.model_no} token={'@' + searchToken('model', meta.model_no)} />);
     if (meta.series) row('シリーズ名', <ValEx text={meta.series} field="series" />);
     if (meta.maker) row('メーカー', <ValEx text={meta.maker} field="maker" />);
     if (meta.label) row('レーベル', <ValEx text={meta.label} field="label" />);
@@ -98,10 +98,10 @@ export function ExtMetaBlock({ meta }) {
             {meta.genres && meta.genres.length > 0 && (
                 <div className="wlext-genres">
                     {meta.genres.map(name => (
-                        <span key={name} className="wlext-genre-chip" title={'「' + name + '」で検索'} data-wlext-href={searchHref('@genre:"' + name + '"')}
-                            onClick={() => navigate(searchHref('@genre:"' + name + '"'))}>
+                        <span key={name} className="wlext-genre-chip" title={'「' + name + '」で検索'} data-wlext-href={searchHref('@' + searchToken('genre', name))}
+                            onClick={() => navigate(searchHref('@' + searchToken('genre', name)))}>
                             <span>{name}</span>
-                            <ExcludeBtn token={'@notgenre:"' + name + '"'} label={name} />
+                            <ExcludeBtn token={'@' + searchToken('notgenre', name)} label={name} />
                         </span>
                     ))}
                 </div>

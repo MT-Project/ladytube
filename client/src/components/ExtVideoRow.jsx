@@ -8,7 +8,7 @@ import { ExtDialog } from './ExtDialog';
 import { ExtStars } from './ExtCardParts';
 import { Icon } from './ExtIcon';
 import { extGet } from '../services/extApi';
-import { formatDuration, formatYmd } from '../utils/formatters';
+import { formatDuration, formatYmd, searchToken } from '../utils/formatters';
 
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 // 表示設定の「動画表示名で表示する」(既定はオン)
@@ -71,7 +71,7 @@ export function ExtStdSeries({ vid }) {
         <>
             {r.parts.length > 1 && <>
                 <div className="wlext-std-sec">
-                    <Link to={searchHref('@model:"' + r.modelNo + '"')} className="wlext-link" title={'品番「' + r.modelNo + '」で検索'}>同じ品番</Link>
+                    <Link to={searchHref('@' + searchToken('model', r.modelNo))} className="wlext-link" title={'品番「' + r.modelNo + '」で検索'}>同じ品番</Link>
                     <span className="wlext-std-sec-n">{'（' + r.parts.length + '本）'}</span>
                 </div>
                 <div className="wlext-vrow-list">
@@ -80,7 +80,7 @@ export function ExtStdSeries({ vid }) {
             </>}
             {r.series && <>
                 <div className="wlext-std-sec">
-                    <Link to={searchHref('@series:"' + r.series + '"')} className="wlext-link" title={'「' + r.series + '」で検索'}>{r.series}</Link>
+                    <Link to={searchHref('@' + searchToken('series', r.series))} className="wlext-link" title={'「' + r.series + '」で検索'}>{r.series}</Link>
                     <span className="wlext-std-sec-n">{'（' + r.works.length + '作品）'}</span>
                 </div>
                 <div className="wlext-vrow-list">

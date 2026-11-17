@@ -7,7 +7,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { Icon } from '../components/ExtIcon';
-import { storedSort, colorFor } from '../utils/formatters';
+import { storedSort, colorFor, searchToken } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { loadVideoTagPresets, parseTagGroups } from '../utils/tagPresets';
@@ -134,7 +134,7 @@ function ThumbEditor({ tag, onClose, onChanged }) {
 
 function TagCard({ tag, sel, onEdit, onThumbError }) {
     return (
-        <ExtListCard to={'/search?q=' + encodeURIComponent('@tag:"' + tag.name + '"')} className="wlext-series-card wlext-tag-card"
+        <ExtListCard to={'/search?q=' + encodeURIComponent('@' + searchToken('tag', tag.name))} className="wlext-series-card wlext-tag-card"
             title={'「' + tag.name + '」で検索'} sel={sel} id={tag.name} name={tag.name}>
             <div className="wlext-video-thumb wlext-tag-thumb" style={tag.hasThumb ? undefined : { background: colorFor(tag.name) }}>
                 {tag.hasThumb

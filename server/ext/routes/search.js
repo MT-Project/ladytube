@@ -50,14 +50,14 @@ function splitQuery(q) {
 
     const body = s.slice(1);
     const tokens = [];
-    // field:"quoted value"  または field:value
-    const re = /(\w+)\s*:\s*("([^"]*)"|[^\s]+)/g;
+    // field:"quoted value"  または field:value。引用の中の \" と \\ は " と \ (client/src/utils/formatters.js の searchToken)
+    const re = /(\w+)\s*:\s*("((?:[^"\\]|\\.)*)"|[^\s]+)/g;
     let match, last = 0, rest = '';
     while ((match = re.exec(body)) !== null) {
         rest += body.slice(last, match.index);
         last = match.index + match[0].length;
         const field = match[1].toLowerCase();
-        let value = match[3] !== undefined ? match[3] : match[2];
+        const value = match[3] !== undefined ? match[3].replace(/\\(.)/g, '$1') : match[2];
         tokens.push({ field, value });
     }
     rest += body.slice(last);

@@ -12,6 +12,7 @@ import { extGet, extSend, extApi } from '../services/extApi';
 import { isBookmarked, setBookmarked, subscribeBookmarks } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
 import { toast } from '../utils/toast';
+import { searchToken } from '../utils/formatters';
 
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
 
@@ -72,7 +73,7 @@ export function ExtCardMeta({ video, poster, list }) {
     const rating = video.ext_rating || 0;
     return (
         <div className={'wlext-card-meta' + (poster ? ' wlext-card-meta-poster' : '')}>
-            {list && video.ext_series && searchLink('@series:"' + video.ext_series + '"', video.ext_series, 'wlext-card-series')}
+            {list && video.ext_series && searchLink('@' + searchToken('series', video.ext_series), video.ext_series, 'wlext-card-series')}
             <div className="wlext-card-rating">
                 {rating > 0 && <ExtStars value={rating} />}
             </div>
@@ -200,7 +201,7 @@ export function ExtPerformers({ video }) {
             {directors.map((d, i) => (
                 <Fragment key={'d' + i}>
                     {i > 0 && '、'}
-                    {searchLink('@director:"' + d + '"', d, 'wlext-card-performer')}
+                    {searchLink('@' + searchToken('director', d), d, 'wlext-card-performer')}
                 </Fragment>
             ))}
         </div>
@@ -234,7 +235,7 @@ export function ExtTagRow({ genres, tags, className, badgeClass }) {
     // 1行に収める (本体の枠 tagBadgeContainer は折り返す)
     return (
         <div ref={ref} className={`${className} wlext-tagrow`} style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
-            {genres.map((g, i) => <Fragment key={'g' + i}>{searchLink('@genre:"' + g + '"', g, 'wlext-genre-chip wlext-list-genre')}</Fragment>)}
+            {genres.map((g, i) => <Fragment key={'g' + i}>{searchLink('@' + searchToken('genre', g), g, 'wlext-genre-chip wlext-list-genre')}</Fragment>)}
             {genres.length > 0 && tags.length > 0 && <span className="wlext-tagsep">│</span>}
             {tags.map((t, i) => <span key={'t' + i} className={badgeClass}>{t}</span>)}
             <span className={`${badgeClass} wlext-tag-ell`} title={all}>…</span>

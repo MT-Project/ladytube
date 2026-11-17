@@ -10,6 +10,7 @@ import { extApi } from '../services/extApi';
 import { ExtConfirm, ExtDialog } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
 import { nameCompare } from '../utils/namekey';
+import { searchToken } from '../utils/formatters';
 
 const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const muted = { color: 'var(--text-secondary,#888)' };
@@ -58,7 +59,7 @@ function deleteDialog(s, onDone) {
 
 function FolderCard({ s, reload }) {
     // フォルダ名で検索する。名前に " を含むとトークンが壊れるので、そのときだけ ID で指定する
-    const token = String(s.name || '').includes('"') ? ('@bookmark:' + s.id) : ('@bookmark:"' + s.name + '"');
+    const token = '@' + searchToken('bookmark', s.name || '');
     const url = '/search?q=' + encodeURIComponent(token);
     return (
         <div className="wlext-series-card">

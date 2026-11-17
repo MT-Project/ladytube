@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
-import { storedSort } from '../utils/formatters';
+import { storedSort, searchToken } from '../utils/formatters';
 import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
@@ -28,7 +28,7 @@ function compare(order) {
 
 function SeriesCard({ s, sel }) {
     return (
-        <ExtListCard to={'/search?q=' + encodeURIComponent('@series:"' + s.name + '"')} className="wlext-series-card"
+        <ExtListCard to={'/search?q=' + encodeURIComponent('@' + searchToken('series', s.name))} className="wlext-series-card"
             title={'「' + s.name + '」で検索'} sel={sel} id={s.name} name={s.name}>
             <div className="wlext-video-thumb">
                 {s.thumbId

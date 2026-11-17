@@ -80,6 +80,10 @@ export function groupMemberIds(video) {
     return video.ext_group_ids ? String(video.ext_group_ids).split(',').map(Number).filter(n => n > 0) : [video.id];
 }
 
+// LadyTube: 検索の項目トークン field:"value" (前に '@' を付けて検索語にする)。値の " と \ は \ を前に付ける
+// (server/ext/routes/search.js の splitQuery と ExtFacets.jsx の parseQuery が戻す)
+export const searchToken = (field, value) => field + ':"' + String(value).replace(/[\\"]/g, '\\$&') + '"';
+
 // LadyTube: 公開日 (拡張メタデータの release_date。'YYYY-MM-DD' を端末の日付として読む) を「2024/03/15」に
 export function parseYmd(s) {
     const m = String(s || '').trim().replace(/[./]/g, '-').match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);

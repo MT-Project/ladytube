@@ -15,7 +15,7 @@ import { ExtStars } from '../components/ExtCardParts';
 import { Icon } from '../components/ExtIcon';
 import { ExtDialog } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
-import { storedSort, colorFor } from '../utils/formatters';
+import { storedSort, colorFor, searchToken } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { cropDialog } from '../utils/imageDialogs';
@@ -26,10 +26,10 @@ const STORE = 'wlext_sort_makers';
 const muted = { color: 'var(--text-secondary,#888)' };
 
 const searchHref = (q) => '/search?q=' + encodeURIComponent(q);
-const makerHref = (name) => searchHref('@maker:"' + name + '"');
-const makerTagHref = (name, tag) => searchHref('@maker:"' + name + '" tag:"' + tag + '"');
-const labelHref = (label) => searchHref('@label:"' + label + '"');
-const noLabelHref = (maker) => searchHref('@maker:"' + maker + '" label:none');
+const makerHref = (name) => searchHref('@' + searchToken('maker', name));
+const makerTagHref = (name, tag) => searchHref('@' + searchToken('maker', name) + ' ' + searchToken('tag', tag));
+const labelHref = (label) => searchHref('@' + searchToken('label', label));
+const noLabelHref = (maker) => searchHref('@' + searchToken('maker', maker) + ' label:none');
 
 function compare(order) {
     const dir = order.dir === 'asc' ? 1 : -1;

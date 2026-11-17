@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
+import { searchToken } from '../utils/formatters';
 
 // 表示順は上から ジャンル → タグ → メーカー → 出演者 → シリーズ
 const SECTIONS = [
@@ -25,14 +26,14 @@ function parseQuery(q) {
     const s = String(q || '').trim();
     if (!s) return { tokens: [], keyword: '' };
     if (!s.startsWith('@')) return { tokens: [], keyword: s };
-    const re = /(\w+)\s*:\s*("([^"]*)"|[^\s]+)/g;
+    const re = /(\w+)\s*:\s*("((?:[^"\\]|\\.)*)"|[^\s]+)/g;
     const body = s.slice(1);
     const tokens = [];
     let m, last = 0, rest = '';
     while ((m = re.exec(body)) !== null) {
         rest += body.slice(last, m.index);
         last = m.index + m[0].length;
-        tokens.push({ field: m[1].toLowerCase(), value: m[3] !== undefined ? m[3] : m[2] });
+        tokens.push({ field: m[1].toLowerCase(), value: m[3] !== undefined ? m[3].replace(/\\(.)/g, '$1') : m[2] });
     }
     rest += body.slice(last);
     return { tokens, keyword: rest.trim() };
@@ -40,7 +41,7 @@ function parseQuery(q) {
 // キーワードは末尾に残す。絞り込みを全部外したら '@' を付けず本家の検索語の形に戻す
 function buildQuery(tokens, keyword) {
     if (!tokens.length) return keyword || '';
-    const parts = tokens.map(t => t.field + ':"' + t.value + '"');
+    const parts = tokens.map(t => searchToken(t.field, t.value));
     if (keyword) parts.push(keyword);
     return '@' + parts.join(' ');
 }
