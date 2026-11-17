@@ -293,12 +293,13 @@ exports.relatedVideos = (req, res) => {
     }
 };
 
-// GET /ext/api/performer/:id/screenshots  関連スクリーンショット(最大8)
-// ?sort=random で最近8件の代わりにランダム8件を抽選する
+// GET /ext/api/performer/:id/screenshots  関連スクリーンショット(?limit=件数。既定8・最大48)
+// ?sort=random で最近の分の代わりにランダムに抽選する
 exports.relatedScreenshots = (req, res) => {
     try {
         const like = `%\n${parseInt(req.params.id, 10)}\n%`;
         const orderBy = req.query.sort === 'random' ? 'RANDOM()' : 's.created_at DESC';
+        const limit = Math.min(48, Math.max(1, parseInt(req.query.limit, 10) || 8));
         const rows = db.prepare(`
             SELECT s.id, s.timestamp, MIN(f.id) AS video_id
             FROM screenshots s
@@ -307,8 +308,8 @@ exports.relatedScreenshots = (req, res) => {
             WHERE ('\n' || IFNULL(e.performers,'') || '\n') LIKE ?
             GROUP BY s.id
             ORDER BY ${orderBy}
-            LIMIT 8
-        `).all(like);
+            LIMIT ?
+        `).all(like, limit);
         res.json(rows);
     } catch (e) {
         console.error('[ext performer screenshots]', e);

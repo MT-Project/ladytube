@@ -1,6 +1,6 @@
 // LadyTube: 出演者のページ (/performer/:id)。写真・氏名・ふりがな・評価・身長などの情報、関連動画、関連スクリーンショット。
 // 情報は押すとその場で編集して保存する (氏名・ふりがな・身長・体重・血液型・誕生日。スリーサイズ・別名・出演者タグはダイアログ)。
-// 写真は押すと拡大 (無ければ画像を選んで正方形に切り取る)。スクリーンショットは「最近」8件か「ランダム」(押すたびに抽選)。
+// 写真は押すと拡大 (無ければ画像を選んで正方形に切り取る)。スクリーンショットは「最近」か「ランダム」(押すたびに抽選)で、数は ShotGrid が決める。
 // 差し込み口 WL.performerExtras に「部品を作る関数 (id) => 要素」を足すと、ページを開くたびに置く (ExtSlot。丸ボタンなどは position: fixed で)。
 // v3.2.1 までは拡張の server/ext/public/performer.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
 // ダイアログは ExtDialog。ライトボックス・切り取り・出演者タグの選択は拡張の WL.* (core.js。React より先に読まれる)
@@ -134,6 +134,34 @@ function VideoCard({ v }) {
     );
 }
 
+// 関連スクリーンショットは「8枚以上で行がそろう最小の数」(列の数の倍数) を出し、足りなければある分を左詰めで出す。
+// 列の数は格子の幅で決まる (womanlive-ext.css の .wlext-video-grid) ので、幅が変わるたびに数え直す。
+// サーバーからは SHOT_POOL 枚まで取っておき、幅が変わっても取り直さない (ランダムも引き直さない)
+const SHOT_MIN = 8, SHOT_POOL = 24;
+function ShotGrid({ list }) {
+    const ref = useRef(null);
+    const [cols, setCols] = useState(4);   // 測れるまで (ペインが隠れているときなど) は今までどおり8枚
+    useEffect(() => {
+        const el = ref.current;
+        const ro = new ResizeObserver(() => setCols(getComputedStyle(el).gridTemplateColumns.split(' ').length || 1));
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    const n = Math.ceil(SHOT_MIN / cols) * cols;
+    return (
+        <div ref={ref} className="wlext-video-grid">
+            {list === null ? <div style={muted}>読み込み中...</div>
+                : list === false ? null
+                    : list.length ? list.slice(0, n).map(s => (
+                        <Link key={s.id} className="wlext-ss-card" to={'/watch/' + s.video_id + '?t=' + Math.floor(s.timestamp || 0)}>
+                            <img src={'/api/screenshot/' + s.id + '/image'} loading="lazy" />
+                        </Link>
+                    ))
+                        : <div style={muted}>関連スクリーンショットはありません</div>}
+        </div>
+    );
+}
+
 function PerformerView({ id }) {
     const [perf, setPerf] = useState(null);       // null = 読み込み中 / false = 見つからない
     const [title, setTitle] = useState('出演者');
@@ -149,7 +177,7 @@ function PerformerView({ id }) {
             setPerf(p);
             setTitle(p.name || '出演者');
             api.performerVideos(id).then(v => { if (alive) setVideos(v); }, () => { if (alive) setVideos(false); });
-            api.performerScreenshots(id, '').then(l => { if (alive) setShots({ mode: 'recent', list: l }); }, () => { if (alive) setShots({ mode: 'recent', list: false }); });
+            api.performerScreenshots(id, '', SHOT_POOL).then(l => { if (alive) setShots({ mode: 'recent', list: l }); }, () => { if (alive) setShots({ mode: 'recent', list: false }); });
         }, () => { if (alive) setPerf(false); });
         return () => { alive = false; };
     }, [id]);
@@ -183,7 +211,7 @@ function PerformerView({ id }) {
     };
     const loadShots = (mode) => {
         setShots({ mode, list: null });
-        extApi.performerScreenshots(id, mode === 'random' ? 'random' : '').then(list => setShots({ mode, list }), () => setShots({ mode, list: false }));
+        extApi.performerScreenshots(id, mode === 'random' ? 'random' : '', SHOT_POOL).then(list => setShots({ mode, list }), () => setShots({ mode, list: false }));
     };
 
     const field = (key) => ({ value: perf[key] || '', type: 'text', onSave: (v) => save({ [key]: v }) });
@@ -245,19 +273,10 @@ function PerformerView({ id }) {
                 <span>関連スクリーンショット</span>
                 <span className="wlext-pp-title-actions">
                     <div className={'wlext-plist-sortbtn' + (shots.mode === 'recent' ? ' active' : '')} onClick={() => loadShots('recent')}>最近</div>
-                    <div className={'wlext-plist-sortbtn' + (shots.mode === 'random' ? ' active' : '')} title="押すたびに8件を抽選します" onClick={() => loadShots('random')}>ランダム</div>
+                    <div className={'wlext-plist-sortbtn' + (shots.mode === 'random' ? ' active' : '')} title="押すたびに抽選し直します" onClick={() => loadShots('random')}>ランダム</div>
                 </span>
             </div>
-            <div className="wlext-video-grid">
-                {shots.list === null ? <div style={muted}>読み込み中...</div>
-                    : shots.list === false ? null
-                        : shots.list.length ? shots.list.map(s => (
-                            <Link key={s.id} className="wlext-ss-card" to={'/watch/' + s.video_id + '?t=' + Math.floor(s.timestamp || 0)}>
-                                <img src={'/api/screenshot/' + s.id + '/image'} loading="lazy" />
-                            </Link>
-                        ))
-                            : <div style={muted}>関連スクリーンショットはありません</div>}
-            </div>
+            <ShotGrid list={shots.list} />
         </ExtListPage>
     );
 }

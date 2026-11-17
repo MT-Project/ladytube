@@ -25,7 +25,7 @@ export const extApi = {
     performerImageUrl: (id, bust) => '/ext/api/performer/' + id + '/image' + (bust ? '?t=' + bust : ''),
     setPerformerImage: (id, dataUrl) => extSend('POST', '/ext/api/performer/' + id + '/image', { image: dataUrl }),
     performerVideos: (id) => extGet('/ext/api/performer/' + id + '/videos'),
-    performerScreenshots: (id, sort) => extGet('/ext/api/performer/' + id + '/screenshots' + (sort ? '?sort=' + sort : '')),
+    performerScreenshots: (id, sort, limit) => extGet('/ext/api/performer/' + id + '/screenshots?limit=' + (limit || 8) + (sort ? '&sort=' + sort : '')),
     getPerformerTags: () => extGet('/ext/api/performer-tags'),
     savePerformerTags: (tags) => extSend('PUT', '/ext/api/performer-tags', { tags }),
     // メーカー
