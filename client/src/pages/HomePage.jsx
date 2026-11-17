@@ -20,12 +20,14 @@ const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCo
 // 個人用モジュールなどのリンクは WLExt.homeLinks に足すと、これらの後ろ (QRコードの前) に並ぶ (ExtSlot。本体のクラスは className で渡す)
 const EXT_HOME_LINKS = [
     { href: '/bookmarks', icon: 'bookmark', label: 'ブックマーク' },
-    { href: '/release-calendar', icon: 'calendar-check', label: '公開カレンダー' },
     { href: '/makers', icon: 'factory', label: 'メーカー一覧' },
     { href: '/series', icon: 'library', label: 'シリーズ一覧' },
     { href: '/performers', icon: 'users', label: '出演者一覧' },
     { href: '/tags', icon: 'tag', label: 'タグ一覧' },
 ];
+
+// LadyTube: 「続きを見る」の行の検索 (視聴途中。サーバーの search.js の @play:partial)
+const CONTINUE_Q = '@play:partial';
 
 // Linaria styles
 const styles = {
@@ -216,12 +218,12 @@ export default function HomePage() {
     const [newVideos, setNewVideos] = useState([]);
     const [pickupVideos, setPickupVideos] = useState([]);
     const [pickupSeed, setPickupSeed] = useState('');
-    const [reservedVideos, setReservedVideos] = useState([]);
+    const [continueVideos, setContinueVideos] = useState([]);
     const [recentVideos, setRecentVideos] = useState([]);
     const [loadingCarousel, setLoadingCarousel] = useState(true);
     const [loadingNew, setLoadingNew] = useState(true);
     const [loadingPickup, setLoadingPickup] = useState(false);
-    const [loadingReserved, setLoadingReserved] = useState(true);
+    const [loadingContinue, setLoadingContinue] = useState(true);
     const [loadingRecent, setLoadingRecent] = useState(true);
     const [scanFolders, setScanFolders] = useState([]);
     const [allowPublic, setAllowPublic] = useState(true);
@@ -320,17 +322,16 @@ export default function HomePage() {
             .catch(err => console.error('Failed to fetch new videos:', err))
             .finally(() => setLoadingNew(false));
 
-        // 予約中の動画（!予約タグ、ランダム8本）
+        // LadyTube: 続きを見る（視聴途中の動画を最近再生した順に8本）。v3.5.0 までは「予約中（予約タグ、ランダム8本）」
         api.getVideos({
-            q: '!予約',
-            sort: 'random',
+            q: CONTINUE_Q,
+            sort: 'history_desc',
             perPage: 8,
-            page: 1,
-            seed: fiveMinSeed
+            page: 1
         })
-            .then(data => setReservedVideos(data.videos || []))
-            .catch(err => console.error('Failed to fetch reserved videos:', err))
-            .finally(() => setLoadingReserved(false));
+            .then(data => setContinueVideos(data.videos || []))
+            .catch(err => console.error('Failed to fetch continue videos:', err))
+            .finally(() => setLoadingContinue(false));
 
         // 最近再生した動画（再生日時でソート、8本）
         api.getVideos({
@@ -352,7 +353,7 @@ export default function HomePage() {
     const handleVideoUpdate = (updatedVideo) => {
         setNewVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
         setPickupVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-        setReservedVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
+        setContinueVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
         setRecentVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
         setCarouselVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
     };
@@ -461,34 +462,32 @@ export default function HomePage() {
                     )}
                 </section>
 
-                {/* 予約中セクション */}
-                <section className={styles.section}>
+                {/* LadyTube: 続きを見るセクション (視聴途中の動画が無ければ出さない) */}
+                {(loadingContinue || continueVideos.length > 0) && <section className={styles.section}>
                     <div className={styles.sectionHeader}>
-                        <div className={styles.sectionTitle}>予約中（予約タグ）</div>
-                        {reservedVideos.length !== 0 &&
+                        <div className={styles.sectionTitle}>続きを見る</div>
+                        {continueVideos.length !== 0 &&
                             <Link
-                                to="/search?q=!予約&sort=random"
+                                to={`/search?q=${encodeURIComponent(CONTINUE_Q)}&sort=history_desc`}
                                 className={styles.moreLink}
                             >
                                 もっと見る
                             </Link>
                         }
                     </div>
-                    {loadingReserved ? (
+                    {loadingContinue ? (
                         <div className={styles.loading}>
                             <LoadingDots />
                         </div>
-                    ) : reservedVideos.length === 0 ? (
-                        <div className={styles.emptyMessage}>該当する動画はありません</div>
                     ) : (
                         <VideoList
-                            videos={reservedVideos}
+                            videos={continueVideos}
                             onPlay={handleVideoClick}
                             viewMode="home"
                             onVideoUpdate={handleVideoUpdate}
                         />
                     )}
-                </section>
+                </section>}
 
                 {/* 最近再生した動画セクション */}
                 <section className={styles.section}>

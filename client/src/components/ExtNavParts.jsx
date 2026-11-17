@@ -87,7 +87,6 @@ const NAV_ITEMS = [
     // 本家 ver.260914 で /folder-tree は廃止され、検索画面のフォルダ絞り込み (カテゴリー) になった
     ['/search?path=root', 'folder', 'カテゴリー'],
     ['/bookmarks', 'bookmark', 'ブックマーク'],
-    ['/release-calendar', 'calendar-check', '公開カレンダー'],
     ['/makers', 'factory', 'メーカー一覧'],
     ['/series', 'library', 'シリーズ一覧'],
     ['/performers', 'users', '出演者一覧'],

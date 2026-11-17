@@ -102,7 +102,7 @@ function initDb(database) {
     }
 
     if (checkSettings.get('preset_tags').count === 0) {
-      const defaultTags = ["予約", "Good", "お気に入り"];
+      const defaultTags = ["Good", "お気に入り"];   // LadyTube: 「予約」を外した (ホームの予約中の行をなくしたため)
       database.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run('preset_tags', JSON.stringify(defaultTags));
     }
 

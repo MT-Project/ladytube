@@ -81,18 +81,29 @@ function conditionsFor(query) {
     return { where, params };
 }
 
+// 値が none のとき「未設定」で引く列 (@maker:none など)。改行区切りの複数値は改行と空白だけなら未設定
+const NONE_COLUMN = {
+    maker: 'e.maker', series: 'e.series', label: 'e.label', model: 'e.model_no', release: 'e.release_date',
+    director: 'e.directors', genre: 'e.genres', performer: 'e.performers', tag: 'm.tags',
+};
+const noneSql = (col) => `TRIM(IFNULL(${col},''), char(10,13,32)) = ''`;
+
+// 視聴途中 = 60秒以上見て、終わりの1割より前で止めた動画 (@play:partial)。未再生は再生回数0 (@play:unwatched)
+const PLAY_SQL = {
+    unwatched: 'IFNULL(m.play_count,0) = 0',
+    partial: '(m.last_pos >= 60 AND m.duration > 0 AND m.last_pos < m.duration * 0.9)',
+};
+
 function buildConditions(tokens) {
     const where = [];
     const params = [];
     for (const { field, value } of tokens) {
+        if (value === 'none' && NONE_COLUMN[field]) { where.push(noneSql(NONE_COLUMN[field])); continue; }
         switch (field) {
+            case 'play': where.push(PLAY_SQL[value] || '1 = 0'); break;
             case 'maker': where.push('e.maker = ? COLLATE NOCASE'); params.push(value); break;
             case 'series': where.push('e.series = ? COLLATE NOCASE'); params.push(value); break;
-            case 'label':
-                // release:none と同じ書き方で「レーベルなし」を引けるようにする
-                if (value === 'none') where.push("(e.label IS NULL OR e.label = '')");
-                else { where.push('e.label = ? COLLATE NOCASE'); params.push(value); }
-                break;
+            case 'label': where.push('e.label = ? COLLATE NOCASE'); params.push(value); break;
             case 'model': where.push('e.model_no = ? COLLATE NOCASE'); params.push(value); break;
             case 'director':
                 where.push("('\n' || IFNULL(e.directors,'') || '\n') LIKE ? COLLATE NOCASE");
@@ -123,8 +134,9 @@ function buildConditions(tokens) {
                 where.push("substr(IFNULL(e.release_date,''),1,4) = ?");
                 params.push(value);
                 break;
-            case 'release':
-                if (value === 'none') where.push("(e.release_date IS NULL OR e.release_date = '')");
+            case 'release': // YYYY-MM-DD (none は上で扱う)
+                where.push('e.release_date = ?');
+                params.push(value);
                 break;
             case 'bookmark': {
                 // ブックマークフォルダ名で指定する(同名のフォルダがあれば両方が対象)。
@@ -262,32 +274,22 @@ exports.seriesList = (req, res) => {
     }
 };
 
-// 公開日(release_date)で年月別に集計 (公開カレンダー用。本体の CalendarPage.jsx が読む。並びは本体の /api/calendar/months と同じ 年の新しい順・年の中は1月から)
-exports.releaseCalendar = (req, res) => {
+// GET /ext/api/calendar/days?kind=updated|release   カレンダー (本体の CalendarPage.jsx) の日ごとの本数
+//  days: [['YYYY-MM-DD', 本数], ...] (古い順)。none: 公開日なしの本数 (release のときだけ)
+//  更新日は本体の検索 (>YYYY/MM/DD <YYYY/MM/DD) と同じく files.updated_at の文字列の日付で数える
+exports.calendarDays = (req, res) => {
     try {
-        const rows = db.prepare(`
-            SELECT substr(e.release_date, 1, 7) AS ym, COUNT(*) AS count
-            FROM files f
-            JOIN ext_video_meta e ON e.hash = f.hash
-            WHERE e.release_date IS NOT NULL AND e.release_date != ''
-            GROUP BY ym
-            ORDER BY substr(ym, 1, 4) DESC, ym ASC
-        `).all();
-
-        const uncategorized = db.prepare(`
-            SELECT COUNT(*) AS c
-            FROM files f
-            LEFT JOIN ext_video_meta e ON e.hash = f.hash
-            WHERE e.release_date IS NULL OR e.release_date = ''
-        `).get().c;
-
-        const months = rows
-            .filter(r => r.ym && /^\d{4}-\d{2}/.test(r.ym))
-            .map(r => ({ year: r.ym.slice(0, 4), month: r.ym.slice(5, 7), count: r.count }));
-
-        res.json({ months, uncategorized });
+        const release = req.query.kind === 'release';
+        const col = release ? 'e.release_date' : 'f.updated_at';
+        const days = db.prepare(`
+            SELECT substr(${col}, 1, 10) AS d, COUNT(*) AS n ${BASE}
+            WHERE ${col} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]*'
+            GROUP BY d ORDER BY d
+        `).all().map(r => [r.d, r.n]);
+        const none = release ? db.prepare(`SELECT COUNT(*) AS c ${BASE} WHERE ${noneSql(col)}`).get().c : 0;
+        res.json({ days, none });
     } catch (e) {
-        console.error('[ext release-calendar]', e);
+        console.error('[ext calendar days]', e);
         res.status(500).json({ error: e.message });
     }
 };
@@ -305,25 +307,29 @@ exports.facets = (req, res) => {
 
         const rows = db.prepare(`
             SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers,
-                   ${GROUP_KEY} AS gk
+                   ${GROUP_KEY} AS gk, ${PLAY_SQL.unwatched} AS unwatched, ${PLAY_SQL.partial} AS partial
             ${BASE}${whereSql}
         `).all(...params);
 
         // 品番でまとめているときは、一覧のカードと同じく「まとめた件数」で数える
         const grouped = req.query.group === '1';
-        const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map() };
+        const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map(), play: new Map() };
         const seen = new Set();
+        // 値 none は「未設定」(検索の @xxx:none と同じ)
         const bump = (kind, v, gk) => {
-            const s = String(v == null ? '' : v).trim(); if (!s) return;
+            const s = String(v == null ? '' : v).trim() || 'none';
             if (grouped) { const k = kind + '\n' + s + '\n' + gk; if (seen.has(k)) return; seen.add(k); }
             counts[kind].set(s, (counts[kind].get(s) || 0) + 1);
         };
+        const bumpList = (kind, s, gk) => { const vs = splitList(s); (vs.length ? vs : ['']).forEach(v => bump(kind, v, gk)); };
         rows.forEach(r => {
-            splitList(r.genres).forEach(v => bump('genre', v, r.gk));
-            splitList(r.tags).forEach(v => bump('tag', v, r.gk));
-            splitList(r.performers).forEach(v => bump('performer', v, r.gk));
+            bumpList('genre', r.genres, r.gk);
+            bumpList('tag', r.tags, r.gk);
+            bumpList('performer', r.performers, r.gk);
             bump('maker', r.maker, r.gk);
             bump('series', r.series, r.gk);
+            if (r.unwatched) bump('play', 'unwatched', r.gk);
+            if (r.partial) bump('play', 'partial', r.gk);
         });
 
         // 出演者は id で数えているので氏名を引く
@@ -334,13 +340,16 @@ exports.facets = (req, res) => {
                 .all(...pids).forEach(p => names.set(String(p.id), p.name));
         }
 
+        // 未設定 (none) は件数に関係なく先頭に置く (画面は上位5件だけ出すので、埋もれないように)
         const list = (kind) => [...counts[kind]]
-            .map(([value, count]) => ({ value, count, label: kind === 'performer' ? (names.get(value) || '') : value }))
+            .map(([value, count]) => ({ value, count, label: value === 'none' ? '未設定' : kind === 'performer' ? (names.get(value) || '') : value }))
             .filter(x => x.label)      // 出演者マスタから消えた id は出さない
-            .sort((a, b) => (b.count - a.count) || String(a.label).localeCompare(String(b.label), 'ja'));
+            .sort((a, b) => ((b.value === 'none') - (a.value === 'none')) || (b.count - a.count) || String(a.label).localeCompare(String(b.label), 'ja'));
+        const PLAY_LABEL = { unwatched: '未再生', partial: '視聴途中' };
 
         res.json({
             total: grouped ? new Set(rows.map(r => r.gk)).size : rows.length,
+            play: ['unwatched', 'partial'].filter(v => counts.play.has(v)).map(v => ({ value: v, label: PLAY_LABEL[v], count: counts.play.get(v) })),
             genre: list('genre'),
             tag: list('tag'),
             maker: list('maker'),

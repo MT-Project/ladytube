@@ -847,6 +847,7 @@ body.wlext-facets-open .wlext-facets { display: flex; }
 .wlext-facet-item:hover { background: var(--bg-hover, #ececec); }
 .wlext-facet-item.active { background: var(--accent, #007acc); color: #fff; }
 .wlext-facet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-facet-item.none:not(.active) .wlext-facet-name { color: var(--text-secondary, #888); font-style: italic; }
 .wlext-facet-count { flex-shrink: 0; font-size: 0.72rem; color: var(--text-secondary, #888); font-variant-numeric: tabular-nums; }
 .wlext-facet-item.active .wlext-facet-count { color: #fff; }
 /* 評価の範囲スライダー (ジャンルの上) */

@@ -9,10 +9,12 @@ import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import { searchToken } from '../utils/formatters';
 
-// 表示順は上から ジャンル → タグ → メーカー → 出演者 → シリーズ
+// 表示順は上から 視聴 → タグ → ジャンル → メーカー → 出演者 → シリーズ (評価はその上)。
+// 各項目の先頭の「未設定」は値 none (サーバーの search.js の @xxx:none)
 const SECTIONS = [
-    { key: 'genre', field: 'genre', label: 'ジャンル', icon: 'layers' },
+    { key: 'play', field: 'play', label: '視聴', icon: 'play' },
     { key: 'tag', field: 'tag', label: 'タグ', icon: 'tag' },
+    { key: 'genre', field: 'genre', label: 'ジャンル', icon: 'layers' },
     { key: 'maker', field: 'maker', label: 'メーカー', icon: 'factory' },
     { key: 'performer', field: 'performer', label: '出演者', icon: 'users' },
     { key: 'series', field: 'series', label: 'シリーズ', icon: 'library' },
@@ -125,7 +127,7 @@ function Section({ sec, items, tokens, keyword, onApply }) {
     const row = (it, i) => {
         const active = tokens.some(t => t.field === sec.field && t.value === it.value);
         return (
-            <div key={i} className={'wlext-facet-item' + (active ? ' active' : '')} title={active ? 'この絞り込みを外す' : (it.label + ' で絞り込む')}
+            <div key={i} className={'wlext-facet-item' + (active ? ' active' : '') + (it.value === 'none' ? ' none' : '')} title={active ? 'この絞り込みを外す' : (it.label + ' で絞り込む')}
                 onClick={() => onApply(buildQuery(active
                     ? tokens.filter(t => !(t.field === sec.field && t.value === it.value))
                     : tokens.concat([{ field: sec.field, value: it.value }]), keyword))}

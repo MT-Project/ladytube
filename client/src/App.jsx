@@ -1,10 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
 import WatchPage from './pages/WatchPage';
 import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
-import CalendarPage from './pages/CalendarPage';
 import ExtPage from './components/ExtPage';
 import { UIProvider } from './contexts/UIContext';
 import { ExtDialogHost } from './components/ExtDialog';
@@ -18,6 +17,8 @@ const BookmarksPage = lazy(() => import('./pages/BookmarksPage'));
 const PerformerPage = lazy(() => import('./pages/PerformerPage'));
 // LadyTube: 管理画面も開いたときに読む (拡張機能の項目を足して大きくなったため)
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+// LadyTube: カレンダーも開いたときに読む (v3.6.0 で書き直して大きくなったため)
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 
 function App() {
   return (
@@ -31,8 +32,8 @@ function App() {
           <Route path="/watch/:id" element={<WatchPage />} />
           <Route path="/screenshots" element={<ScreenshotGalleryPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
-          {/* LadyTube: 公開カレンダー (公開日で年月別。v3.2.1 までは拡張のページ。key でカレンダーとは別のものとして置く) */}
-          <Route path="/release-calendar" element={<CalendarPage key="release" release />} />
+          {/* LadyTube: 公開カレンダーは v3.6.0 でカレンダーの「公開日」側になった。古い URL はそこへ移す */}
+          <Route path="/release-calendar" element={<Navigate to="/calendar?kind=release" replace />} />
           {/* LadyTube: シリーズ一覧・タグ一覧・出演者一覧・メーカー一覧・ブックマーク・出演者 (v3.2.1 までは拡張のページ) */}
           <Route path="/series" element={<SeriesPage />} />
           <Route path="/tags" element={<TagsPage />} />
