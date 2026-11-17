@@ -1,7 +1,8 @@
 # LadyTube 追加機能 (server/ext)
 
 LadyTube のうち、派生元の WomanLive に足した機能の詳細です。v2.1.1 までは WomanLive 本体を改変しないアドオン
-（WomanLive 拡張機能）として配っていたもので、その作りのまま `server/ext/` に入っています。導入方法はルートの README を見てください。
+（WomanLive 拡張機能）として配っていたもので、サーバー側はその作りのまま `server/ext/` に入っています。
+画面の側は v3.3.0 で本体の画面（`client/src`）に移しました。導入方法はルートの README を見てください。
 
 ## 仕組み
 - **読み込み**: 本体の `server/index.js` が express のアプリを作った直後に `require('./ext')(app)` で拡張を読み込みます。
@@ -11,6 +12,10 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
   拡張のソート・品番でまとめる表示は、ここで扱います。
 - 追加データは `videos.db` の**新規テーブル**（`ext_*`）に保存。WomanLive から引き継いだテーブルの形は変えていません。
 - **ライブラリ**を作ると、ライブラリごとの DB ファイル（`libraries\<ID>\videos.db`）を本体に開かせます（後述の「ライブラリ」）。
+- **画面**: 追加機能の画面は本体の React です。ページは `client/src/pages/`（`SeriesPage.jsx`・`TagsPage.jsx`・`PerformersPage.jsx`・
+  `PerformerPage.jsx`・`MakersPage.jsx`・`BookmarksPage.jsx`。公開カレンダーは `CalendarPage.jsx`）、部品は `client/src/components/Ext*.jsx`、
+  スタイルは `client/src/womanlive-ext.css`（`.wlext-*`）です。v3.2.1 までは `server/ext/public` の JS と CSS を
+  index.html に差し込んでいました。今の `server/ext/inject.js` は、使用中のライブラリを index.html に埋め込むだけです。
 
 ## 追加機能の一覧
 記載順の概要です（各機能の詳細は以下の同名の節を参照）。
@@ -26,7 +31,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 設定画面「拡張機能：カバー画像」でフォルダを指定して保存。
 - DMM 商品検索で取得したカバーは `ext_video_cover` テーブルに保存（フォルダ未設定でも表示可）。
 - 両方あるときは**フォルダの画像を優先**します（自分で置いた画像を DMM のカバーより先に出す）。
-- 実装: カードは `client/src/components/ExtWatchParts.jsx` の `CoverCard`(動画ページ `WatchPage.jsx` がスクリーンショットの欄の先頭に置く。拡大は拡張の `WL.lightbox`)。DMM の情報を反映したあとは `videometa.js` が `wlext-cover-refresh` を投げて取り直させます。
+- 実装: カードは `client/src/components/ExtWatchParts.jsx` の `CoverCard`(動画ページ `WatchPage.jsx` がスクリーンショットの欄の先頭に置く。拡大は `ExtImageDialogs.jsx` の `ExtLightbox`)。DMM の情報を反映したあとは `ExtMetaSearch.jsx` が `wlext-cover-refresh` を投げて取り直させます。
 
 ## 拡張メタデータ
 評価(★)・表示名・品番・公開日・シリーズ名・メーカー・レーベル・作品監督・出演者・ジャンルを、
@@ -40,7 +45,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
   ON のまま「拡張子を表示する」も ON にすると、表示動画名の後ろに元のファイルの拡張子を付けます。
 - 実装: 一覧と動画ページの API が表示動画名を `ext_display_name` で返し、本体の画面が
   `client/src/utils/formatters.js` の `videoName` で名前を組み立てます。トグルは本体の表示設定(`UIOverlay.jsx`)にあります。
-- 実装(動画ページ): 評価・ジャンル・出演者・品番などの表示と右下の丸ボタンは `client/src/components/ExtWatchMeta.jsx`(`WatchPage.jsx` が置く。本体のタグ編集ボタンの代わり)。詳細情報の読み込みと保存、編集・タグ編集・DMM 検索のダイアログは `videometa.js`。保存すると `videometa.js` が `wlext-meta-updated` で知らせ、動画ページが表示とタイトルを描き直します。
+- 実装(動画ページ): 評価・ジャンル・出演者・品番などの表示と右下の丸ボタンは `client/src/components/ExtWatchMeta.jsx`(`WatchPage.jsx` が置く。本体のタグ編集ボタンの代わり)。詳細情報の読み込みと保存・タグ編集は `client/src/utils/videoMeta.js`、編集のダイアログは `ExtMetaEdit.jsx`、タグ選択は `ExtPresetTagDialog.jsx`、DMM 検索は `utils/metaSearch.jsx` と `ExtMetaSearch.jsx`。保存すると `wlext-meta-updated` で知らせ、動画ページが表示とタイトルを描き直します。
 
 ## 関連動画（メタデータ類似・事前計算）
 動画ページの「関連動画」を、拡張メタデータの一致度で選出します。
@@ -108,8 +113,8 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 右下の丸ボタンは、標準モードの間は情報欄の下端に横一列で並べます。
 - 幅 1000px 未満の画面と全画面表示では使わず、切り替えボタンも隠します。
 - 実装: 切替・右欄の見出し・大きさは `client/src/components/ExtStandard.jsx`(動画ページ `WatchPage.jsx` が置く。切替ボタンはプレイヤーの
-  `renderExtraControls`)。右欄の「同じシリーズ」「関連動画」の一覧は `server/ext/public/standard.js`
-  (`WL.renderStdSeries`/`WL.renderStdRelated`。API `GET /ext/api/video/:id/siblings`・`GET /ext/api/videos/brief?ids=`)。
+  `renderExtraControls`)。右欄の「同じシリーズ」「関連動画」の一覧は `client/src/components/ExtVideoRow.jsx`
+  (`ExtStdSeries`/`ExtStdRelated`。API `GET /ext/api/video/:id/siblings`・`GET /ext/api/videos/brief?ids=`)。
   右欄へ重ねる CSS は `womanlive-ext.css` の `body.wlext-std` の規則で、目印は `WatchPage.jsx` が付ける `data-wlext-std`。
 
 ## 公開日と更新日の表示
@@ -117,7 +122,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
   1ヶ月未満は「今月」、未来の日付は「発売前」です。公開日が無いときは再生回数だけです。
 - ここにあった本家の日時(ファイルの更新日時)は、詳細欄の「前回再生:」の下へ「更新日:」として移します。
 - 実装: 動画ページ(`client/src/pages/WatchPage.jsx`)。公開日は動画の API が `ext_release_date` で返し、詳細情報を保存したときは
-  `videometa.js` が `wlext-meta-updated` で知らせます。
+  `client/src/utils/videoMeta.js` が `wlext-meta-updated` で知らせます。
 
 ## DMM(FANZA) 商品検索によるメタデータ自動設定
 各動画ページの右下「🔍」ボタンから、品番で FANZA 商品情報を検索しメタデータへ自動設定します。
@@ -204,7 +209,7 @@ LadyTube のうち、派生元の WomanLive に足した機能の詳細です。
 - 品番の無い動画はまとめません。
 - 実装: まとめるのは `routes/search.js` の `groupedVideos`。トグルは検索画面(`SearchPage.jsx`)にあり、一覧と件数の要求に
   `group=1` を付けます。「N本」はカード(`VideoList.jsx`)が `ext_group_count` から出し、押したときの一覧は
-  `server/ext/public/groupview.js` の `WL.openGroupMembers` です。カードの名前からパート番号を外すのは `core.js` が行います。
+  `client/src/components/ExtVideoRow.jsx` の `ExtGroupMembers` です。カードの名前からパート番号を外すのは `routes/search.js` が行います。
 
 ## 検索結果のサイドメニュー（絞り込み）
 検索結果の左側に、今の結果をさらに絞り込むためのサイドメニューを出します。
@@ -296,7 +301,7 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 - 旧形式の**フォルダID指定(`@bookmark:2`)も引き続き動きます**。名前に一致しないときにIDとして
   解釈するので、保存済みのリンクは壊れません。
 - フォルダ名に `"` が含まれるときだけ、一覧のリンクはID指定になります(検索トークンが壊れるため)。
-- 実装: ボタンは `client/src/components/ExtCardParts.jsx` の `ExtBookmarkButton`(カードは `ExtCardBadges`、動画ページの右下は `ExtWatchMeta.jsx` の `ExtWatchFabs` が置く)、フォルダを選ぶダイアログは `server/ext/public/bookmark.js`。
+- 実装: ボタンは `client/src/components/ExtCardParts.jsx` の `ExtBookmarkButton`(カードは `ExtCardBadges`、動画ページの右下は `ExtWatchMeta.jsx` の `ExtWatchFabs` が置く)、フォルダを選ぶダイアログは同じファイルの `ExtBookmarkDialog`、ブックマーク済みの動画は `client/src/utils/bookmarks.js`。
 
 ## メタデータ置換
 設定画面の本家「タグ置換」を「**メタデータ置換**」に差し替え、タグ以外のメタデータも一括置換できるようにします。
@@ -320,7 +325,7 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
   - タグ: 本家 `metadata.tags` から取り除き、**本家のプリセットと拡張のグループレイアウト**からも消します
     (グループ見出しの `# 名前` は対象外)。
   - 出演者: 動画側の紐づけを外し、出演者マスタからも削除します(0本の出演者が一覧に残らないようにするため)。
-- 実装: `server/ext/public/listselect.js`、`routes/replace.js`、API `POST /ext/api/metadata/delete`。
+- 実装: `client/src/components/ExtListParts.jsx`(`ExtListFabs` と一括削除のメニュー・確認)、`routes/replace.js`、API `POST /ext/api/metadata/delete`。
 
 ## メンテナンス（参照されていないデータの削除）
 動画ファイルが無くなったあとも残る拡張データを削除します。
@@ -363,8 +368,9 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
   `library.opened(db)` で既定のライブラリを繋ぎます。切り替えではサーバーが終了コード 75 で終わり、`ladytube.bat` が
   起動し直します(コンソール画面はそのまま。2回目以降は `-browser` を外すのでタブは増えません)。`ladytube.bat` 以外から
   起動したとき(bat が渡す `LADYTUBE_RESTART=1` が無いとき)は自動で再起動せず、次の起動から切り替わります。
-- 実装: `server/ext/library.js`、`server/ext/routes/library.js`、`server/ext/public/library.js`(と `api.js` の書き込みガード)。
-  ヘッダーのライブラリ名は `library.js` の `WL.libraryPill` が作り、本体のヘッダー(`Navbar.jsx` の `ExtSlot`)と拡張のページの共通ヘッダー(`nav.js` の `WL.pageHeader`)が置きます。
+- 実装: `server/ext/library.js`、`server/ext/routes/library.js`(書き込みのガード)。画面は `client/src/utils/library.jsx`
+  (全リクエストへの印付け・切り替わったときの読み直し・切り替えの確認)、ヘッダーのライブラリ名は `ExtLibraryPill.jsx`
+  (本体のヘッダー `Navbar.jsx` が置く)、管理画面の項目は `ExtLibrary.jsx` です。
 
 ## 設定画面のサイドメニュー
 設定画面(本家の表記は「管理」)の左側に、設定項目の一覧を出します。
@@ -393,8 +399,6 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 - **フォルダーツリーの廃止**: `/folder-tree` が無くなったので、メニューの項目を「カテゴリー」
   (`/search?path=root`)に差し替えました。
 - **再生履歴ソート**: 本家に合わせ、未再生(`last_played_at` が NULL)を除きます。
-- **ロゴの置換**: ロゴが `<a><span>WomanLive</span>…</a>` の形になったため、リンク直下のテキストだけを
-  見ていた処理を、中の末端要素まで探す形にしました。
 
 ## 配色テーマ
 派生元の WomanLive と見分けやすいよう、配色を変えています。
@@ -407,9 +411,10 @@ API ID とアフィリエイトID は DMM 商品検索と同じ設定を使い�
 ```
 server/ext/
   library.js            ライブラリ（一覧・起動時に開く DB・共通の出演者/設定・作成/取り込み/削除・切り替え）
-  index.js              拡張のエントリ（ルート登録・注入ミドルウェア）
+  index.js              拡張のエントリ（ルート登録・使用中のライブラリの埋め込み）
   db.js                 追加テーブルのスキーマ／共通ヘルパ
-  inject.js             index.html への <script>/<link> 動的注入
+  inject.js             index.html へ使用中のライブラリ（window.WLExtLibrary）を埋め込む
+  namekey.mjs           名前ソート用の共通ソートキー（サーバーと本体の画面で共用）
   routes/               サーバー API
     library.js          ライブラリ API・書き込みガード
     cover.js            カバー画像・拡張設定
@@ -430,27 +435,11 @@ server/ext/
     replace.js          メタデータの一括置換
     maintenance.js      参照されていない拡張データの掃除
     backup.js           追加データのエクスポート/インポート
-  public/               ブラウザで動く拡張 UI（/ext/assets で配信）
-    api.js              API クライアント・ライブラリの印付け（切り替え前の画面の検知）
-    namekey.js          名前ソート用の共通ソートキー（サーバー/クライアント共用 UMD）
-    core.js             fetch フック（まとめたカードの手直し・関連動画の差し替え）・ルート検知・共通 UI（ダイアログ/チップ入力/クロッパ等）
-    nav.js              ナビゲーション統一（単色アイコン/拡張ページの共通ヘッダー/メニューと検索ヘルプの中身/テーマ）
-    videometa.js        動画ページの拡張メタの読み込み/保存・編集/DMM検索/タグ編集のダイアログ
-    groupview.js        まとめた動画の一覧（「N本」を押したとき）・一覧の1行 WL.videoRow
-    standard.js         動画ページの標準モードの右欄の一覧（同じシリーズ・関連動画。切替と見出しは ExtStandard.jsx）
-    bulkselect.js       検索結果の一括操作のメニューとダイアログ（選択モードのボタンとチェックは client/src/components/ExtSelection.jsx・VideoList.jsx。
-                        WL.videoMenuExtras に足した項目もメニューに並べる）
-    listselect.js       一覧ページの選択モード・一括削除
-    (以下のページは WL.extPages に登録し、置き場所は本体の client/src/components/ExtPage.jsx が決める)
-    performer.js        出演者ページ
-    performerlist.js    出演者一覧
-    makerlist.js        メーカー一覧（画像登録・情報編集・FANZAからの情報取得）
-    serieslist.js       シリーズ一覧
-    taglist.js          タグ一覧（サムネイル登録・タグ名/本数ソート・タグ検索）
-    releasecal.js       公開カレンダー
-    bookmark.js         ブックマークのダイアログ（ブックマーク済みの動画の読み込み）
-    bookmarklist.js     ブックマーク一覧ページ
-    settings.js         管理画面の拡張の項目（置き場所は本体の SettingsPage.jsx が決める）
-    library.js          ライブラリ（ヘッダーの切り替えメニュー・管理画面のセクション）
-    womanlive-ext.css   スタイル
+
+client/src/（追加機能の画面。v3.2.1 までは server/ext/public）
+  pages/                SeriesPage・TagsPage・PerformersPage・PerformerPage・MakersPage・BookmarksPage（公開カレンダーは CalendarPage）
+  components/Ext*.jsx   部品（カード・動画ページ・検索の絞り込み・一括操作・ダイアログ・管理画面の項目・ライブラリ ほか）
+  utils/                詳細情報（videoMeta）・動画情報の検索（metaSearch）・ライブラリと通信の印（library）・通知（toast） ほか
+  services/extApi.js    追加機能の API の呼び出し
+  womanlive-ext.css     スタイル
 ```
