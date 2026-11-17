@@ -54,8 +54,6 @@
     --border-color: #3A1A24;
 }
 
-.wlext-hidden { display: none !important; }
-
 /* ---- カバー画像カード (スクリーンショット欄の先頭) ---- */
 .wlext-cover-card {
     flex-shrink: 0;
@@ -159,13 +157,6 @@
     text-overflow: ellipsis;
 }
 .wlext-performer-name:hover { color: var(--accent, #007acc); text-decoration: underline; }
-.wlext-performer-search {
-    cursor: pointer;
-    color: var(--text-secondary, #888);
-    display: inline-flex;
-    flex-shrink: 0;
-}
-.wlext-performer-search:hover { color: var(--accent, #007acc); }
 .wlext-performer-age {
     font-size: 0.72rem;
     color: var(--text-secondary, #888);
@@ -358,7 +349,6 @@
 .wlext-input:focus, .wlext-textarea:focus { border-color: var(--border-focus, #007acc); }
 .wlext-textarea { resize: vertical; min-height: 3.5rem; }
 .wlext-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
-.wlext-row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.6rem; }
 .wlext-btn {
     padding: 0.4rem 1.1rem; border-radius: 3px; cursor: pointer;
     border: 1px solid var(--border-primary, #ccc);
@@ -606,14 +596,8 @@
 }
 
 /* =============================================================
-   拡張ページ共通シェル (一覧のページ・出演者。.wlext-relcal-title は WL.pageTitle の見出し)
+   一覧のページの見出し (ExtListParts.jsx と private のページ)
    ============================================================= */
-.wlext-ext-page {
-    position: fixed; inset: 0; z-index: 4000;
-    background: var(--bg-primary, #fff);
-    color: var(--text-primary, #222);
-    overflow-y: auto;
-}
 .wlext-relcal-title {
     font-size: 1.2rem; font-weight: bold; margin: 0 0 1.5rem;
     display: flex; align-items: center; gap: 0.5rem;
@@ -1082,21 +1066,6 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
     font-size: 0.85rem; word-break: break-all;
 }
 
-/* ---- トースト ---- */
-.wlext-toast-wrap {
-    position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
-    z-index: 9000; display: flex; flex-direction: column; gap: 0.5rem; align-items: center;
-}
-.wlext-toast {
-    background: var(--bg-modal, #333); color: var(--text-primary, #fff);
-    border: 1px solid var(--border-primary, #555);
-    border-left: 4px solid var(--accent, #007acc);
-    padding: 0.6rem 1rem; border-radius: 4px; font-size: 0.85rem;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3); max-width: 80vw;
-}
-.wlext-toast.error { border-left-color: var(--status-error, #e51400); }
-.wlext-toast.success { border-left-color: var(--status-success, #388a34); }
-
 /* ---- コマ送りインジケータ (プレイヤー中央上に一瞬だけ出す) ---- */
 .wlext-frame-ind {
     position: fixed; top: 12%; left: 50%; transform: translateX(-50%);
@@ -1131,40 +1100,8 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-frame-ov.nostep .wlext-frame-z.back, .wlext-frame-ov.nostep .wlext-frame-z.fwd { display: none; }
 
 /* =============================================================
-   統一ヘッダー / ナビゲーションメニュー
-   本家ヘッダー(.nj9rcpl 等)と同じ見た目を、独自クラスで複製。
-   拡張ページではこのヘッダーを表示し、本家ページでは設定ボタンを
-   メニューボタンへ差し替える(.wlext-menu-btn / .wlext-navmenu)。
+   ヘッダーのボタンとナビゲーションメニュー (ExtNavParts.jsx)
    ============================================================= */
-/* 拡張ページ上部の共通ヘッダー (本家 .nj9rcpl を sticky で複製) */
-.wlext-nav {
-    position: sticky; top: 0; z-index: 50;
-    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--border-primary, #e4e4e4);
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 0 1rem; background-color: var(--bg-secondary, #f3f3f3); height: 3rem;
-}
-.wlext-logo { display: flex; align-items: center; flex-shrink: 0; width: auto; margin-right: 1rem; }
-.wlext-brand {
-    font-size: 1.25rem; letter-spacing: -0.1rem; color: var(--text-primary, #222);
-    font-weight: 700; text-decoration: none; font-family: sans-serif; transition: color 0.2s;
-}
-.wlext-brand:hover { color: var(--accent, #007acc); }
-/* スマホ幅はロゴの代わりにアイコン (本体のヘッダーの Navbar.jsx と同じ。img を付けて .dark .lt-logo-dark より強くする) */
-.wlext-brand .lt-logo-icon { display: none; }
-@media (max-width: 600px) {
-    .wlext-brand img.lt-logo { display: none; }
-    .wlext-brand .lt-logo-icon { display: block; }
-}
-.wlext-search { display: flex; flex: 1; justify-content: center; height: 2rem; }
-.wlext-search-wrap { display: flex; position: relative; width: 100%; max-width: 400px; }
-.wlext-search-input {
-    background-color: var(--bg-modal, #fff); color: var(--text-primary, #222);
-    border: 1px solid var(--border-primary, #ccc); border-radius: 0.25rem;
-    padding: 4px 10px; outline: none; width: 100%; line-height: 1.25rem; transition: all 0.2s;
-}
-.wlext-search-input:focus { border-color: var(--border-focus, #007acc); box-shadow: 0 0 0 2px var(--accent-light, rgba(0,122,204,0.2)); }
-.wlext-search-input:hover { border-color: var(--border-focus, #007acc); }
 .wlext-action {
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     background-color: transparent; color: var(--text-primary, #222); cursor: pointer;
@@ -1172,8 +1109,6 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 }
 .wlext-action:hover { color: var(--accent, #007acc); }
 .wlext-action:active { opacity: 0.5; }
-.wlext-search-btn { width: 32px; }
-.wlext-actions { display: flex; align-items: center; flex-shrink: 0; justify-content: flex-end; margin-left: 0.25rem; gap: 0.7rem; }
 
 /* メニュー(ハンバーガー)ボタン: 本家設定リンク .s1omeqqo の見た目を踏襲 */
 .wlext-menu-btn {
