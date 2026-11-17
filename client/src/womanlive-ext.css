@@ -712,6 +712,24 @@
 }
 .wlext-taglist-sep:first-child { margin-top: 0; }
 
+/* 並び替えの行と表示の切り替え (ExtListParts.jsx の ExtViewToggle。差し込み口で足すページも) を横に並べる。狭い画面は折り返す */
+.wlext-plist-ctlrow { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1.5rem; }
+.wlext-plist-viewbtn { display: inline-flex; align-items: center; gap: 0.3rem; }
+.wlext-plist-viewbtn .wlext-ico { display: block; }
+/* 「名前のみ」の表示 (ExtListParts.jsx の ExtNameList。差し込み口で足すページも)。箇条書きで、広い画面は複数の列に流す */
+.wlext-name-list { columns: 16rem; column-gap: 2rem; margin: 0 0 1rem; padding-left: 1.2rem; }
+.wlext-taglist-sep + .wlext-name-list { margin-top: 0.5rem; }
+.wlext-name-list li { break-inside: avoid; padding: 0.2rem 0; }
+.wlext-name-item { display: inline-flex; align-items: center; gap: 0.3rem; color: var(--text-primary, #222); text-decoration: none; }
+.wlext-name-item:hover .wlext-name-text { color: var(--accent, #007acc); text-decoration: underline; }
+.wlext-name-count { color: var(--text-secondary, #888); font-size: 0.85em; }
+/* 選択モードの印は名前の前に小さく置く (カードの左上の印と同じ色) */
+.wlext-name-item .wlext-sel-badge { position: static; order: -1; flex-shrink: 0; width: 16px; height: 16px; font-size: 10px; border-width: 1px; box-shadow: none; }
+.wlext-name-item.wlext-sel-on { outline: none; }
+.wlext-name-item.wlext-sel-on .wlext-name-text { color: var(--accent, #007acc); font-weight: bold; }
+/* ブックマークの名前のみの表示は、名称変更・削除を行の右に置く */
+.wlext-name-list .wlext-bm-actions { display: inline-flex; margin: 0 0 0 0.8rem; }
+
 /* ---- メーカー一覧 (横長リスト。動画一覧のリスト表示に寄せる) ---- */
 .wlext-maker-list { display: flex; flex-direction: column; gap: 0.7rem; }
 .wlext-maker-row {

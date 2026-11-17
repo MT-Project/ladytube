@@ -2,13 +2,14 @@
 // 選択モードで選んだシリーズを、全動画のメタデータから取り除ける (メニューと確認は ExtListParts.jsx の ExtListFabs)。
 // v3.2.1 までは拡張の server/ext/public/serieslist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス
 import { useEffect, useState } from 'react';
-import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
+import { ExtListCard, ExtListFabs, ExtListPage, ExtNameList, ExtPageTitle, ExtSortRow, ExtViewToggle } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
-import { storedSort, searchToken } from '../utils/formatters';
+import { storedSort, storedView, searchToken } from '../utils/formatters';
 import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'シリーズ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
 const STORE = 'wlext_sort_series';
+const VIEW_STORE = 'wlext_view_series';
 const muted = { color: 'var(--text-secondary,#888)' };
 
 function compare(order) {
@@ -50,6 +51,7 @@ export default function SeriesPage() {
     const [list, setList] = useState(null);
     const [error, setError] = useState(null);
     const [order, setOrder] = useState(() => storedSort(STORE, SORTS, { sort: 'name', dir: 'asc' }));
+    const [view, setView] = useState(() => storedView(VIEW_STORE));
     const [mode, setMode] = useState(false);
     const [selected, setSelected] = useState(() => new Map());
     const sel = { mode, setMode, selected, setSelected };
@@ -68,13 +70,18 @@ export default function SeriesPage() {
         <ExtListPage title="シリーズ一覧">
             <ExtPageTitle icon="library" text={'シリーズ一覧（' + list.length + '件）'} />
             <div className="wlext-plist-controls">
-                <ExtSortRow defs={SORTS} order={order} onChange={setOrder} storeKey={STORE} />
+                <div className="wlext-plist-ctlrow">
+                    <ExtSortRow defs={SORTS} order={order} onChange={setOrder} storeKey={STORE} />
+                    <ExtViewToggle view={view} onChange={setView} storeKey={VIEW_STORE} />
+                </div>
             </div>
-            <div className="wlext-series-grid">
-                {sorted.length
-                    ? sorted.map(s => <SeriesCard key={s.name} s={s} sel={sel} />)
-                    : <div style={muted}>シリーズが設定された動画がありません</div>}
-            </div>
+            {!sorted.length ? <div style={muted}>シリーズが設定された動画がありません</div>
+                : view === 'names'
+                    ? <ExtNameList sel={sel} items={sorted.map(s => ({
+                        id: s.name, name: s.name || '(無題)', count: s.count, title: '「' + s.name + '」で検索',
+                        to: '/search?q=' + encodeURIComponent('@' + searchToken('series', s.name)),
+                    }))} />
+                    : <div className="wlext-series-grid">{sorted.map(s => <SeriesCard key={s.name} s={s} sel={sel} />)}</div>}
             <ExtListFabs sel={sel} items={sorted.map(s => [s.name, s.name])} kind="series" kindLabel="シリーズ" />
         </ExtListPage>
     );

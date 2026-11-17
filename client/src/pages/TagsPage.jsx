@@ -1,13 +1,14 @@
 // LadyTube: タグ一覧 (/tags)。登録動画のタグをサムネイル付きで並べる (作りはシリーズ一覧と同じ)。押すとそのタグを検索。
 // サムネイルは既定が無地 (タグ名から決まる色) にタグ名。右下の画像ボタンから、そのタグの動画のスクリーンショットか
 // 手元の画像 (16:9 に切り取る) を登録できる。並び替え: タグ名 / 動画本数 / プリセット順 (# のグループごとに見出し)。
+// 表示はサムネイルと名前のみ (箇条書き。プリセット順は同じ見出しで区切る) を切り替えられる。
 // v3.2.1 までは拡張の server/ext/public/taglist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
 // API・切り取り・通知・プリセットの読み込みは拡張の WL.* (api.js・core.js。React より先に読まれる)
 import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ExtListCard, ExtListFabs, ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
+import { ExtListCard, ExtListFabs, ExtListPage, ExtNameList, ExtPageTitle, ExtSortRow, ExtViewToggle } from '../components/ExtListParts';
 import { Icon } from '../components/ExtIcon';
-import { storedSort, colorFor, searchToken } from '../utils/formatters';
+import { storedSort, storedView, colorFor, searchToken } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { loadVideoTagPresets, parseTagGroups } from '../utils/tagPresets';
@@ -16,6 +17,7 @@ import { nameCompare } from '../utils/namekey';
 
 const SORTS = [['name', 'タグ名', 'asc'], ['count', '動画本数', 'desc'], ['preset', 'プリセット順', 'asc']];
 const STORE = 'wlext_sort_tags';
+const VIEW_STORE = 'wlext_view_tags';
 const muted = { color: 'var(--text-secondary,#888)' };
 
 // 並びの区切り [{ label, items }]。プリセット順は、タグのプリセットの並びで # のグループごとに分け
@@ -157,6 +159,7 @@ export default function TagsPage() {
     const [presets, setPresets] = useState([]);
     const [error, setError] = useState(null);
     const [order, setOrder] = useState(() => storedSort(STORE, SORTS, { sort: 'name', dir: 'asc' }));
+    const [view, setView] = useState(() => storedView(VIEW_STORE));
     const [editing, setEditing] = useState(null);   // サムネイルを編集中のタグ名
     const [mode, setMode] = useState(false);
     const [selected, setSelected] = useState(() => new Map());
@@ -183,10 +186,25 @@ export default function TagsPage() {
         <ExtListPage title="タグ一覧">
             <ExtPageTitle icon="tag" text={'タグ一覧（' + list.length + '件）'} />
             <div className="wlext-plist-controls">
-                <ExtSortRow defs={SORTS} order={order} onChange={setOrder} storeKey={STORE} />
-                <div className="wlext-plist-ctl-label">サムネイルの推奨比率は 16:9（例: 640×360）です。各タグ右下の画像ボタンから変更できます。</div>
+                <div className="wlext-plist-ctlrow">
+                    <ExtSortRow defs={SORTS} order={order} onChange={setOrder} storeKey={STORE} />
+                    <ExtViewToggle view={view} onChange={setView} storeKey={VIEW_STORE} />
+                </div>
+                {view === 'thumb' && <div className="wlext-plist-ctl-label">サムネイルの推奨比率は 16:9（例: 640×360）です。各タグ右下の画像ボタンから変更できます。</div>}
             </div>
-            <div className="wlext-series-grid">
+            {view === 'names' ? (
+                sections.some(s => s.items.length)
+                    ? sections.map((sec, i) => (
+                        <Fragment key={i + ':' + sec.label}>
+                            {sec.label && <div className="wlext-taglist-sep">{sec.label}</div>}
+                            <ExtNameList sel={sel} items={sec.items.map(t => ({
+                                id: t.name, name: t.name, count: t.count, title: '「' + t.name + '」で検索',
+                                to: '/search?q=' + encodeURIComponent('@' + searchToken('tag', t.name)),
+                            }))} />
+                        </Fragment>
+                    ))
+                    : <div style={muted}>タグが設定された動画がありません</div>
+            ) : <div className="wlext-series-grid">
                 {sections.some(s => s.items.length)
                     ? sections.map((sec, i) => (
                         <Fragment key={i + ':' + sec.label}>
@@ -198,7 +216,7 @@ export default function TagsPage() {
                         </Fragment>
                     ))
                     : <div style={muted}>タグが設定された動画がありません</div>}
-            </div>
+            </div>}
             {editTag && <ThumbEditor tag={editTag} onClose={() => setEditing(null)} onChanged={(has) => setThumb(editTag.name, has)} />}
             <ExtListFabs sel={sel} items={sections.flatMap(s => s.items).map(t => [t.name, t.name])} kind="tag" kindLabel="タグ" />
         </ExtListPage>

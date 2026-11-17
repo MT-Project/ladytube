@@ -1,18 +1,20 @@
 // LadyTube: ブックマーク (/bookmarks)。ブックマークのフォルダをサムネイル・本数・平均評価で並べる。
 // 並び替え: フォルダ名 / 動画本数 / 評価 (保存しない)。フォルダの追加・名称変更・削除。サムネイルか名前を押すとそのフォルダを検索。
+// 表示はサムネイルと名前のみ (箇条書き。名称変更・削除は行の右) を切り替えられる (保存する)。
 // v3.2.1 までは拡張の server/ext/public/bookmarklist.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ExtListPage, ExtPageTitle, ExtSortRow } from '../components/ExtListParts';
+import { ExtListPage, ExtNameList, ExtPageTitle, ExtSortRow, ExtViewToggle } from '../components/ExtListParts';
 import { ExtStars } from '../components/ExtCardParts';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 import { ExtConfirm, ExtDialog } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
 import { nameCompare } from '../utils/namekey';
-import { searchToken } from '../utils/formatters';
+import { searchToken, storedView } from '../utils/formatters';
 
 const SORTS = [['name', 'フォルダ名', 'asc'], ['count', '動画本数', 'desc'], ['rating', '評価', 'desc']];
+const VIEW_STORE = 'wlext_view_bookmarks';
 const muted = { color: 'var(--text-secondary,#888)' };
 
 function compare(order) {
@@ -57,10 +59,20 @@ function deleteDialog(s, onDone) {
     });
 }
 
+// フォルダ名で検索する (名前の " と \ は searchToken がエスケープする)
+const folderUrl = (s) => '/search?q=' + encodeURIComponent('@' + searchToken('bookmark', s.name || ''));
+
+function FolderActions({ s, reload }) {
+    return (
+        <div className="wlext-bm-actions">
+            <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => extApi.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
+            <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}>🗑削除</span>
+        </div>
+    );
+}
+
 function FolderCard({ s, reload }) {
-    // フォルダ名で検索する。名前に " を含むとトークンが壊れるので、そのときだけ ID で指定する
-    const token = '@' + searchToken('bookmark', s.name || '');
-    const url = '/search?q=' + encodeURIComponent(token);
+    const url = folderUrl(s);
     return (
         <div className="wlext-series-card">
             <Link to={url} className="wlext-video-thumb" title="開く">
@@ -75,10 +87,7 @@ function FolderCard({ s, reload }) {
                     ? <><ExtStars value={Math.round(s.avgRating)} /><span className="wlext-series-ratingnum">{s.avgRating.toFixed(1)}</span></>
                     : <span style={{ ...muted, fontSize: '0.75rem' }}>評価なし</span>}
             </div>
-            <div className="wlext-bm-actions">
-                <span className="wlext-link" onClick={() => nameDialog('フォルダ名を変更', '変更', s.name || '', (name) => extApi.bmRenameFolder(s.id, name), reload, false)}>✎名称変更</span>
-                <span className="wlext-link" style={{ color: 'var(--status-error,#e51400)' }} onClick={() => deleteDialog(s, reload)}>🗑削除</span>
-            </div>
+            <FolderActions s={s} reload={reload} />
         </div>
     );
 }
@@ -87,6 +96,7 @@ export default function BookmarksPage() {
     const [list, setList] = useState(null);
     const [error, setError] = useState(null);
     const [order, setOrder] = useState({ sort: 'name', dir: 'asc' });
+    const [view, setView] = useState(() => storedView(VIEW_STORE));
 
     useEffect(() => {
         extApi.bmFolders().then(setList, e => setError(e.message));
@@ -101,16 +111,21 @@ export default function BookmarksPage() {
         <ExtListPage title="ブックマーク">
             <ExtPageTitle icon="bookmark" text={'ブックマーク（' + list.length + 'フォルダ）'} />
             <div className="wlext-plist-controls">
-                <ExtSortRow defs={SORTS} order={order} onChange={setOrder} />
+                <div className="wlext-plist-ctlrow">
+                    <ExtSortRow defs={SORTS} order={order} onChange={setOrder} />
+                    <ExtViewToggle view={view} onChange={setView} storeKey={VIEW_STORE} />
+                </div>
                 <div className="wlext-plist-sortrow">
                     <button className="wlext-btn" onClick={() => nameDialog('フォルダを追加', '追加', null, (name) => extApi.bmCreateFolder(name), reload, true)}>＋ フォルダを追加</button>
                 </div>
             </div>
-            <div className="wlext-series-grid">
-                {sorted.length
-                    ? sorted.map(s => <FolderCard key={s.id} s={s} reload={reload} />)
-                    : <div style={muted}>ブックマークフォルダがありません。「＋ フォルダを追加」または各動画の🔖ボタンから作成できます。</div>}
-            </div>
+            {!sorted.length ? <div style={muted}>ブックマークフォルダがありません。「＋ フォルダを追加」または各動画の🔖ボタンから作成できます。</div>
+                : view === 'names'
+                    ? <ExtNameList items={sorted.map(s => ({
+                        id: s.id, name: s.name || '(無題)', count: s.count, title: '開く', to: folderUrl(s),
+                        extra: <FolderActions s={s} reload={reload} />,
+                    }))} />
+                    : <div className="wlext-series-grid">{sorted.map(s => <FolderCard key={s.id} s={s} reload={reload} />)}</div>}
         </ExtListPage>
     );
 }

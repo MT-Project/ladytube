@@ -131,6 +131,11 @@ export function storedSort(storeKey, defs, initial) {
     return initial;
 }
 
+// LadyTube: 一覧のページの表示 ('thumb' = サムネイル / 'names' = 名前のみ) を localStorage から戻す (保存は ExtListParts.jsx の ExtViewToggle)
+export function storedView(storeKey) {
+    try { return localStorage.getItem(storeKey) === 'names' ? 'names' : 'thumb'; } catch { return 'thumb'; }
+}
+
 // LadyTube: 画像が無いカード (タグ・メーカー) の既定の背景。名前から決めるので毎回同じ色 (v3.2.1 までは拡張の WL.colorFor)
 export function colorFor(s) {
     let n = 0;

@@ -60,6 +60,24 @@ export function ExtListCard({ to, className, title, sel, id, name, children }) {
     );
 }
 
+// 「名前のみ」の表示 (ExtViewToggle で切り替える)。items は [{ id, to, title, name, count, extra }] で、箇条書きに「名前（N本）」を並べる
+// (広い画面は複数の列に流す。womanlive-ext.css の .wlext-name-list)。sel を渡すと選択モードで選べる (カードの ExtListCard と同じ)
+export function ExtNameList({ items, sel }) {
+    const body = (it) => <><span className="wlext-name-text">{it.name}</span><span className="wlext-name-count">{'（' + it.count + '本）'}</span></>;
+    return (
+        <ul className="wlext-name-list">
+            {items.map(it => (
+                <li key={it.id}>
+                    {sel
+                        ? <ExtListCard to={it.to} className="wlext-name-item" title={it.title} sel={sel} id={it.id} name={it.name}>{body(it)}</ExtListCard>
+                        : <Link to={it.to} className="wlext-name-item" title={it.title}>{body(it)}</Link>}
+                    {it.extra}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 // 選択モードの丸ボタン (検索画面と同じ ExtSelectionFabs)。items は表示中の [削除対象の値, 表示名] の並び。
 // 「すべて選択」は表示中を選んだものに足す (絞り込みで隠れた選択は残す。拡張と同じ)。
 // kind / kindLabel は削除の種類 (series / tag ...) と、メニュー・確認に出す名前。メニューと確認は下の ListMenu (v3.2.1 までは拡張の listselect.js)
@@ -115,6 +133,25 @@ function ListDeleteDialog({ kind, kindLabel: label, selected, onClose }) {
                 <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>この操作は元に戻せません。よろしいですか？</div>
             </div>
         </ExtDialog>
+    );
+}
+
+// 表示の切り替え (サムネイル / 名前のみ)。並び替えの行の右に置く (.wlext-plist-ctlrow で並べる)。view は 'thumb' | 'names'。
+// storeKey があれば保存する (戻すのは utils/formatters.js の storedView)
+const VIEWS = [['thumb', 'サムネイル', 'layout-grid'], ['names', '名前のみ', 'list']];
+export function ExtViewToggle({ view, onChange, storeKey }) {
+    return (
+        <div className="wlext-plist-sortrow">
+            <span className="wlext-plist-ctl-label">表示:</span>
+            {VIEWS.map(([key, label, icon]) => (
+                <div key={key} className={'wlext-plist-sortbtn wlext-plist-viewbtn' + (view === key ? ' active' : '')} onClick={() => {
+                    if (storeKey) { try { localStorage.setItem(storeKey, key); } catch { /* 保存できなくても切り替える */ } }
+                    onChange(key);
+                }}>
+                    <Icon name={icon} size={14} /><span>{label}</span>
+                </div>
+            ))}
+        </div>
     );
 }
 
