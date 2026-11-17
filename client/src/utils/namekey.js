@@ -4,5 +4,5 @@ import { nameKey, nameCompare } from '../../../server/ext/namekey.mjs';
 
 export { nameKey, nameCompare };
 
-// 拡張の書き方のページ (private のジャンル一覧) が WL.nameCompare を使うので渡す (private が写すまで。ExtPage.jsx が読み込む)
+// 個人用モジュールのページが WL.nameCompare を使うので渡す (ExtPage.jsx が読み込む)
 if (window.WLExt) Object.assign(window.WLExt, { nameKey, nameCompare });

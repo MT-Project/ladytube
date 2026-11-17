@@ -3,8 +3,7 @@
 //    content を渡すと別のヘルプ (タグ選択のダイアログのプリセット編集のヘルプ。ExtPresetTagDialog.jsx)
 //  ・ExtMenuButton: 右上のメニュー (ハンバーガー)。管理画面以外で、本体の歯車 (管理) の代わりに置く。
 //    差し込み口 WL.navMenuExtras に足した「項目を作る関数 (close) => 要素」は「QRコード」の上に並ぶ (押したら close() を呼ぶ)
-// 見た目は womanlive-ext.css の .wlext-help-* / .wlext-navmenu-*。拡張の書き方のページ (private のジャンル一覧) の
-// 共通ヘッダーは、まだ nav.js の WL.pageHeader が同じものを出す。
+// 見た目は womanlive-ext.css の .wlext-help-* / .wlext-navmenu-*。
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';

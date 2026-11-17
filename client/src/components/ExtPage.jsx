@@ -1,4 +1,4 @@
-// LadyTube: 差し込み口 WLExt.extPages で足すページ (今は個人用モジュールのジャンル一覧 /genres だけ。拡張のページは v3.2.1 の後から
+// LadyTube: 差し込み口 WLExt.extPages で足すページ (個人用モジュールが足すページ。拡張のページは v3.2.1 の後から
 // 本体の CalendarPage.jsx・SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx・MakersPage.jsx・BookmarksPage.jsx・PerformerPage.jsx)。
 // 本体のページが無い URL で App.jsx の最後のルートが置く。
 // 足す側は WLExt.extPages に { 'URL の形': render(params, mount, { setTitle }) } を置いておき、URL が合うと render が呼ばれる。

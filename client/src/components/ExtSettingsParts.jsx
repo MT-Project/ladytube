@@ -23,8 +23,7 @@ const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, dmm: Ex
 
 export function ExtSettingsSection({ name }) {
     const Section = SECTIONS[name];
-    if (Section) return <Section />;
-    return name ? <ExtSlot from="settingsSections" name={name} /> : <ExtSlot from="settingsExtras" />;
+    return Section ? <Section /> : <ExtSlot from="settingsExtras" />;
 }
 
 // cls: { section, title, icon, box, desc, input, button } (SettingsPage の styles)
