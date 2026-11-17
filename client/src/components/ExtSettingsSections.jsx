@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExtConfirm, ExtDialog } from './ExtDialog';
 import { Icon } from './ExtIcon';
+import FolderPicker from './FolderPicker';
 import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
 import { currentLibrary } from '../utils/library';
@@ -283,42 +284,6 @@ export function ExtTagRuleSettings() {
     );
 }
 
-/* ---------- 簡易フォルダピッカ (ライブラリの取り込み ExtLibrary.jsx も使う) ---------- */
-// 本家の /api/fs/list は絶対パスを返すので、そのまま降りる。/api/fs/resolve は path.join(base, target) するため、
-// 絶対パスを渡すと "D:\" + "D:\Cover" = "D:\D:\Cover" と、ドライブレターが二重に入る (「上へ」にだけ使う)
-export function FolderPicker({ onSelect, onClose }) {
-    const [cur, setCur] = useState('/');
-    const [items, setItems] = useState(null);   // null = 読み込み中 / [{ name, path }] / { error }
-    useEffect(() => {
-        let alive = true;
-        extGet('/api/fs/list?path=' + encodeURIComponent(cur)).then(a => { if (alive) setItems(a); }, e => { if (alive) setItems({ error: e.message }); });
-        return () => { alive = false; };
-    }, [cur]);
-    const go = (p) => { setItems(null); setCur(p); };
-    const up = async () => {
-        try { const r = await extGet('/api/fs/resolve?base=' + encodeURIComponent(cur) + '&target=' + encodeURIComponent('..')); go(r.path); }
-        catch (e) { toast(e.message, 'error'); }
-    };
-    const item = (key, label, onClick) => (
-        <div key={key} style={{ padding: '0.45rem 0.6rem', cursor: 'pointer', borderBottom: '1px solid var(--border-primary,#eee)', fontWeight: 'normal' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover,#eee)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }} onClick={onClick}>{label}</div>
-    );
-    const choose = () => { if (cur && cur !== '/') { onSelect(cur); onClose(); } else toast('フォルダを開いてください', 'error'); };
-    return (
-        <ExtDialog title="フォルダを選択" onClose={onClose} onSave={choose} saveLabel="このフォルダを選択">
-            <div>
-                <div style={{ fontSize: '0.8rem', wordBreak: 'break-all', marginBottom: '0.5rem', color: 'var(--text-secondary,#777)' }}>{'現在地: ' + (cur === '/' ? 'コンピューター (ドライブ選択)' : cur)}</div>
-                <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid var(--border-primary,#ccc)', borderRadius: '4px' }}>
-                    {cur !== '/' && item('..', '📁 .. (上へ)', up)}
-                    {items && (items.error
-                        ? <div style={{ padding: '0.6rem', color: 'var(--status-error,#e51400)' }}>{'読み込み失敗: ' + items.error}</div>
-                        : items.length ? items.map(it => item(it.path || it.name, '📁 ' + it.name, () => go(it.path || it.name)))
-                            : <div style={{ padding: '0.6rem', color: 'var(--text-secondary,#999)' }}>(サブフォルダなし)</div>)}
-                </div>
-            </div>
-        </ExtDialog>
-    );
-}
-const openFolderPicker = (onSelect) => openExtDialog(FolderPicker, { onSelect });
+// フォルダの選択は本体の FolderPicker.jsx (ライブラリの取り込み ExtLibrary.jsx も)。openExtDialog で開くので isOpen は常に true
+const openFolderPicker =(onSelect) => openExtDialog(FolderPicker, { isOpen: true, onSelect });
 

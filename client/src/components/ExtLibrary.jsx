@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExtDialog } from './ExtDialog';
 import { Icon } from './ExtIcon';
-import { FolderPicker } from './ExtSettingsSections';
+import FolderPicker from './FolderPicker';
 import { extGet, extSend } from '../services/extApi';
 import { currentLibrary, switchLibrary } from '../utils/library';
 import { GOTO_KEY } from './ExtLibraryPill';
@@ -154,7 +154,7 @@ export function ExtLibrarySettings() {
             <Note>指定した videos.db をコピーして新しいライブラリにします（元のファイルは変更しません）。フォルダを選ぶと、その中の videos.db を取り込みます。出演者は名前で突き合わせて共通の出演者へまとめます。</Note>
             <div className="wlext-inline wlext-lib-form">
                 <input ref={path} className="wlext-input" placeholder="(例) D:\WomanLive\videos.db （フォルダでも可）" />
-                <button className="wlext-btn" onClick={() => openExtDialog(FolderPicker, { onSelect: (p) => { path.current.value = p; } })}>参照...</button>
+                <button className="wlext-btn" onClick={() => openExtDialog(FolderPicker, { isOpen: true, onSelect: (p) => { path.current.value = p; } })}>参照...</button>
             </div>
             <div className="wlext-inline wlext-lib-form">
                 <input ref={impName} className="wlext-input" placeholder="ライブラリの名前" maxLength="40" />
