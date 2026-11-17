@@ -8,6 +8,7 @@ import { ExtStars } from '../components/ExtCardParts';
 import { storedSort, parseYmd } from '../utils/formatters';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
+import { currentLibrary } from '../utils/library';
 import { ExtConfirm } from '../components/ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
 import { nameCompare } from '../utils/namekey';
@@ -112,7 +113,7 @@ function PerformerCard({ p, sort, sel }) {
 
 export default function PerformersPage() {
     // 出演者は全ライブラリ共通。ライブラリが複数あるときは、既定で今のライブラリに出演作がある人だけ出す
-    const multiLib = !!(window.WLExt.library && window.WLExt.library.count > 1);
+    const multiLib = !!(currentLibrary && currentLibrary.count > 1);
     const [all, setAll] = useState(null);
     const [error, setError] = useState(null);
     const [order, setOrder] = useState(() => storedSort(STORE, SORTS, { sort: 'furigana', dir: 'asc' }));

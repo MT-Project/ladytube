@@ -12,6 +12,9 @@ import { toast } from './toast';
 
 export const currentLibrary = window.WLExtLibrary || null;
 
+// private の画面とやり取りする入れ物 (差し込み口と、本体が渡す関数を置く)。React より先にここで作っておく
+window.WLExt = window.WLExt || {};
+
 // 画面全体を覆うお知らせ (切り替え中・切り替わった)
 export function libraryOverlay(text) {
     let box = document.querySelector('.wlext-lib-overlay');

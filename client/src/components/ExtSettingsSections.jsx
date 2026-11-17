@@ -7,6 +7,7 @@ import { ExtConfirm, ExtDialog } from './ExtDialog';
 import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
+import { currentLibrary } from '../utils/library';
 import { toast } from '../utils/toast';
 
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
@@ -160,7 +161,7 @@ export function ExtBackupSettings() {
     const [result, setResult] = useState('');
     const [status, setStatus] = useState('※ 復元するJSONを選択');
     const data = useRef(null);
-    const lib = window.WLExt?.library;   // 使用中のライブラリ (api.js がサーバーの埋め込みから読む)
+    const lib = currentLibrary;   // 使用中のライブラリ (サーバーが HTML に埋め込んだもの)
     const multiLib = !!lib && lib.count > 1;
     const doExport = async () => {
         setResult('エクスポート中...');

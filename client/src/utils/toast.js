@@ -3,3 +3,6 @@
 let sink = null;
 export const setToastSink = (f) => { sink = f; };
 export const toast = (msg, type = 'info') => { if (sink) sink(msg, type); };
+
+// private の画面も同じ通知を出す (WLExt.toast。v3.2.1 までは拡張の core.js の下の通知)
+(window.WLExt = window.WLExt || {}).toast = toast;

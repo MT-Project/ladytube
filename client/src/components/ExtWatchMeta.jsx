@@ -9,7 +9,7 @@
 // 詳細情報は WatchPage が loadMeta で読み、保存したあとは window に wlext-meta-updated ({ id, meta }) が来る。
 // 拡張の関数 (window.WLExt) は、詳細情報が届いたあと (= 拡張は読み込み済み) か、押されたときにだけ呼ぶ。
 // 検索や出演者へのリンクは読み直さずに移る (v3.2.1 までは拡張の WL.searchBy / WL.openPerformer でページごと読み直していた)。
-// 中クリックは data-wlext-href を拡張の core.js が拾う (ボタンを中に持つチップがあり <a> にできないため)。
+// 中クリックは data-wlext-href を下で拾って新しいタブで開く (ボタンを中に持つチップがあり <a> にできないため。v3.2.1 までは拡張の core.js)。
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -25,6 +25,17 @@ import { extApi } from '../services/extApi';
 
 const WL = () => window.WLExt;
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
+
+// 中クリックで data-wlext-href の URL を新しいタブで開く (委譲なので後から描いた要素にも効く)
+const midTarget = (e) => e.target.closest && e.target.closest('[data-wlext-href]');
+document.addEventListener('mousedown', (e) => { if (e.button === 1 && midTarget(e)) e.preventDefault(); });
+document.addEventListener('auxclick', (e) => {
+    if (e.button !== 1) return;
+    const el = midTarget(e);
+    if (!el) return;
+    e.preventDefault(); e.stopPropagation();
+    window.open(el.getAttribute('data-wlext-href'), '_blank');
+});
 
 // 評価。変わったら WatchPage が key で作り直す (以前の「保存したら描き直す」と同じ)
 export function ExtRating({ videoId, value }) {

@@ -10,24 +10,12 @@ const library = require('./library');
 
 const DIST_INDEX = path.join(__dirname, '..', '..', 'client', 'dist', 'index.html');
 
-// api/core は React 本体(module)より先に fetch をフックする必要があるため
-// あえて defer を付けずに先頭で実行させる。各機能はコールバック登録のみなので defer でよい。
-const EARLY_SCRIPTS = [
-    '/ext/assets/api.js',
-    '/ext/assets/core.js',
-];
-const FEATURE_SCRIPTS = [
-    '/ext/assets/nav.js',
-    '/ext/assets/listselect.js',
-];
-
 module.exports = function createInject() {
     const cacheBust = Date.now(); // サーバー起動ごとに更新
-    const injection =
-        `\n  <link rel="stylesheet" href="/ext/assets/womanlive-ext.css?v=${cacheBust}">\n` +
-        EARLY_SCRIPTS.map(s => `  <script src="${s}?v=${cacheBust}"></script>`).join('\n') + '\n' +
-        FEATURE_SCRIPTS.map(s => `  <script defer src="${s}?v=${cacheBust}"></script>`).join('\n') +
-        '\n';
+    // 拡張の画面の CSS (.wlext-*。本体の画面の部品も使う)。v3.2.1 までは拡張の JS (api.js・core.js・nav.js ほか) も注入していた
+    const injection = `
+  <link rel="stylesheet" href="/ext/assets/womanlive-ext.css?v=${cacheBust}">
+`;
 
     return function injectMiddleware(req, res, next) {
         if (req.method !== 'GET') return next();
@@ -46,7 +34,7 @@ module.exports = function createInject() {
             let html = fs.readFileSync(DIST_INDEX, 'utf8');
             if (html.includes('</head>')) {
                 // 使用中のライブラリ (名前変更などで変わるので配信のたびに作る)。
-                // api.js がこれを見て、全リクエストに「どのライブラリの画面か」を付ける。
+                // 本体の client/src/utils/library.jsx がこれを見て、全リクエストに「どのライブラリの画面か」を付ける。
                 const lib = JSON.stringify(library.clientInfo()).replace(/</g, '\\u003c');
                 html = html.replace('</head>', `
   <script>window.WLExtLibrary = ${lib};</script>` + injection + '</head>');
