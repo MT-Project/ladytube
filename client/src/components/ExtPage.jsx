@@ -1,20 +1,24 @@
-// LadyTube: 拡張の差し込み口 WLExt.extPages で足すページ (今は個人用モジュールのページだけ。拡張のページ (公開カレンダー・シリーズ一覧・
-// タグ一覧・出演者一覧・メーカー一覧・ブックマーク・出演者) は v3.2.1 の後から本体の CalendarPage.jsx・SeriesPage.jsx・TagsPage.jsx・
-// PerformersPage.jsx・MakersPage.jsx・BookmarksPage.jsx・PerformerPage.jsx)。本体のページが無い URL で App.jsx の最後のルートが置く。
-// 拡張は WLExt.extPages に { 'URL の形': render(params, mount) } を足しておき、URL が合うと render を呼ぶ。
-// ページの中身は拡張が作り、mount(要素) で渡された要素をここが body の末尾に置く (v3.1.15 までと同じ位置。
-// 拡張のページは画面全体に重ねる position: fixed)。URL が変わるか、ほかのページへ移ると外す。
-// 拡張は defer で読むので、まだなら読み終わってから (DOMContentLoaded) 探す。
-import { useLayoutEffect } from 'react';
+// LadyTube: 差し込み口 WLExt.extPages で足すページ (今は個人用モジュールのジャンル一覧 /genres だけ。拡張のページは v3.2.1 の後から
+// 本体の CalendarPage.jsx・SeriesPage.jsx・TagsPage.jsx・PerformersPage.jsx・MakersPage.jsx・BookmarksPage.jsx・PerformerPage.jsx)。
+// 本体のページが無い URL で App.jsx の最後のルートが置く。
+// 足す側は WLExt.extPages に { 'URL の形': render(params, mount, { setTitle }) } を置いておき、URL が合うと render が呼ばれる。
+// 枠 (本体のヘッダー Navbar と中身の外枠 .wlext-pp-container) はここが出し、足す側は mount(要素) で中身だけを渡す
+// (v3.2.1 までは足す側が拡張の共通ヘッダー WL.pageHeader 付きのページを作り、body の末尾に画面全体に重ねていた)。
+// setTitle(文) は文書の題 (「文 - LadyTube」)。URL が変わるか、ほかのページへ移ると中身を外す。
+// 足す側 (private) は defer で読むので、まだなら読み終わってから (DOMContentLoaded) 探す。
+import { useLayoutEffect, useRef, useState } from 'react';
 import { matchPath, useLocation } from 'react-router-dom';
+import { ExtListPage } from './ExtListParts';
 // LadyTube: 拡張の書き方のページが使う名前の並べ替えを window.WLExt に渡す
 import '../utils/namekey';
 
 export default function ExtPage() {
     const { pathname } = useLocation();
+    const box = useRef(null);
+    const [title, setTitle] = useState('');
     useLayoutEffect(() => {
         let node = null, done = false;
-        const mount = (el) => { node = el; document.body.appendChild(el); };
+        const mount = (el) => { node = el; box.current.appendChild(el); };
         const find = () => {
             const pages = window.WLExt && window.WLExt.extPages;
             if (!pages || done) return;
@@ -22,7 +26,7 @@ export default function ExtPage() {
                 const m = matchPath(pattern, pathname);
                 if (!m) continue;
                 done = true;
-                render(m.params, mount);
+                render(m.params, mount, { setTitle });
                 return;
             }
         };
@@ -30,5 +34,5 @@ export default function ExtPage() {
         window.addEventListener('DOMContentLoaded', find, { once: true });
         return () => { done = true; window.removeEventListener('DOMContentLoaded', find); if (node) node.remove(); };
     }, [pathname]);
-    return null;
+    return <ExtListPage title={title}><div ref={box} /></ExtListPage>;
 }

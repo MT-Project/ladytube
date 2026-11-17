@@ -29,14 +29,6 @@
     });
 
     WL.api = {
-        // ライブラリ
-        libraries: () => req('/ext/api/libraries'),
-        createLibrary: (name, mode) => req('/ext/api/libraries', jsonOpts('POST', { name, mode })),
-        importLibrary: (path, name) => req('/ext/api/libraries/import', jsonOpts('POST', { path, name })),
-        renameLibrary: (id, name) => req('/ext/api/libraries/' + encodeURIComponent(id), jsonOpts('PUT', { name })),
-        switchLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id) + '/switch', jsonOpts('POST', {})),
-        deleteLibrary: (id) => req('/ext/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' }),
-
         // DMM(FANZA) メーカー検索 (private のメーカー情報の取得)
         dmmMakerSearch: (name) => req('/ext/api/dmm/makers?name=' + encodeURIComponent(name)),
 

@@ -20,10 +20,10 @@ const page = css`
     color: ${theme.colors.text.primary};
 `;
 
-// ページの外枠。title は文書の題 (「<title> - LadyTube」。拡張の WL.setDocTitle と同じ形)
+// ページの外枠。title は文書の題 (「<title> - LadyTube」。拡張の WL.setDocTitle と同じ形。空なら「LadyTube」)
 export function ExtListPage({ title, children }) {
     useEffect(() => {
-        document.title = title + ' - LadyTube';
+        document.title = title ? title + ' - LadyTube' : 'LadyTube';
         window.scrollTo(0, 0);
     }, [title]);
     return (
