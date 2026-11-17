@@ -30,7 +30,8 @@ module.exports = function createInject() {
             if (html.includes('</head>')) {
                 // 使用中のライブラリ (名前変更などで変わるので配信のたびに作る)。
                 // 本体の client/src/utils/library.jsx がこれを見て、全リクエストに「どのライブラリの画面か」を付ける。
-                const lib = JSON.stringify(library.clientInfo()).replace(/</g, '\\u003c');
+                // local: サーバーを動かしている PC の画面か (PC からだけ使える操作を、画面が先に止めるため。API 側でも断る)
+                const lib = JSON.stringify({ ...library.clientInfo(), local: library.isLocal(req) }).replace(/</g, '\\u003c');
                 html = html.replace('</head>', `
   <script>window.WLExtLibrary = ${lib};</script>
 </head>`);

@@ -6,7 +6,7 @@
 const path = require('path');
 const express = require('express');
 
-const { initSchema } = require('./db');
+const { db, initSchema } = require('./db');
 const cover = require('./routes/cover');
 const meta = require('./routes/meta');
 const search = require('./routes/search');
@@ -26,6 +26,12 @@ const makers = require('./routes/makers');
 const file = require('./routes/file');
 const createInject = require('./inject');
 const libraryRoutes = require('./routes/library');
+const library = require('./library');
+const autobackup = require('./autobackup');
+
+// サーバーを動かしている PC からだけ使える API に付ける (LAN の端末からは 403)
+const pcOnly = (what) => (req, res, next) => (library.isLocal(req) ? next()
+    : res.status(403).json({ error: what + 'は、サーバーを動かしている PC（localhost）からのみ行えます' }));
 
 module.exports = function setupExt(app) {
     // 二重ロード防止
@@ -38,6 +44,9 @@ module.exports = function setupExt(app) {
 
     // 1. 追加テーブルを用意
     initSchema();
+
+    // 1.2 DB の自動バックアップ (1日1回。終わるのを待たない)
+    autobackup.run(db);
 
     // 1.5 個人用モジュール (server/private) があれば読み込む。
     //     配布物・git には含めない前提。存在しなければ何もしない(配布時は no-op)。
@@ -64,6 +73,18 @@ module.exports = function setupExt(app) {
                     if (r.total) console.log(`[LadyTube] 参照されていない拡張データ ${r.total}件を削除しました`);
                 }
             } catch (e) { console.error('[ext maintenance hook]', e); }
+            return orig(body);
+        };
+        next();
+    });
+
+    // 1.8 本家の /api/settings は設定を丸ごと返すので、PC 以外には DMM の API ID を渡さない
+    //     (LAN の端末の画面は API ID を使わない。検索はサーバーが行う)
+    app.use((req, res, next) => {
+        if (req.method !== 'GET' || req.path !== '/api/settings' || library.isLocal(req)) return next();
+        const orig = res.json.bind(res);
+        res.json = (body) => {
+            if (body && typeof body === 'object') { delete body.ext_dmm_api_id; delete body.ext_dmm_affiliate_id; }
             return orig(body);
         };
         next();
@@ -166,14 +187,16 @@ module.exports = function setupExt(app) {
     app.delete('/ext/api/bookmark/video/:id', bookmark.removeVideo);
 
     // -- バックアップ
-    app.get('/ext/api/backup/export', backup.exportAll);
-    app.post('/ext/api/backup/import', backup.importAll);
+    //    書き出しには DMM の API ID が入り、復元は全置換なので、どちらも PC からだけ
+    app.get('/ext/api/backup/export', pcOnly('バックアップの書き出し'), backup.exportAll);
+    app.post('/ext/api/backup/import', pcOnly('バックアップの復元'), backup.importAll);
 
     // -- 一括操作
     app.post('/ext/api/bulk/tags', bulk.tags);
     app.post('/ext/api/bulk/meta', bulk.meta);
     app.post('/ext/api/bulk/bookmark', bulk.bookmark);
-    app.post('/ext/api/bulk/delete', bulk.delete);
+    app.post('/ext/api/bulk/delete/check', bulk.deleteCheck);
+    app.post('/ext/api/bulk/delete', pcOnly('動画の削除'), bulk.delete);
 
     // -- 出演者
     app.get('/ext/api/performers/all', performers.all);

@@ -1,4 +1,5 @@
-// LadyTube: 使用中のライブラリ (サーバーが HTML に埋め込んだ window.WLExtLibrary = { id, name, count })。v3.2.1 までは拡張の api.js。
+// LadyTube: 使用中のライブラリ (サーバーが HTML に埋め込んだ window.WLExtLibrary = { id, name, count, local })。v3.2.1 までは拡張の api.js。
+// local はサーバーを動かしている PC の画面か (動画の削除・DMM の API ID・バックアップは PC からだけ。API 側でも断る)。
 // main.jsx が最初に読み込み、React が通信を始める前に次のことをしておく:
 //  ・同じオリジンへのリクエストすべてに印 X-WLExt-Library を付ける。返事の印が違えば (ほかの端末で切り替えられた)、
 //    ホームを開き直す (動画の id はライブラリごとに振られるので、前の画面のまま操作させない。書き込みはサーバーも 409 で拒む)
@@ -11,6 +12,8 @@ import { openExtDialog } from './extDialog';
 import { toast } from './toast';
 
 export const currentLibrary = window.WLExtLibrary || null;
+export const isLocalPC = !!(currentLibrary && currentLibrary.local);
+export const PC_ONLY = 'サーバーを動かしている PC からのみ行えます';
 
 // private の画面とやり取りする入れ物 (差し込み口と、本体が渡す関数を置く)。React より先にここで作っておく
 window.WLExt = window.WLExt || {};

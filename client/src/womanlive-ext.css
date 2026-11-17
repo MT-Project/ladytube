@@ -1077,6 +1077,8 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-sel-menu-item:hover .wlext-ico { color: var(--accent, #007acc); }
 .wlext-sel-menu-item.danger { color: var(--status-error, #e51400); border-top: 1px solid var(--border-primary, #eee); }
 .wlext-sel-menu-item.danger:hover { background: rgba(229,20,0,0.1); }
+/* PC からだけ使える項目を、ほかの端末で出すとき */
+.wlext-sel-menu-item.disabled { opacity: 0.5; cursor: not-allowed; }
 
 .wlext-sel-del-names {
     margin-top: 0.3rem; padding: 0.5rem 0.7rem; max-height: 9rem; overflow-y: auto;

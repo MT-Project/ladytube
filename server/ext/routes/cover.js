@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { db, getSetting, setSetting, imageContentType, IMG_EXTS, sharp } = require('../db');
+const library = require('../library');
 
 const MIME = {
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
@@ -11,26 +12,27 @@ const MIME = {
 };
 
 // --- 拡張設定 (カバー画像フォルダ / DMM API) ---
-exports.getSettings = (req, res) => {
-    res.json({
+// DMM の API ID とアフィリエイト ID は、サーバーを動かしている PC にだけ返し、PC からだけ変えられる
+function settingsFor(req) {
+    const local = library.isLocal(req);
+    return {
         cover_folder: getSetting('ext_cover_folder', ''),
-        dmm_api_id: getSetting('ext_dmm_api_id', ''),
-        dmm_affiliate_id: getSetting('ext_dmm_affiliate_id', '')
-    });
-};
+        dmm_api_id: local ? getSetting('ext_dmm_api_id', '') : '',
+        dmm_affiliate_id: local ? getSetting('ext_dmm_affiliate_id', '') : ''
+    };
+}
+exports.getSettings = (req, res) => res.json(settingsFor(req));
 
 exports.updateSettings = (req, res) => {
     try {
         const b = req.body || {};
+        if ((b.dmm_api_id !== undefined || b.dmm_affiliate_id !== undefined) && !library.isLocal(req)) {
+            return res.status(403).json({ error: 'DMM API の設定は、サーバーを動かしている PC（localhost）からのみ行えます' });
+        }
         if (b.cover_folder !== undefined) setSetting('ext_cover_folder', b.cover_folder);
         if (b.dmm_api_id !== undefined) setSetting('ext_dmm_api_id', String(b.dmm_api_id).trim());
         if (b.dmm_affiliate_id !== undefined) setSetting('ext_dmm_affiliate_id', String(b.dmm_affiliate_id).trim());
-        res.json({
-            success: true,
-            cover_folder: getSetting('ext_cover_folder', ''),
-            dmm_api_id: getSetting('ext_dmm_api_id', ''),
-            dmm_affiliate_id: getSetting('ext_dmm_affiliate_id', '')
-        });
+        res.json({ success: true, ...settingsFor(req) });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

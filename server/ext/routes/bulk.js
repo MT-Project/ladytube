@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { db, splitList, joinList, getSetting, IMG_EXTS } = require('../db');
+const trash = require('../trash');
 
 // 選択 id 群を hash 単位(重複排除)で処理するためのヘルパ
 function eachHash(ids, fn) {
@@ -109,8 +110,20 @@ exports.bookmark = (req, res) => {
     } catch (e) { console.error('[ext bulk bookmark]', e); res.status(500).json({ error: e.message }); }
 };
 
+// POST /ext/api/bulk/delete/check  { ids }
+//  削除の確認画面用: ごみ箱が使えない場所にある (= 完全に消える) 動画の本数
+exports.deleteCheck = (req, res) => {
+    try {
+        const { ids } = req.body || {};
+        const getPath = db.prepare('SELECT path FROM files WHERE id = ?');
+        const noTrash = (Array.isArray(ids) ? ids : []).map(id => getPath.get(id)).filter(f => f && f.path && !trash.canRecycle(f.path)).length;
+        res.json({ noTrash });
+    } catch (e) { console.error('[ext bulk delete check]', e); res.status(500).json({ error: e.message }); }
+};
+
 // POST /ext/api/bulk/delete  { ids }
-//  元ファイル + 関連(スクリーンショット/カバー/メタ/ブックマーク)を削除
+//  元ファイルをごみ箱へ送り (v3.4.0 までは即削除)、関連(スクリーンショット/カバー/メタ/ブックマーク)を削除。
+//  ファイルを消せなかった動画は DB も残す (fileErrors に数える)
 exports.delete = (req, res) => {
     try {
         const { ids } = req.body || {};
@@ -127,21 +140,26 @@ exports.delete = (req, res) => {
         const delBm = db.prepare('DELETE FROM ext_bookmarks WHERE hash = ?');
         const delExtRelated = db.prepare('DELETE FROM ext_related WHERE src_hash = ? OR rel_hash = ?');
 
-        function deleteFolderCover(filename, filePath) {
-            if (!coverFolder) return;
+        // このファイル名のカバー画像 (フォルダ側)
+        function folderCovers(filename, filePath) {
+            if (!coverFolder) return [];
             const base = path.parse(filename || path.basename(filePath || '')).name;
-            if (!base) return;
-            IMG_EXTS.forEach(ext => { const p = path.join(coverFolder, base + ext); try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) { } });
+            if (!base) return [];
+            return IMG_EXTS.map(ext => path.join(coverFolder, base + ext)).filter(p => fs.existsSync(p));
         }
 
-        let deleted = 0, fileErrors = 0;
-        (ids || []).forEach(id => {
-            const f = getFile.get(id);
-            if (!f) return;
-            // 1) 物理ファイル削除 (best-effort)
-            try { if (f.path && fs.existsSync(f.path)) fs.unlinkSync(f.path); } catch (e) { fileErrors++; }
-            // 2) このファイル名のカバー画像(フォルダ側)も削除
-            deleteFolderCover(f.filename, f.path);
+        const files = ids.map(id => getFile.get(id)).filter(Boolean);
+        // 1) 動画ファイルをごみ箱へ。残ったものは消せなかった
+        const left = trash.removeFiles(files.map(f => f.path).filter(p => p && fs.existsSync(p)));
+        const gone = files.filter(f => !left.has(f.path));
+        // 2) 消せた動画のカバー画像 (フォルダ側) もごみ箱へ (best-effort)
+        const covers = gone.flatMap(f => folderCovers(f.filename, f.path));
+        if (covers.length) trash.removeFiles(covers);
+
+        let deleted = 0;
+        const fileErrors = files.length - gone.length;
+        gone.forEach(f => {
+            const id = f.id;
             // 3) DB 整理 (この hash を参照するファイルが無くなったら関連も削除)
             db.transaction(() => {
                 delFile.run(id);

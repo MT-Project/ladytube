@@ -9,7 +9,7 @@ import { Icon } from './ExtIcon';
 import FolderPicker from './FolderPicker';
 import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
-import { currentLibrary } from '../utils/library';
+import { currentLibrary, isLocalPC, PC_ONLY } from '../utils/library';
 import { toast } from '../utils/toast';
 
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
@@ -57,9 +57,10 @@ export function ExtDmmSettings() {
     return (
         <Section title="DMM(FANZA) 商品検索API" icon="search">
             <div style={desc('0.6rem')}>各動画ページの🔍ボタンで品番からFANZA商品情報を検索し、メタデータへ自動設定します。利用にはご自身のDMMアカウントで取得したAPI IDとアフィリエイトIDが必要です。</div>
-            <div className="wlext-field"><label>API ID</label><input ref={api} className="wlext-input" placeholder="API ID" defaultValue="" /></div>
-            <div className="wlext-field"><label>アフィリエイトID</label><input ref={aff} className="wlext-input" placeholder="アフィリエイトID (例: xxxxx-999)" defaultValue="" /></div>
-            <div className="wlext-inline"><button className="wlext-btn wlext-btn-primary" onClick={save}>保存</button></div>
+            {!isLocalPC && <div style={desc('0.6rem')}>{'API ID とアフィリエイトID の表示と変更は、' + PC_ONLY + '。'}</div>}
+            <div className="wlext-field"><label>API ID</label><input ref={api} className="wlext-input" placeholder={isLocalPC ? 'API ID' : ''} defaultValue="" disabled={!isLocalPC} /></div>
+            <div className="wlext-field"><label>アフィリエイトID</label><input ref={aff} className="wlext-input" placeholder={isLocalPC ? 'アフィリエイトID (例: xxxxx-999)' : ''} defaultValue="" disabled={!isLocalPC} /></div>
+            <div className="wlext-inline"><button className="wlext-btn wlext-btn-primary" onClick={save} disabled={!isLocalPC}>保存</button></div>
         </Section>
     );
 }
@@ -216,10 +217,11 @@ export function ExtBackupSettings() {
     return (
         <Section title="バックアップ（詳細情報・出演者・ブックマークなど）" icon="archive">
             <div style={desc('0.6rem')}>LadyTube が追加したデータ（動画の詳細情報・出演者情報と画像・出演者タグのプリセット・タグ付与ルール・ブックマーク・各種設定）を JSON で書き出し／復元します。動画ファイル自体と、タグ・再生回数などのデータは含みません。</div>
-            <div className="wlext-inline" style={{ marginBottom: '0.6rem' }}><button className="wlext-btn wlext-btn-primary" onClick={doExport}>エクスポート</button></div>
-            <input type="file" accept=".json,application/json" onChange={onFile} />
+            {!isLocalPC && <div style={desc('0.6rem')}>{'バックアップの書き出しと復元は、' + PC_ONLY + '。'}</div>}
+            <div className="wlext-inline" style={{ marginBottom: '0.6rem' }}><button className="wlext-btn wlext-btn-primary" onClick={doExport} disabled={!isLocalPC}>エクスポート</button></div>
+            <input type="file" accept=".json,application/json" onChange={onFile} disabled={!isLocalPC} />
             <div style={{ fontSize: '0.82rem', margin: '0.5rem 0', color: 'var(--text-secondary,#777)' }}>{status}</div>
-            <div className="wlext-inline"><button className="wlext-btn" onClick={doImport}>インポート（復元）</button></div>
+            <div className="wlext-inline"><button className="wlext-btn" onClick={doImport} disabled={!isLocalPC}>インポート（復元）</button></div>
             <div style={resultStyle}>{result}</div>
         </Section>
     );

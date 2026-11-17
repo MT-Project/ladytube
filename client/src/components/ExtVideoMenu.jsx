@@ -5,7 +5,7 @@
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
 // タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog。
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
 import { ExtBulkMetaDialog } from './ExtMetaEdit';
@@ -13,6 +13,7 @@ import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { setBookmarked } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
+import { isLocalPC, PC_ONLY } from '../utils/library';
 import { toast } from '../utils/toast';
 import ExtPresetTagDialog from './ExtPresetTagDialog';
 import { loadVideoTagPresets, saveVideoTagPresets } from '../utils/tagPresets';
@@ -52,7 +53,8 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
                 <div className="wlext-sel-menu-item" onClick={run(doTags)}><Icon name="tag" size={15} /><span>タグ追加</span></div>
                 <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}>✎ 詳細情報編集</div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
-                <div ref={del} className="wlext-sel-menu-item danger" onClick={run((ids, done) => openExtDialog(DeleteDialog, { ids, done }))}>🗑 動画の削除</div>
+                <div ref={del} className={'wlext-sel-menu-item danger' + (isLocalPC ? '' : ' disabled')} title={isLocalPC ? '' : '動画の削除は、' + PC_ONLY}
+                    onClick={run((ids, done) => (isLocalPC ? openExtDialog(DeleteDialog, { ids, done }) : toast('動画の削除は、' + PC_ONLY, 'error')))}>🗑 動画の削除</div>
             </div>
         </>,
         document.body
@@ -139,20 +141,30 @@ function BulkBookmarkDialog({ ids, folders: initial, onClose }) {
 }
 
 /* ---------- 削除 ---------- */
+// 動画ファイルはごみ箱へ送る (v3.4.0 までは即削除)。ごみ箱が使えない場所の本数 (noTrash) を先に聞いて、その分は完全に消えると書く
 function DeleteDialog({ ids, done, onClose }) {
+    const [noTrash, setNoTrash] = useState(0);
+    useEffect(() => {
+        let alive = true;
+        extSend('POST', '/ext/api/bulk/delete/check', { ids }).then(r => { if (alive) setNoTrash(r.noTrash || 0); }, () => { });
+        return () => { alive = false; };
+    }, [ids]);
     const remove = async () => {
         try {
             const r = await extSend('POST', '/ext/api/bulk/delete', { ids });
-            toast(r.deleted + '件を削除しました' + (r.fileErrors ? '（ファイル削除に失敗 ' + r.fileErrors + '件）' : ''), 'success');
+            const failed = r.fileErrors ? '（' + r.fileErrors + '件はファイルを削除できなかったので残しました）' : '';
+            toast(r.deleted + '件を削除しました' + failed, r.deleted || !r.fileErrors ? 'success' : 'error');
             onClose(); afterAction(done);
         } catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
     };
+    const red = { color: 'var(--status-error,#e51400)', fontWeight: 'bold' };
     return (
         <ExtDialog title="動画の削除" onClose={onClose} onSave={remove} saveLabel="削除する" danger>
             <div style={{ fontSize: '0.9rem', lineHeight: '1.7' }}>
-                <div style={{ color: 'var(--status-error,#e51400)', fontWeight: 'bold', marginBottom: '0.4rem' }}>{'⚠ 選択した ' + ids.length + '件の動画を削除します'}</div>
-                <div>元の動画ファイルが削除され、関連するスクリーンショット・カバー画像・追加情報・ブックマークも削除されます。</div>
-                <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>この操作は元に戻せません。よろしいですか？</div>
+                <div style={{ ...red, marginBottom: '0.4rem' }}>{'⚠ 選択した ' + ids.length + '件の動画を削除します'}</div>
+                <div>元の動画ファイルはごみ箱へ送ります。関連するスクリーンショット・カバー画像・追加情報・ブックマークは削除され、動画をごみ箱から戻しても元に戻りません。</div>
+                {noTrash > 0 && <div style={{ ...red, marginTop: '0.4rem' }}>{(noTrash === ids.length ? '' : 'このうち ' + noTrash + '件は、') + 'ごみ箱が使えない場所（ネットワークや USB メモリなど）にあるので、動画ファイルも完全に削除されます。'}</div>}
+                <div style={{ marginTop: '0.4rem', fontWeight: 'bold' }}>よろしいですか？</div>
             </div>
         </ExtDialog>
     );
