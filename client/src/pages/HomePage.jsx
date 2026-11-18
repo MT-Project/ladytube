@@ -13,6 +13,7 @@ import { Search, QrCode, X, Image, Calendar, Folder } from 'lucide-react';
 import { Icon } from '../components/ExtIcon';
 import ExtSlot from '../components/ExtSlot';
 import { savedSearchHref, useSavedSearches } from '../utils/savedSearches';
+import { homeRowName, homeRowQuery, loadHomeLayout, normalizeHomeLayout } from '../utils/homeLayout';
 
 // LadyTube: QR コードの部品は、ダイアログを開いたときに読む (最初に読む JS を軽くする)
 const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCodeSVG })));
@@ -26,9 +27,6 @@ const EXT_HOME_LINKS = [
     { href: '/performers', icon: 'users', label: '出演者一覧' },
     { href: '/tags', icon: 'tag', label: 'タグ一覧' },
 ];
-
-// LadyTube: 「続きを見る」の行の検索 (視聴途中。サーバーの search.js の @play:partial)
-const CONTINUE_Q = '@play:partial';
 
 // Linaria styles
 const styles = {
@@ -202,31 +200,14 @@ const styles = {
     `,
 };
 
-// 1ヶ月前の日付を取得 (YYYY-MM-DD形式)
-function getOneMonthAgo() {
-    const date = new Date();
-    date.setMonth(date.getMonth() - 1);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
 export default function HomePage() {
     const navigate = useNavigate();
     const { showExtension } = useUI();
     const [carouselVideos, setCarouselVideos] = useState([]);
-    const [newVideos, setNewVideos] = useState([]);
-    const [pickupVideos, setPickupVideos] = useState([]);
-    const [pickupSeed, setPickupSeed] = useState('');
-    const [continueVideos, setContinueVideos] = useState([]);
+    // LadyTube: ホームの並び (v3.8.0。utils/homeLayout.js)。null は読み込み中。行の動画は表示する行の番号ごとに { name, href, videos } (無いあいだは読み込み中)
+    const [layout, setLayout] = useState(null);
+    const [rowData, setRowData] = useState({});
     const savedSearches = useSavedSearches();   // LadyTube: メニューに並べる保存した検索
-    const [recentVideos, setRecentVideos] = useState([]);
-    const [loadingCarousel, setLoadingCarousel] = useState(true);
-    const [loadingNew, setLoadingNew] = useState(true);
-    const [loadingPickup, setLoadingPickup] = useState(false);
-    const [loadingContinue, setLoadingContinue] = useState(true);
-    const [loadingRecent, setLoadingRecent] = useState(true);
     const [scanFolders, setScanFolders] = useState([]);
     const [allowPublic, setAllowPublic] = useState(true);
     const [loadingSettings, setLoadingSettings] = useState(true);
@@ -272,80 +253,47 @@ export default function HomePage() {
 
     const qrUrls = serverInfo && serverInfo.ips ? serverInfo.ips.map(ip => `http://${ip}:${serverInfo.port}`) : [];
 
-    // 各セクションの動画を取得（5分間固定シード、各セクション並行取得）
+    // LadyTube: ホームの並びを読む (読めなかったときは既定の並び)
     useEffect(() => {
+        loadHomeLayout().then(setLayout, () => setLayout(normalizeHomeLayout(null)));
+    }, []);
+
+    // 各セクションの動画を取得（5分間固定シード、各セクション並行取得）
+    // LadyTube: 行は並びの設定から作る (v3.8.0。v3.7.0 までは 最新動画/PICKUP・続きを見る・最近再生 の固定)
+    useEffect(() => {
+        if (!layout) return;
         const fiveMinSeedNum = Math.floor(Date.now() / (5 * 60 * 1000));
-        const fiveMinSeed = fiveMinSeedNum.toString();
-        const pickupSeedVal = (fiveMinSeedNum + 1).toString();
-        const oneMonthAgo = getOneMonthAgo();
 
         // カルーセル用動画（ランダム15本）
-        api.getVideos({
+        if (layout.carousel) api.getVideos({
             q: '',
             sort: 'random',
             perPage: 15,
             page: 1,
-            seed: fiveMinSeed
+            seed: fiveMinSeedNum.toString()
         })
-            .then(data => {
-                const videos = data.videos || [];
-                setCarouselVideos(videos);
-            })
-            .catch(err => console.error('Failed to fetch carousel videos:', err))
-            .finally(() => setLoadingCarousel(false));
+            .then(data => setCarouselVideos(data.videos || []))
+            .catch(err => console.error('Failed to fetch carousel videos:', err));
 
-        // 新しい動画（1ヶ月以内、ランダム8本）
-        api.getVideos({
-            q: `>${oneMonthAgo}`,
-            sort: 'random',
-            perPage: 8,
-            page: 1,
-            seed: fiveMinSeed
-        })
-            .then(data => {
-                const videos = data.videos || [];
-                setNewVideos(videos);
-                // 新しい動画が無い場合、PICKUPとしてランダム8本を取得（カルーセルと重複しないよう異なるseedを指定）
-                if (videos.length === 0) {
-                    setLoadingPickup(true);
-                    setPickupSeed(pickupSeedVal);
-                    api.getVideos({
-                        q: '',
-                        sort: 'random',
-                        perPage: 8,
-                        page: 1,
-                        seed: pickupSeedVal
-                    })
-                        .then(pickupData => setPickupVideos(pickupData.videos || []))
-                        .catch(err => console.error('Failed to fetch pickup videos:', err))
-                        .finally(() => setLoadingPickup(false));
-                }
-            })
-            .catch(err => console.error('Failed to fetch new videos:', err))
-            .finally(() => setLoadingNew(false));
-
-        // LadyTube: 続きを見る（視聴途中の動画を最近再生した順に8本）。v3.5.0 までは「予約中（予約タグ、ランダム8本）」
-        api.getVideos({
-            q: CONTINUE_Q,
-            sort: 'history_desc',
-            perPage: 8,
-            page: 1
-        })
-            .then(data => setContinueVideos(data.videos || []))
-            .catch(err => console.error('Failed to fetch continue videos:', err))
-            .finally(() => setLoadingContinue(false));
-
-        // 最近再生した動画（再生日時でソート、8本）
-        api.getVideos({
-            q: '',
-            sort: 'history_desc',
-            perPage: 8,
-            page: 1
-        })
-            .then(data => setRecentVideos(data.videos || []))
-            .catch(err => console.error('Failed to fetch recent videos:', err))
-            .finally(() => setLoadingRecent(false));
-    }, []);
+        const rows = layout.rows.filter(r => r.show);
+        const pickupShown = rows.some(r => r.type === 'pickup');
+        const fetchRow = (d) => api.getVideos({ q: d.q, sort: d.sort, perPage: d.count, page: 1, ...(d.seed && { seed: d.seed }), ...(d.path && { path: d.path }) })
+            .then(data => data.videos || []);
+        rows.forEach((row, i) => {
+            const d = homeRowQuery(row, fiveMinSeedNum, i);
+            const put = (dd, videos) => setRowData(prev => ({ ...prev, [i]: { name: dd.name, href: savedSearchHref(dd), videos } }));
+            fetchRow(d)
+                .then(videos => {
+                    // 新しい動画が無い場合、PICKUPとしてランダムに取得（カルーセルと重複しないよう異なるseed）。PICKUP の行を出しているときは代えない
+                    if (!videos.length && row.type === 'new' && !pickupShown) {
+                        const p = homeRowQuery({ type: 'pickup', count: row.count }, fiveMinSeedNum, i);
+                        return fetchRow(p).then(v => put(p, v));
+                    }
+                    put(d, videos);
+                })
+                .catch(err => { console.error('Failed to fetch home row:', err); put(d, []); });
+        });
+    }, [layout]);
 
     const handleVideoClick = (video) => {
         const videoId = typeof video === 'object' && video !== null ? video.id : video;
@@ -353,11 +301,9 @@ export default function HomePage() {
     };
 
     const handleVideoUpdate = (updatedVideo) => {
-        setNewVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-        setPickupVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-        setContinueVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-        setRecentVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
-        setCarouselVideos(prev => prev.map(v => v.id === updatedVideo.id ? updatedVideo : v));
+        const swap = (list) => list.map(v => v.id === updatedVideo.id ? updatedVideo : v);
+        setRowData(prev => Object.fromEntries(Object.entries(prev).map(([k, d]) => [k, { ...d, videos: swap(d.videos) }])));
+        setCarouselVideos(swap);
     };
 
     // スキャンフォルダーがない場合はInitGuidを表示
@@ -365,15 +311,16 @@ export default function HomePage() {
         return <InitGuid />;
     }
 
+    const shownRows = layout ? layout.rows.filter(r => r.show) : [];   // LadyTube: 並びの設定で出す行
     return (
         <div className={styles.page}>
             <Navbar />
             <div className={styles.content}>
-                {/* カルーセルセクション */}
-                <VideoCarousel videos={carouselVideos} showExtension={showExtension} />
+                {/* カルーセルセクション (LadyTube: 並びの設定で隠せる) */}
+                {layout && layout.carousel && <VideoCarousel videos={carouselVideos} showExtension={showExtension} />}
 
-                {/* メニューセクション (LadyTube: 「すべての動画」の後ろは右上のメニュー (server/ext/public/nav.js の NAV_ITEMS) と同じ順) */}
-                <div className={styles.menuSection}>
+                {/* メニューセクション (LadyTube: 「すべての動画」の後ろは右上のメニュー (server/ext/public/nav.js の NAV_ITEMS) と同じ順。並びの設定で隠せる) */}
+                {layout && layout.menu && <div className={styles.menuSection}>
                     <Link to="/search" className={styles.menuItem}>
                         <Search size={13} />
                         すべての動画
@@ -411,121 +358,36 @@ export default function HomePage() {
                         <QrCode size={13} />
                         QRコード
                     </span>
-                </div>
+                </div>}
 
-                {/* 最新動画セクション / PICKUPセクション */}
-                <section className={styles.section}>
-                    {loadingNew ? (
-                        <>
+                {/* LadyTube: 行のセクション (v3.8.0。並びの設定の順。動画が無い行は出さない。v3.7.0 までは 最新動画/PICKUP・続きを見る・最近再生 の固定) */}
+                {shownRows.map((row, i) => {
+                    const d = rowData[i];
+                    if (d && !d.videos.length) return null;
+                    return (
+                        <section key={i} className={styles.section}>
                             <div className={styles.sectionHeader}>
-                                <div className={styles.sectionTitle}>最新動画（1ヶ月以内）</div>
+                                <div className={styles.sectionTitle}>{d ? d.name : homeRowName(row)}</div>
+                                {d && <Link to={d.href} className={styles.moreLink}>もっと見る</Link>}
                             </div>
-                            <div className={styles.loading}>
-                                <LoadingDots />
-                            </div>
-                        </>
-                    ) : newVideos.length > 0 ? (
-                        <>
-                            <div className={styles.sectionHeader}>
-                                <div className={styles.sectionTitle}>最新動画（1ヶ月以内）</div>
-                                <Link
-                                    to={`/search?q=>${getOneMonthAgo()}&sort=random`}
-                                    className={styles.moreLink}
-                                >
-                                    もっと見る
-                                </Link>
-                            </div>
-                            <VideoList
-                                videos={newVideos}
-                                onPlay={handleVideoClick}
-                                viewMode="home"
-                                onVideoUpdate={handleVideoUpdate}
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <div className={styles.sectionHeader}>
-                                <div className={styles.sectionTitle}>PICKUP</div>
-                                <Link
-                                    to={`/search?q=&sort=random&seed=${pickupSeed}`}
-                                    className={styles.moreLink}
-                                >
-                                    もっと見る
-                                </Link>
-                            </div>
-                            {loadingPickup ? (
-                                <div className={styles.loading}>
-                                    <LoadingDots />
-                                </div>
-                            ) : pickupVideos.length === 0 ? (
-                                <div className={styles.emptyMessage}>該当する動画はありません</div>
-                            ) : (
+                            {d ? (
                                 <VideoList
-                                    videos={pickupVideos}
+                                    videos={d.videos}
                                     onPlay={handleVideoClick}
                                     viewMode="home"
                                     onVideoUpdate={handleVideoUpdate}
                                 />
+                            ) : (
+                                <div className={styles.loading}>
+                                    <LoadingDots />
+                                </div>
                             )}
-                        </>
-                    )}
-                </section>
+                        </section>
+                    );
+                })}
 
-                {/* LadyTube: 続きを見るセクション (視聴途中の動画が無ければ出さない) */}
-                {(loadingContinue || continueVideos.length > 0) && <section className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <div className={styles.sectionTitle}>続きを見る</div>
-                        {continueVideos.length !== 0 &&
-                            <Link
-                                to={`/search?q=${encodeURIComponent(CONTINUE_Q)}&sort=history_desc`}
-                                className={styles.moreLink}
-                            >
-                                もっと見る
-                            </Link>
-                        }
-                    </div>
-                    {loadingContinue ? (
-                        <div className={styles.loading}>
-                            <LoadingDots />
-                        </div>
-                    ) : (
-                        <VideoList
-                            videos={continueVideos}
-                            onPlay={handleVideoClick}
-                            viewMode="home"
-                            onVideoUpdate={handleVideoUpdate}
-                        />
-                    )}
-                </section>}
-
-                {/* 最近再生した動画セクション */}
-                <section className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <div className={styles.sectionTitle}>最近再生した動画</div>
-                        {recentVideos.length !== 0 &&
-                            <Link
-                                to="/search?q=&sort=history_desc"
-                                className={styles.moreLink}
-                            >
-                                もっと見る
-                            </Link>
-                        }
-                    </div>
-                    {loadingRecent ? (
-                        <div className={styles.loading}>
-                            <LoadingDots />
-                        </div>
-                    ) : recentVideos.length === 0 ? (
-                        <div className={styles.emptyMessage}>該当する動画はありません</div>
-                    ) : (
-                        <VideoList
-                            videos={recentVideos}
-                            onPlay={handleVideoClick}
-                            viewMode="home"
-                            onVideoUpdate={handleVideoUpdate}
-                        />
-                    )}
-                </section>
+                {/* LadyTube: 管理画面の「ホーム画面」へ */}
+                {layout && <div className="wlext-home-edit"><Link to="/settings#home-layout"><Icon name="pencil" size={14} />ホームを編集</Link></div>}
             </div>
 
             {/* QRコードダイアログ */}

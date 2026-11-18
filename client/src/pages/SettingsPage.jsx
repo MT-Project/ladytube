@@ -627,7 +627,8 @@ export default function SettingsPage() {
                 <ExtSettingsSection name="cover" />
                 <ExtSettingsSection name="related" />
                 <ExtSettingsSection name="tagRule" />
-                {/* LadyTube: 保存した検索 (v3.7.0) */}
+                {/* LadyTube: ホーム画面 (v3.8.0) と保存した検索 (v3.7.0) */}
+                <ExtSettingsSection name="home" />
                 <ExtSettingsSection name="savedSearch" />
 
                 {/* Tag Rename Section (LadyTube: 描かない。下の「メタデータ置換」が代わる) */}

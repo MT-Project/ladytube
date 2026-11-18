@@ -137,6 +137,9 @@ module.exports = function setupExt(app) {
     // -- 保存した検索 (v3.7.0)
     app.get('/ext/api/saved-searches', saved.list);
     app.put('/ext/api/saved-searches', saved.save);
+    // -- ホームの並び (v3.8.0)
+    app.get('/ext/api/home-layout', saved.homeGet);
+    app.put('/ext/api/home-layout', saved.homeSave);
     app.get('/ext/api/videos/brief', search.brief);
     app.get('/ext/api/video/:id/siblings', search.siblings);
     app.get('/ext/api/calendar/days', search.calendarDays);

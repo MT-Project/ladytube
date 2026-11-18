@@ -17,6 +17,7 @@ export function savedSearchHref(s) {
     const p = new URLSearchParams();
     if (s.q) p.set('q', s.q);
     if (s.sort) p.set('sort', s.sort);
+    if (s.seed) p.set('seed', s.seed);   // ホームの行 (utils/homeLayout.js) のランダムの並び
     if (s.path) p.set('path', s.path);
     const t = p.toString();
     return '/search' + (t ? '?' + t : '');

@@ -1,5 +1,5 @@
 // LadyTube: 管理画面の LadyTube の項目 (v3.2.1 までは拡張の server/ext/public/settings.js)。
-// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / 保存した検索 / 参照されていないデータの削除 / バックアップ。
+// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / ホーム画面 / 保存した検索 / 参照されていないデータの削除 / バックアップ。
 // 見出しは本体の項目と同じく名前だけ (v3.3.1 までは「拡張機能：」とパズルのアイコン)。
 // 置き場所と並びは SettingsPage.jsx が ExtSettingsSection name="..." で決める (ExtSettingsParts.jsx がここの部品を選ぶ)。
 // 見た目は womanlive-ext.css の .wlext-settings-section・.wlext-rule-*・.wlext-related-*。入力欄は押したときに欄の値を読む。
@@ -11,14 +11,15 @@ import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
 import { currentLibrary, isLocalPC, PC_ONLY } from '../utils/library';
 import { loadSavedSearches, saveSavedSearches } from '../utils/savedSearches';
+import { HOME_COUNTS, HOME_ROWS, homeRowName, loadHomeLayout, normalizeHomeLayout, saveHomeLayout } from '../utils/homeLayout';
 import { toast } from '../utils/toast';
 
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
 const resultStyle = { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' };
 
-function Section({ title, icon, children }) {
+function Section({ title, icon, children, id }) {
     return (
-        <div className="wlext-settings-host wlext-settings-section">
+        <div id={id} className="wlext-settings-host wlext-settings-section">
             <h3 className="wlext-ext-h3"><Icon name={icon} size={16} /><span>{title}</span></h3>
             {children}
         </div>
@@ -228,6 +229,76 @@ export function ExtBackupSettings() {
     );
 }
 
+// ホーム画面 (v3.8.0。utils/homeLayout.js)。カルーセルとメニューを出すかと、行の並び・出すか・名前・枚数を変えて「保存」で書く。
+// 保存した検索は、条件を写した行として足す。ホームの下の「ホームを編集」(/settings#home-layout) から来たときは、読み終えたらこの項目へ移る
+let homeKey = 0;
+const withKeys = (l) => ({ ...l, rows: l.rows.map(r => ({ key: ++homeKey, r })) });
+export function ExtHomeSettings() {
+    const [lay, setLay] = useState(null);   // { carousel, menu, rows: [{ key, r }] }。null は読み込み中
+    const [saved, setSaved] = useState([]);
+    const pick = useRef(null);
+    useEffect(() => {
+        const done = (l) => {
+            setLay(withKeys(l));
+            if (window.location.hash === '#home-layout') setTimeout(() => { const el = document.getElementById('home-layout'); if (el) el.scrollIntoView(); }, 0);
+        };
+        loadHomeLayout().then(done, () => done(normalizeHomeLayout(null)));
+        loadSavedSearches().then(setSaved, () => { });
+    }, []);
+    const setRow = (i, patch) => setLay(l => ({ ...l, rows: l.rows.map((x, j) => (j === i ? { ...x, r: { ...x.r, ...patch } } : x)) }));
+    const move = (i, d) => setLay(l => { const a = l.rows.slice(); [a[i], a[i + d]] = [a[i + d], a[i]]; return { ...l, rows: a }; });
+    const addSaved = () => {
+        const s = saved[pick.current.value];
+        if (s) setLay(l => ({ ...l, rows: [...l.rows, { key: ++homeKey, r: { type: 'saved', show: true, name: s.name, count: 8, q: s.q, sort: s.sort, path: s.path } }] }));
+    };
+    const save = async () => {
+        if (lay.rows.some(x => x.r.type === 'saved' && !x.r.name.trim())) { toast('名前が空の行があります', 'error'); return; }
+        try { await saveHomeLayout({ carousel: lay.carousel, menu: lay.menu, rows: lay.rows.map(x => x.r) }); toast('ホーム画面を保存しました', 'success'); }
+        catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
+    };
+    const about = (r) => (r.type === 'saved' ? '保存した検索: ' + savedSummary(r) : HOME_ROWS[r.type].about);
+    const check = (key, label) => (
+        <label className="wlext-home-check"><input type="checkbox" checked={lay[key]} onChange={(e) => setLay(l => ({ ...l, [key]: e.target.checked }))} />{label}</label>
+    );
+    return (
+        <Section title="ホーム画面" icon="layout-grid" id="home-layout">
+            <div style={desc('0.6rem')}>ホームに出すものと、行の並びを決めます。チェックを外した行と、動画が1本も無い行は出しません。名前を空にすると、もとの名前になります。変えたあとは「保存」を押してください。</div>
+            {lay && <>
+                {check('carousel', 'カルーセル（ランダムに15本）')}
+                {check('menu', 'メニュー（すべての動画・カレンダー・一覧のページなど）')}
+                <div style={{ marginTop: '0.6rem' }}>
+                    {lay.rows.map((x, i) => (
+                        <div key={x.key} className="wlext-saved-row wlext-home-row" style={{ opacity: x.r.show ? 1 : 0.6 }}>
+                            <input type="checkbox" checked={x.r.show} onChange={(e) => setRow(i, { show: e.target.checked })} title="ホームに出す" />
+                            <input className="wlext-input" value={x.r.name} placeholder={x.r.type === 'saved' ? '' : homeRowName({ type: x.r.type })} onChange={(e) => setRow(i, { name: e.target.value })} />
+                            <select className="wlext-rule-select" value={x.r.count} onChange={(e) => setRow(i, { count: Number(e.target.value) })} title="出す本数">
+                                {HOME_COUNTS.map(n => <option key={n} value={n}>{n + '本'}</option>)}
+                            </select>
+                            <span className="wlext-saved-sum" title={about(x.r)}>{about(x.r)}</span>
+                            <button className="wlext-btn" disabled={i === 0} onClick={() => move(i, -1)} title="上へ">↑</button>
+                            <button className="wlext-btn" disabled={i === lay.rows.length - 1} onClick={() => move(i, 1)} title="下へ">↓</button>
+                            <button className="wlext-btn" style={x.r.type === 'saved' ? undefined : { visibility: 'hidden' }} onClick={() => setLay(l => ({ ...l, rows: l.rows.filter((_, j) => j !== i) }))} title="削除"><Icon name="trash" size={14} /></button>
+                        </div>
+                    ))}
+                </div>
+                <div className="wlext-inline" style={{ marginTop: '0.6rem' }}>
+                    {saved.length ? <>
+                        <select ref={pick} className="wlext-rule-select">{saved.map((s, i) => <option key={i} value={i}>{s.name}</option>)}</select>
+                        <button className="wlext-btn" onClick={addSaved}>保存した検索を行に足す</button>
+                    </> : <span style={desc(0)}>検索画面の「この条件を保存」で保存した検索も、行として足せます。</span>}
+                </div>
+                <div className="wlext-inline" style={{ marginTop: '0.6rem' }}>
+                    <button className="wlext-btn wlext-btn-primary" onClick={save}>保存</button>
+                    <button className="wlext-btn" onClick={() => setLay(withKeys(normalizeHomeLayout(null)))} title="最新動画・続きを見る・最近再生した動画の3つの行に戻します（保存を押すまでは変わりません）">既定に戻す</button>
+                </div>
+            </>}
+        </Section>
+    );
+}
+
+// 保存した検索の条件を1行で (管理画面の「保存した検索」と「ホーム画面」)
+const savedSummary = (s) => [s.q || '（検索語なし）', s.path ? 'フォルダ: ' + (s.path === 'root' ? 'すべて' : s.path) : ''].filter(Boolean).join(' / ');
+
 // 保存した検索 (v3.7.0。保存は検索画面の「この条件を保存」)。名前の変更・並べ替え・削除をして「保存」で書く
 let savedKey = 0;
 export function ExtSavedSearchSettings() {
@@ -242,15 +313,14 @@ export function ExtSavedSearchSettings() {
         try { await saveSavedSearches(rows.map(r => r.s)); toast('保存した検索を更新しました', 'success'); }
         catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
-    const summary = (s) => [s.q || '（検索語なし）', s.path ? 'フォルダ: ' + (s.path === 'root' ? 'すべて' : s.path) : ''].filter(Boolean).join(' / ');
     return (
         <Section title="保存した検索" icon="filter">
-            <div style={desc('0.6rem')}>検索画面の「この条件を保存」で保存した検索です。ホームと右上のメニューに、この順で並びます。名前の変更・並べ替え・削除のあとは「保存」を押してください。</div>
+            <div style={desc('0.6rem')}>検索画面の「この条件を保存」で保存した検索です。ホームのメニューと右上のメニューに、この順で並びます。名前の変更・並べ替え・削除のあとは「保存」を押してください。</div>
             {rows && !rows.length && <div style={desc('0.6rem')}>保存した検索はありません。</div>}
             {rows && rows.map((r, i) => (
                 <div key={r.key} className="wlext-saved-row">
                     <input className="wlext-input" value={r.s.name} onChange={(e) => rename(i, e.target.value)} />
-                    <span className="wlext-saved-sum" title={summary(r.s)}>{summary(r.s)}</span>
+                    <span className="wlext-saved-sum" title={savedSummary(r.s)}>{savedSummary(r.s)}</span>
                     <button className="wlext-btn" disabled={i === 0} onClick={() => move(i, -1)} title="上へ">↑</button>
                     <button className="wlext-btn" disabled={i === rows.length - 1} onClick={() => move(i, 1)} title="下へ">↓</button>
                     <button className="wlext-btn" onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} title="削除"><Icon name="trash" size={14} /></button>
