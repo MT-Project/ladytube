@@ -462,11 +462,15 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     break;
                 case 'ArrowLeft':
                     e.preventDefault();
+                    // LadyTube: Shift+← は前のスクリーンショットの位置へ (v3.7.0。スクリーンショットの無い動画は5秒戻る)
+                    if (e.shiftKey && jumpShot(-1)) break;
                     triggerSeekIndicator('left');
                     handleSeek(Math.max(0, currentTime - 5));
                     break;
                 case 'ArrowRight':
                     e.preventDefault();
+                    // LadyTube: Shift+→ は次のスクリーンショットの位置へ
+                    if (e.shiftKey && jumpShot(1)) break;
                     if (duration > 0 && currentTime >= duration) break;
                     triggerSeekIndicator('right');
                     handleSeek(Math.min(duration, currentTime + 5));
@@ -486,6 +490,16 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     extKey(e);
             }
         };
+        // LadyTube: スクリーンショットの位置へ移る。戻るときは今の位置の1.5秒前より前の印へ
+        // (印の位置で続けて押すと、その前の印へ戻れるように)。印が無い動画は false を返し、普通の5秒移動にする
+        const jumpShot = (dir) => {
+            const ts = (screenshots || []).map(s => s.timestamp).filter(t => t >= 0).sort((a, b) => a - b);
+            if (!ts.length) return false;
+            const i = dir < 0 ? ts.findLastIndex(t => t < currentTime - 1.5) : ts.findIndex(t => t > currentTime + 0.5);
+            if (i < 0) showPlayerToast(dir < 0 ? '前のスクリーンショットはありません' : '次のスクリーンショットはありません', null, 'shot');
+            else { handleSeek(ts[i]); showPlayerToast('スクリーンショット ' + (i + 1) + '/' + ts.length, null, 'shot'); }
+            return true;
+        };
         const extKey = (e) => {
             const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
             if (k === 'f') handleFullScreen();
@@ -504,7 +518,7 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [duration, currentTime, volume, isMuted, playbackSpeed]);
+    }, [duration, currentTime, volume, isMuted, playbackSpeed, screenshots]);
 
     const updateVolume = useCallback((newVol) => {
         const v = parseFloat(newVol.toFixed(2));

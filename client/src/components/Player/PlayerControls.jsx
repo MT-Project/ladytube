@@ -321,14 +321,14 @@ const PlayerControls = ({
                     }}
                 />
 
-                {/* Screenshot Markers */}
+                {/* Screenshot Markers (LadyTube: マウスを乗せていないときも、線と同じ 2px で出す。v3.6.0 までは 0px で隠れていた) */}
                 {duration > 0 && screenshots.map((shot, idx) => (
                     <div
                         key={shot.id || idx}
                         className={styles.screenshotMarker}
                         style={{
                             left: `${(shot.timestamp / duration) * 100}%`,
-                            height: isDraggingRef.current || isSeekHovered ? '6px' : '0px',
+                            height: isDraggingRef.current || isSeekHovered ? '6px' : '2px',
                         }}
                     />
                 ))}
