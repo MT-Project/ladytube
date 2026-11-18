@@ -24,6 +24,7 @@ const maintenance = require('./routes/maintenance');
 const replace = require('./routes/replace');
 const makers = require('./routes/makers');
 const file = require('./routes/file');
+const saved = require('./routes/saved');
 const createInject = require('./inject');
 const libraryRoutes = require('./routes/library');
 const library = require('./library');
@@ -133,6 +134,9 @@ module.exports = function setupExt(app) {
 
     // -- 拡張検索
     app.get('/ext/api/search/facets', search.facets);
+    // -- 保存した検索 (v3.7.0)
+    app.get('/ext/api/saved-searches', saved.list);
+    app.put('/ext/api/saved-searches', saved.save);
     app.get('/ext/api/videos/brief', search.brief);
     app.get('/ext/api/video/:id/siblings', search.siblings);
     app.get('/ext/api/calendar/days', search.calendarDays);

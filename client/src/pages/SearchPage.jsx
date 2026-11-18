@@ -5,6 +5,7 @@ import { css } from '@linaria/core';
 import VideoList from '../components/VideoList';
 import ExtSelectionFabs from '../components/ExtSelection';
 import ExtFacets from '../components/ExtFacets';
+import { ExtSaveSearchButton } from '../components/ExtSavedSearch';
 import { Icon as ExtIcon } from '../components/ExtIcon';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
@@ -776,6 +777,8 @@ export default function SearchPage() {
             <div className={styles.countDisplay}>
               <span className={styles.countNumber}>{totalCount}</span>
               <span className={styles.videoCountBadge}>の動画</span>
+              {/* LadyTube: この条件を保存 (v3.7.0。ホームと右上のメニューに並ぶ) */}
+              <ExtSaveSearchButton q={q.trim()} sort={searchParams.get('sort') || ''} path={categoryPath} />
             </div>
 
             <div className={styles.controlsRow}>

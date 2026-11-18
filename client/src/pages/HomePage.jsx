@@ -12,6 +12,7 @@ import InitGuid from './InitGuid';
 import { Search, QrCode, X, Image, Calendar, Folder } from 'lucide-react';
 import { Icon } from '../components/ExtIcon';
 import ExtSlot from '../components/ExtSlot';
+import { savedSearchHref, useSavedSearches } from '../utils/savedSearches';
 
 // LadyTube: QR コードの部品は、ダイアログを開いたときに読む (最初に読む JS を軽くする)
 const QRCodeSVG = lazy(() => import('qrcode.react').then(m => ({ default: m.QRCodeSVG })));
@@ -219,6 +220,7 @@ export default function HomePage() {
     const [pickupVideos, setPickupVideos] = useState([]);
     const [pickupSeed, setPickupSeed] = useState('');
     const [continueVideos, setContinueVideos] = useState([]);
+    const savedSearches = useSavedSearches();   // LadyTube: メニューに並べる保存した検索
     const [recentVideos, setRecentVideos] = useState([]);
     const [loadingCarousel, setLoadingCarousel] = useState(true);
     const [loadingNew, setLoadingNew] = useState(true);
@@ -395,6 +397,13 @@ export default function HomePage() {
                         </a>
                     ))}
                     <ExtSlot from="homeLinks" args={{ className: styles.menuItem }} />
+                    {/* LadyTube: 保存した検索 (v3.7.0。検索画面の「この条件を保存」) */}
+                    {savedSearches.map((s, i) => (
+                        <Link key={'saved-' + i} to={savedSearchHref(s)} className={styles.menuItem + ' wlext-home-link'}>
+                            <Icon name="filter" size={16} />
+                            {s.name}
+                        </Link>
+                    ))}
                     <span
                         className={styles.menuItem}
                         onClick={() => setShowQR(true)}

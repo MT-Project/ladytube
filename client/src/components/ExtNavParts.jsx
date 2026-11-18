@@ -2,12 +2,14 @@
 //  ・ExtHelpButton: 検索ボタンの右の「？」。PC はホバー、タッチはタップで検索のヘルプを出す (押すと出したままにする)。
 //    content を渡すと別のヘルプ (タグ選択のダイアログのプリセット編集のヘルプ。ExtPresetTagDialog.jsx)
 //  ・ExtMenuButton: 右上のメニュー (ハンバーガー)。管理画面以外で、本体の歯車 (管理) の代わりに置く。
-//    差し込み口 WL.navMenuExtras に足した「項目を作る関数 (close) => 要素」は「QRコード」の上に並ぶ (押したら close() を呼ぶ)
+//    差し込み口 WL.navMenuExtras に足した「項目を作る関数 (close) => 要素」は「QRコード」の上に並ぶ (押したら close() を呼ぶ)。
+//    保存した検索 (utils/savedSearches.js) は「QRコード」と「管理」の間に並ぶ (v3.7.0)
 // 見た目は womanlive-ext.css の .wlext-help-* / .wlext-navmenu-*。
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
+import { savedSearchHref, useSavedSearches } from '../utils/savedSearches';
 
 const HelpRow = ({ code, desc }) => <div className="wlext-help-row"><code className="wlext-help-code">{code}</code><span className="wlext-help-desc">{desc}</span></div>;
 const HELP = <>
@@ -96,6 +98,7 @@ const NAV_ITEMS = [
 function NavMenu({ anchor, onClose }) {
     const navigate = useNavigate();
     const menu = useRef(null), qr = useRef(null);
+    const saved = useSavedSearches();
     useLayoutEffect(() => {
         const extras = Object.values(window.WLExt?.navMenuExtras || {}).map(make => make(onClose)).filter(Boolean);
         extras.forEach(x => qr.current.parentNode.insertBefore(x, qr.current));
@@ -105,11 +108,13 @@ function NavMenu({ anchor, onClose }) {
         el.style.position = 'fixed';
         el.style.top = (r.bottom + 6) + 'px';
         el.style.left = left + 'px';
+        el.style.maxHeight = (window.innerHeight - r.bottom - 14) + 'px';   // 保存した検索が多くても画面に収める
+        el.style.overflowY = 'auto';
         const onKey = (e) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', onKey);
         window.addEventListener('resize', onClose);
         return () => { extras.forEach(x => x.remove()); document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onClose); };
-    }, [anchor, onClose]);
+    }, [anchor, onClose, saved]);
     const go = (href) => () => { onClose(); navigate(href); };
     // QR コードは本体のホームのダイアログ (HomePage.jsx が受ける)。ほかのページからは /?qr=1 で開く
     const openQR = () => { onClose(); if (location.pathname === '/') window.dispatchEvent(new Event('wlext-open-qr')); else navigate('/?qr=1'); };
@@ -120,6 +125,8 @@ function NavMenu({ anchor, onClose }) {
             <div ref={menu} className="wlext-navmenu">
                 {NAV_ITEMS.map(([href, icon, label]) => item(icon, label, go(href)))}
                 {item('qr-code', 'QRコード', openQR, qr)}
+                {saved.length > 0 && <div className="wlext-navmenu-sep" />}
+                {saved.map((s, i) => <div key={'saved-' + i} className="wlext-navmenu-item" onClick={go(savedSearchHref(s))}><Icon name="filter" size={18} /><span>{s.name}</span></div>)}
                 <div className="wlext-navmenu-sep" />
                 {item('settings', '管理', go('/settings'))}
             </div>

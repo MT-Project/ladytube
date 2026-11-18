@@ -1102,6 +1102,15 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 }
 .wlext-frame-ind.on { opacity: 1; }
 
+/* ---- 検索画面の「この条件を保存」と、管理画面の「保存した検索」(ExtSavedSearch.jsx / ExtSettingsSections.jsx) ---- */
+.wlext-savesearch-btn { display: inline-flex; align-items: center; gap: 0.3rem; margin-left: 0.2rem; padding: 0.15rem 0.6rem; font-size: 0.75rem; border-radius: 999px;
+    border: 1px solid var(--border-color, #ddd); background: transparent; color: var(--text-secondary, #888); cursor: pointer; }
+.wlext-savesearch-btn:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }
+.wlext-saved-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.wlext-saved-row .wlext-input { width: 14rem; flex-shrink: 0; }
+.wlext-saved-sum { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; color: var(--text-secondary, #888); }
+@media (max-width: 640px) { .wlext-saved-row { flex-wrap: wrap; } .wlext-saved-row .wlext-input { width: 100%; } }
+
 /* ---- 動画情報の一括取得 (ExtMetaSearch.jsx の BulkMetaFetchDialog) ---- */
 .wlext-bulkfetch-bar { height: 6px; margin: 0.8rem 0 0.4rem; border-radius: 3px; background: var(--bg-hover, #ececec); overflow: hidden; }
 .wlext-bulkfetch-bar > div { height: 100%; background: var(--accent, #007acc); transition: width 0.2s; }

@@ -1,5 +1,5 @@
 // LadyTube: 管理画面の LadyTube の項目 (v3.2.1 までは拡張の server/ext/public/settings.js)。
-// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / 参照されていないデータの削除 / バックアップ。
+// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / 保存した検索 / 参照されていないデータの削除 / バックアップ。
 // 見出しは本体の項目と同じく名前だけ (v3.3.1 までは「拡張機能：」とパズルのアイコン)。
 // 置き場所と並びは SettingsPage.jsx が ExtSettingsSection name="..." で決める (ExtSettingsParts.jsx がここの部品を選ぶ)。
 // 見た目は womanlive-ext.css の .wlext-settings-section・.wlext-rule-*・.wlext-related-*。入力欄は押したときに欄の値を読む。
@@ -10,6 +10,7 @@ import FolderPicker from './FolderPicker';
 import { extGet, extSend } from '../services/extApi';
 import { openExtDialog } from '../utils/extDialog';
 import { currentLibrary, isLocalPC, PC_ONLY } from '../utils/library';
+import { loadSavedSearches, saveSavedSearches } from '../utils/savedSearches';
 import { toast } from '../utils/toast';
 
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
@@ -223,6 +224,39 @@ export function ExtBackupSettings() {
             <div style={{ fontSize: '0.82rem', margin: '0.5rem 0', color: 'var(--text-secondary,#777)' }}>{status}</div>
             <div className="wlext-inline"><button className="wlext-btn" onClick={doImport} disabled={!isLocalPC}>インポート（復元）</button></div>
             <div style={resultStyle}>{result}</div>
+        </Section>
+    );
+}
+
+// 保存した検索 (v3.7.0。保存は検索画面の「この条件を保存」)。名前の変更・並べ替え・削除をして「保存」で書く
+let savedKey = 0;
+export function ExtSavedSearchSettings() {
+    const [rows, setRows] = useState(null);   // [{ key, s }]。null は読み込み中
+    useEffect(() => {
+        loadSavedSearches().then(list => setRows(list.map(s => ({ key: ++savedKey, s }))), () => setRows([]));
+    }, []);
+    const move = (i, d) => setRows(rs => { const a = rs.slice(); [a[i], a[i + d]] = [a[i + d], a[i]]; return a; });
+    const rename = (i, name) => setRows(rs => rs.map((r, j) => (j === i ? { ...r, s: { ...r.s, name } } : r)));
+    const save = async () => {
+        if (rows.some(r => !r.s.name.trim())) { toast('名前が空の行があります', 'error'); return; }
+        try { await saveSavedSearches(rows.map(r => r.s)); toast('保存した検索を更新しました', 'success'); }
+        catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
+    };
+    const summary = (s) => [s.q || '（検索語なし）', s.path ? 'フォルダ: ' + (s.path === 'root' ? 'すべて' : s.path) : ''].filter(Boolean).join(' / ');
+    return (
+        <Section title="保存した検索" icon="filter">
+            <div style={desc('0.6rem')}>検索画面の「この条件を保存」で保存した検索です。ホームと右上のメニューに、この順で並びます。名前の変更・並べ替え・削除のあとは「保存」を押してください。</div>
+            {rows && !rows.length && <div style={desc('0.6rem')}>保存した検索はありません。</div>}
+            {rows && rows.map((r, i) => (
+                <div key={r.key} className="wlext-saved-row">
+                    <input className="wlext-input" value={r.s.name} onChange={(e) => rename(i, e.target.value)} />
+                    <span className="wlext-saved-sum" title={summary(r.s)}>{summary(r.s)}</span>
+                    <button className="wlext-btn" disabled={i === 0} onClick={() => move(i, -1)} title="上へ">↑</button>
+                    <button className="wlext-btn" disabled={i === rows.length - 1} onClick={() => move(i, 1)} title="下へ">↓</button>
+                    <button className="wlext-btn" onClick={() => setRows(rs => rs.filter((_, j) => j !== i))} title="削除"><Icon name="trash" size={14} /></button>
+                </div>
+            ))}
+            {rows && <div className="wlext-inline" style={{ marginTop: '0.6rem' }}><button className="wlext-btn wlext-btn-primary" onClick={save}>保存</button></div>}
         </Section>
     );
 }
