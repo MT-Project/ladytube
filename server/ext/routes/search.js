@@ -89,9 +89,20 @@ const NONE_COLUMN = {
 const noneSql = (col) => `TRIM(IFNULL(${col},''), char(10,13,32)) = ''`;
 
 // 視聴途中 = 60秒以上見て、終わりの1割より前で止めた動画 (@play:partial)。未再生は再生回数0 (@play:unwatched)
+const partialOf = (a) => `(${a}.last_pos >= 60 AND ${a}.duration > 0 AND ${a}.last_pos < ${a}.duration * 0.9)`;
+// 次のパート (@play:next。v3.8.0) = 未再生で、同じ品番のファイル名の自然順で1つ前のパートを見終えた (再生済みで視聴途中でない) 動画。
+// 品番ごとの並びは1回だけ数える (相関のない副問い合わせ)。並びの区切りは「品番でまとめる」の GROUP_KEY と同じく大文字小文字を区別しない
+const NEXT_PART_SQL = `f.id IN (
+    SELECT id FROM (
+        SELECT f2.id AS id, IFNULL(m2.play_count,0) AS pc,
+               LAG(IFNULL(m2.play_count,0) > 0 AND NOT IFNULL(${partialOf('m2')}, 0)) OVER (PARTITION BY UPPER(e2.model_no) ORDER BY ext_namekey(f2.filename), f2.id) AS prev_done
+        FROM files f2 JOIN metadata m2 ON f2.hash = m2.hash JOIN ext_video_meta e2 ON e2.hash = f2.hash
+        WHERE IFNULL(e2.model_no,'') <> ''
+    ) WHERE pc = 0 AND prev_done = 1)`;
 const PLAY_SQL = {
     unwatched: 'IFNULL(m.play_count,0) = 0',
-    partial: '(m.last_pos >= 60 AND m.duration > 0 AND m.last_pos < m.duration * 0.9)',
+    partial: partialOf('m'),
+    next: NEXT_PART_SQL,
 };
 
 function buildConditions(tokens) {
@@ -307,7 +318,7 @@ exports.facets = (req, res) => {
 
         const rows = db.prepare(`
             SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers,
-                   ${GROUP_KEY} AS gk, ${PLAY_SQL.unwatched} AS unwatched, ${PLAY_SQL.partial} AS partial
+                   ${GROUP_KEY} AS gk, ${PLAY_SQL.unwatched} AS unwatched, ${PLAY_SQL.partial} AS partial, ${PLAY_SQL.next} AS next
             ${BASE}${whereSql}
         `).all(...params);
 
@@ -330,6 +341,7 @@ exports.facets = (req, res) => {
             bump('series', r.series, r.gk);
             if (r.unwatched) bump('play', 'unwatched', r.gk);
             if (r.partial) bump('play', 'partial', r.gk);
+            if (r.next) bump('play', 'next', r.gk);
         });
 
         // 出演者は id で数えているので氏名を引く
@@ -345,11 +357,11 @@ exports.facets = (req, res) => {
             .map(([value, count]) => ({ value, count, label: value === 'none' ? '未設定' : kind === 'performer' ? (names.get(value) || '') : value }))
             .filter(x => x.label)      // 出演者マスタから消えた id は出さない
             .sort((a, b) => ((b.value === 'none') - (a.value === 'none')) || (b.count - a.count) || String(a.label).localeCompare(String(b.label), 'ja'));
-        const PLAY_LABEL = { unwatched: '未再生', partial: '視聴途中' };
+        const PLAY_LABEL = { unwatched: '未再生', partial: '視聴途中', next: '次のパート' };
 
         res.json({
             total: grouped ? new Set(rows.map(r => r.gk)).size : rows.length,
-            play: ['unwatched', 'partial'].filter(v => counts.play.has(v)).map(v => ({ value: v, label: PLAY_LABEL[v], count: counts.play.get(v) })),
+            play: ['unwatched', 'partial', 'next'].filter(v => counts.play.has(v)).map(v => ({ value: v, label: PLAY_LABEL[v], count: counts.play.get(v) })),
             genre: list('genre'),
             tag: list('tag'),
             maker: list('maker'),

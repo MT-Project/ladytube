@@ -173,6 +173,8 @@ const SORT_MAP = {
     'ext_screenshots_asc': '(SELECT COUNT(*) FROM screenshots s WHERE s.hash = f.hash) ASC, f.updated_at DESC',
     'ext_displayname_asc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) ASC",
     'ext_displayname_desc': "ext_namekey(COALESCE(NULLIF(e.display_name,''), f.filename)) DESC",
+    // 同じ品番のパートを最後に再生した順 (ホームの「次のパート」の行。v3.8.0)。並び替えの行には出さない
+    'ext_partplayed_desc': "(SELECT MAX(m2.last_played_at) FROM ext_video_meta e2 JOIN files f2 ON f2.hash = e2.hash JOIN metadata m2 ON m2.hash = f2.hash WHERE e2.model_no = NULLIF(e.model_no,'') COLLATE NOCASE) DESC, f.updated_at DESC",
 };
 
 // 画像変換用 sharp (未インストールでも動作: null のときは変換をスキップ)
