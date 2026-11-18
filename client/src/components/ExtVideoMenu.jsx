@@ -1,14 +1,15 @@
 // LadyTube: 検索画面の動画の操作メニュー (v3.2.1 までは拡張の server/ext/public/bulkselect.js)。openExtDialog で開く:
 //  ・選択モードの一括操作の丸ボタン (ExtSelection.jsx): anchor なし。右下に出て、見出しは「N件を一括操作」
 //  ・リスト表示の「⋮」(VideoList.jsx): anchor にボタンの要素を渡すと、その下に出る。まとめたカードなら見出し「まとめた N本を操作」
-// 操作: タグ追加 / 詳細情報編集 / ブックマーク追加 / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
+// 操作: タグ追加 / 詳細情報編集 / 動画情報を取得 / ブックマーク追加 / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
-// タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog。
+// タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog、動画情報を取得は ExtMetaSearch.jsx の BulkMetaFetchDialog。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
 import { ExtBulkMetaDialog } from './ExtMetaEdit';
+import { BulkMetaFetchDialog } from './ExtMetaSearch';
 import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
 import { setBookmarked } from '../utils/bookmarks';
@@ -52,6 +53,7 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
                 {head && <div className="wlext-sel-menu-head">{head}</div>}
                 <div className="wlext-sel-menu-item" onClick={run(doTags)}><Icon name="tag" size={15} /><span>タグ追加</span></div>
                 <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="pencil" size={15} /><span>詳細情報編集</span></div>
+                <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(BulkMetaFetchDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="search" size={15} /><span>動画情報を取得</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
                 <div ref={del} className={'wlext-sel-menu-item danger' + (isLocalPC ? '' : ' disabled')} title={isLocalPC ? '' : '動画の削除は、' + PC_ONLY}
                     onClick={run((ids, done) => (isLocalPC ? openExtDialog(DeleteDialog, { ids, done }) : toast('動画の削除は、' + PC_ONLY, 'error')))}><Icon name="trash" size={15} /><span>動画の削除</span></div>

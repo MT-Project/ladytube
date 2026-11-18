@@ -139,12 +139,25 @@ async function findItems(apiId, affId, pn) {
     return { result: {}, method: '' };
 }
 
+// 同じ品番の結果を10分だけ控える (一括取得で、同じ品番のパートを1回の問い合わせで済ませるため)。
+// 返すたびに JSON を作り直すので、呼んだ側が items を書き換えても控えには響かない
+const FIND_CACHE_MS = 10 * 60 * 1000;
+const findCache = new Map();   // pn -> { at, value }
+async function findItemsCached(apiId, affId, pn) {
+    const hit = findCache.get(pn);
+    if (hit && Date.now() - hit.at < FIND_CACHE_MS) return JSON.parse(hit.value);
+    const r = await findItems(apiId, affId, pn);
+    if (findCache.size >= 1000) findCache.clear();   // ponytail: 溢れたら全部捨てる。一括取得は数百本なので足りる
+    findCache.set(pn, { at: Date.now(), value: JSON.stringify(r) });
+    return r;
+}
+
 // 品番で FANZA を検索し、mapItem() の形で返す (ほかの情報ソースと並べて検索する個人用モジュールから使う)
 exports.searchItems = async (pn) => {
     const apiId = getSetting('ext_dmm_api_id', '');
     const affId = getSetting('ext_dmm_affiliate_id', '');
     if (!apiId || !affId) { const e = new Error('DMM API ID / アフィリエイトID が未設定です'); e.notConfigured = true; throw e; }
-    const { result } = await findItems(apiId, affId, String(pn || '').trim());
+    const { result } = await findItemsCached(apiId, affId, String(pn || '').trim());
     return (result.items || []).map(mapItem);
 };
 
@@ -165,7 +178,7 @@ exports.search = async (req, res) => {
         const pn = meta && meta.model_no ? meta.model_no.trim() : '';
         if (!pn) return res.status(400).json({ error: '品番が設定されていません。先に品番を登録してください。' });
 
-        const { result, method } = await findItems(apiId, affId, pn);
+        const { result, method } = await findItemsCached(apiId, affId, pn);
         const items = (result.items || []).map(mapItem);
         res.json({
             status: result.status,

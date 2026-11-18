@@ -2,8 +2,9 @@
 //  ・MetaSelectDialog: 検索結果が複数のとき、選ばせる
 //  ・MetaPreviewDialog: 取り込む項目の確認。チェックを付けた項目だけを /ext/api/dmm/apply で反映する
 //    (サーバーは空の項目を今の値のまま残すので、チェックを外した項目は空にして送る)
-// 見た目は womanlive-ext.css の .wlext-dmm-* / .wlext-prev-*。
-import { useRef } from 'react';
+//  ・BulkMetaFetchDialog: 一括操作と「⋮」の「動画情報を取得」(ExtVideoMenu.jsx が開く)。今の値がある項目を空にして送り、空の項目だけを埋める
+// 見た目は womanlive-ext.css の .wlext-dmm-* / .wlext-prev-* / .wlext-bulkfetch-*。
+import { useEffect, useRef, useState } from 'react';
 import { ExtDialog } from './ExtDialog';
 import { extSend } from '../services/extApi';
 import { formatYmd } from '../utils/formatters';
@@ -106,6 +107,100 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
                         </label>}
                     </div>
                     : <div style={{ color: 'var(--text-secondary,#888)' }}>設定できる情報が取得できませんでした。</div>}
+            </div>
+        </ExtDialog>
+    );
+}
+
+// 一括取得。選んだ動画を1本ずつ品番で FANZA から検索し (window.WLExt.dmmSearch。1本ずつの検索と同じ関数なので、包んで足した処理もそのまま効く)、
+// 品番の一致する商品が1つだけなら、空の項目だけを埋める。見つからない・候補が複数・品番なし・失敗は飛ばし、最後に一覧で出す。
+// 同じ品番のパートは、サーバー (dmm.js の findItemsCached) が控えた結果を返すので、問い合わせは1回で済む。
+// 動いている間の「中止」(✕・Esc も) は今の1本を終えてから止まる。ほかのダイアログに替わったときも止まる
+const WHY = { none: '品番なし', notfound: '見つからない', multi: '候補が複数', error: '失敗' };
+const isSet = (f, v) => (f.list ? (v || []).length > 0 : !!v);
+// 1本分。戻りは 'filled' (埋めた) / 'same' (埋める項目なし) / 'none' / 'notfound' / 'multi'。検索や反映の失敗は投げる
+async function fetchOne(vid, meta) {
+    if (!meta.model_no) return 'none';
+    const items = (await window.WLExt.dmmSearch(vid)).items || [];
+    if (items.length !== 1) return items.length ? 'multi' : 'notfound';
+    const picked = { ...items[0] };
+    FIELDS.forEach(f => { if (isSet(f, f.cur(meta))) picked[f.key] = f.list ? [] : ''; });
+    const fills = FIELDS.some(f => isSet(f, picked[f.key]));
+    // 埋める項目が無く、カバー画像も無ければ送らない (サーバーは更新日時だけを変えてしまう)
+    const r = fills || picked.imageLarge ? await extSend('POST', '/ext/api/dmm/apply', { id: vid, item: picked }) : {};
+    return fills || r.coverSet ? 'filled' : 'same';
+}
+export function BulkMetaFetchDialog({ ids, onDone, onClose }) {
+    const [st, setSt] = useState(null);   // null = 始める前。{ n, filled, same, skipped: [{ vid, name, why, msg }], running, retry }
+    const stop = useRef(false);
+    useEffect(() => () => { stop.current = true; }, []);
+    const start = async () => {
+        stop.current = false;
+        const s = { n: 0, filled: 0, same: 0, skipped: [], running: true, retry: 0 };
+        const show = () => setSt({ ...s, skipped: s.skipped.slice(), stopping: stop.current });
+        let fatal = false;
+        const run = async (vid) => {
+            let name = String(vid);
+            try {
+                const meta = await loadMeta(vid);
+                name = (meta.model_no ? meta.model_no + '  ' : '') + (meta.file_name || '');
+                const res = await fetchOne(vid, meta);
+                if (res === 'filled') s.filled++; else if (res === 'same') s.same++; else s.skipped.push({ vid, name, why: res });
+            } catch (e) {
+                const msg = e.message || String(e);
+                s.skipped.push({ vid, name, why: 'error', msg });
+                // API ID が無いときは、残りも同じなので止める
+                if (/未設定/.test(msg)) { toast(msg, 'error'); fatal = true; }
+            }
+        };
+        show();
+        for (const vid of ids) {
+            if (stop.current || fatal) break;
+            await run(vid);
+            s.n++;
+            show();
+        }
+        // 失敗した動画は、最後に3秒おいてもう1回だけやり直す (DMM への接続が少しの間つながらないことがあるため)
+        const failed = s.skipped.filter(x => x.why === 'error');
+        if (!stop.current && !fatal && failed.length) {
+            s.retry = failed.length;
+            show();
+            await new Promise(r => setTimeout(r, 3000));
+            for (const x of failed) {
+                if (stop.current) break;
+                s.skipped = s.skipped.filter(y => y !== x);
+                await run(x.vid);
+                show();
+            }
+            s.retry = 0;
+        }
+        s.running = false;
+        show();
+        if (s.filled) onDone?.();   // 一覧を取り直させる
+    };
+    const pct = st ? Math.round(st.n / ids.length * 100) : 0;
+    const halt = () => { stop.current = true; setSt(p => ({ ...p, stopping: true })); };
+    return (
+        <ExtDialog title={'動画情報を取得（' + ids.length + '本）'}
+            onClose={st?.running ? halt : onClose}
+            cancelLabel={!st ? null : st.running ? '中止' : '閉じる'}
+            onSave={st ? null : start} saveLabel="取得する">
+            <div style={{ fontSize: '0.85rem', lineHeight: 1.7 }}>
+                <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つだけなら、<b>空の項目だけ</b>を埋めます。今の値がある項目は変えません。カバー画像は未設定のときだけ取得します。</div>
+                {st && <>
+                    <div className="wlext-bulkfetch-bar"><div style={{ width: pct + '%' }} /></div>
+                    <div>{st.n + ' / ' + ids.length + ' 本' + (st.running ? (st.stopping ? '（中止しています…）' : st.retry ? '（失敗した ' + st.retry + '本をやり直しています…）' : '') : (st.n < ids.length ? '（中止しました）' : '（終わりました）'))}</div>
+                    <div>{'埋めた ' + st.filled + '本・埋める項目なし ' + st.same + '本・飛ばした ' + st.skipped.length + '本'}</div>
+                    {st.skipped.length > 0 && <div className="wlext-bulkfetch-list">
+                        {st.skipped.map(x => (
+                            <div key={x.vid}>
+                                <span className="why">{WHY[x.why]}</span>
+                                {/* 一覧を残したまま1本ずつ直せるよう、別のタブで開く */}
+                                <a href={'/watch/' + x.vid} target="_blank" rel="noreferrer" title={x.msg || ''}>{x.name}</a>
+                            </div>
+                        ))}
+                    </div>}
+                </>}
             </div>
         </ExtDialog>
     );

@@ -1102,6 +1102,14 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 }
 .wlext-frame-ind.on { opacity: 1; }
 
+/* ---- 動画情報の一括取得 (ExtMetaSearch.jsx の BulkMetaFetchDialog) ---- */
+.wlext-bulkfetch-bar { height: 6px; margin: 0.8rem 0 0.4rem; border-radius: 3px; background: var(--bg-hover, #ececec); overflow: hidden; }
+.wlext-bulkfetch-bar > div { height: 100%; background: var(--accent, #007acc); transition: width 0.2s; }
+.wlext-bulkfetch-list { margin-top: 0.6rem; max-height: 14rem; overflow-y: auto; border-top: 1px solid var(--border-color, #ddd); padding-top: 0.4rem; }
+.wlext-bulkfetch-list > div { display: flex; gap: 0.6rem; white-space: nowrap; }
+.wlext-bulkfetch-list .why { flex-shrink: 0; width: 6.5em; color: var(--text-secondary, #888); }
+.wlext-bulkfetch-list a { overflow: hidden; text-overflow: ellipsis; color: inherit; }
+
 /* ---- 次のパートの自動再生 (ExtWatchParts.jsx の ExtAutoNext。プレイヤーの枠の右下、下のコントロール行の上) ---- */
 .wlext-autonext {
     position: absolute; right: 1.5rem; bottom: 5.5rem; z-index: 21;
