@@ -246,8 +246,10 @@
 /* ---- 動画情報検索 FAB (品番でFANZA検索) ---- */
 .wlext-search-fab {
     position: fixed;
-    bottom: 9rem;   /* 上から ブックマーク(12.5rem)・動画情報検索(9rem)・タグ編集(5.5rem)・詳細情報を編集(2rem) */
-    right: 2rem;
+    /* 右下に横一列 (v3.9.0。v3.8.0 までは縦に積んでいた)。右から 詳細情報を編集(2rem)・タグ編集(5.5rem)・動画情報検索(9rem)・
+       ブックマーク(12.5rem)・本体のイメージリスト(16rem)。標準モードは下の body.wlext-std の規則で少し右下へ寄せる */
+    bottom: 2rem;
+    right: 9rem;
     width: 3rem; height: 3rem; border-radius: 50%;
     background-color: var(--accent, #007acc);
     opacity: 0.7; color: #fff; border: none; cursor: pointer;
@@ -260,8 +262,8 @@
 /* ---- タグ編集 FAB (本家タグ編集を ext のグループ対応ダイアログへ統一) ---- */
 .wlext-tag-fab {
     position: fixed;
-    bottom: 5.5rem;   /* 詳細情報を編集(.wlext-edit-fab, 2rem=本家タグ編集ボタンの位置)の上 */
-    right: 2rem;
+    bottom: 2rem;
+    right: 5.5rem;   /* 詳細情報を編集 (.wlext-edit-fab。本家のタグ編集ボタンの位置 2rem) の左 */
     width: 3rem; height: 3rem; border-radius: 50%;
     background-color: var(--accent, #007acc);
     opacity: 0.7; color: #fff; border: none; cursor: pointer;
@@ -270,7 +272,10 @@
     z-index: 100;
 }
 .wlext-tag-fab:hover { opacity: 1; }
-.wlext-tag-fab.wlext-edit-fab { bottom: 2rem; }
+.wlext-tag-fab.wlext-edit-fab { right: 2rem; }
+/* 本体のイメージリストの丸ボタン (WatchPage.jsx。本体は詳細情報を編集の左 right: 5.5rem に置く) を列の左端へ。
+   本体のボタンは小さい (2.2rem) ので、6px 上げて列の中央にそろえる */
+body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); }
 
 /* ---- DMM 検索結果 ---- */
 .wlext-dmm-thumb {
@@ -984,11 +989,11 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-bm-watch {
     width: 24px; height: 24px; margin-left: 0.5rem; vertical-align: middle;
 }
-/* 動画ページ: ブックマークを FAB 化 (動画情報検索=9rem・タグ編集=5.5rem・詳細情報を編集=2rem の上) */
+/* 動画ページ: ブックマークを FAB 化 (右下の横一列で、動画情報検索=9rem の左) */
 .wlext-bm-btn.wlext-bm-fab {
     position: fixed;
-    bottom: 12.5rem;
-    right: 2rem;
+    bottom: 2rem;
+    right: 12.5rem;
     width: 3rem; height: 3rem;
     border-radius: 50%;
     background-color: var(--accent, #007acc);
@@ -1406,7 +1411,7 @@ body.wlext-std .wlext-std-head {
 .wlext-std-msg { padding: 12px 4px; font-size: 0.85rem; color: var(--text-secondary, #999); }
 
 /* 右下のボタン (詳細情報を編集・タグ編集・動画情報検索・ブックマーク・本家のイメージリスト) は、
-   縦に積むと右欄の一覧に重なるので、右欄の下端に横一列で並べる */
+   右欄の一覧に重なる幅を減らすため、シアターモードより右下へ寄せる (並びは同じ横一列) */
 body.wlext-std .wlext-edit-fab,
 body.wlext-std .wlext-tag-fab,
 body.wlext-std .wlext-search-fab,

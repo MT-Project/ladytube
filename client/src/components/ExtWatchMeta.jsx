@@ -143,7 +143,7 @@ export function ExtWatchFabs({ videoId }) {
     };
     return createPortal(
         <>
-            {/* 位置は CSS で決まる (上から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集) */}
+            {/* 位置は CSS で決まる (右下に横一列。左から ブックマーク → 動画情報検索 → タグ編集 → 詳細情報を編集) */}
             <ExtBookmarkButton id={videoId} fab />
             {/* 説明は検索を差し替えたもの (WL.metaSearchTitle) があればそれ。拡張は defer で読むが、ここは動画を読み込んでから描くので間に合う */}
             <button className="wlext-search-fab" title={WL()?.metaSearchTitle || '動画情報を検索（品番でFANZA商品検索し、メタデータを自動設定）'} onClick={() => openMetaSearch(vid)}>
