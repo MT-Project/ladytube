@@ -1,5 +1,12 @@
 # LadyTube
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/Logo-brand-dark.png">
+    <img src="docs/Logo-brand.png" alt="LadyTube" width="240">
+  </picture>
+</p>
+
 動画管理ソフト **LadyTube** です。**WomanLive（woman projects）の派生版**で、WomanLive 本体に、
 v2.1.1 まで非公式アドオン「WomanLive 拡張機能」として配っていた機能をまとめて入れています。
 WomanLive を別に入れる必要はありません。

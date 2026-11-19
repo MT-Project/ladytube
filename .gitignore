@@ -21,6 +21,9 @@
 !/setup.bat
 !/ladytube.bat
 
+# docs: README に出す画像 (ロゴの縮小版。元の画像は logo/ で追跡しない)
+!/docs/
+
 # server: 本体のソースと拡張。個人用モジュールと node_modules は除く
 !/server/
 /server/private/
