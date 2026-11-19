@@ -1373,6 +1373,9 @@ body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist-control
 body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist-loading"] { display: none !important; }
 .wlext-std-pane { display: none; }
 .fullscreen .wlext-layout-btn { display: none !important; }   /* フルスクリーン中は切り替えない */
+/* ピクチャーインピクチャーのボタン (PlayerControls.jsx。v3.9.0): 幅 640px 以下では出さない。
+   コントロールの行に収まらず、全画面のボタンを画面の外へ押し出すため (行は幅 440px ほどで本体の並びのまま、はみ出しはじめる) */
+@media (max-width: 640px) { .wlext-pip-btn { display: none !important; } }
 body.wlext-std[data-wlext-tab="series"] .wlext-std-pane[data-pane="series"],
 body.wlext-std[data-wlext-tab="related"] .wlext-std-pane[data-pane="related"] { display: block; }
 

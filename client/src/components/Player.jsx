@@ -8,7 +8,7 @@ import PlayerOverlay from './Player/PlayerOverlay';
 import VideoRecommendation from './Player/VideoRecommendation';
 import { useDraggable } from './Player/useDraggable';
 import { useMsePlayback } from './Player/useMsePlayback';
-import { FrameStep, ExtAutoNext } from './ExtWatchParts';
+import { FrameStep, ExtAutoNext, ExtMediaSession } from './ExtWatchParts';
 import { css } from '@linaria/core';
 import { theme } from '../theme';
 import ASS from 'assjs';
@@ -774,6 +774,13 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
         else document.exitFullscreen();
     };
 
+    // LadyTube: ピクチャーインピクチャー (v3.9.0)。別の動画へ移ったときの引き継ぎと、ページを離れたときに閉じるのは ExtMediaSession (ExtWatchParts.jsx)
+    const handlePip = (e) => {
+        e?.stopPropagation();
+        if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => { });
+        else videoElementRef.current?.requestPictureInPicture().catch(() => showToast('ピクチャーインピクチャーにできませんでした', 'error'));
+    };
+
     const handleMouseMove = () => {
         setShowControls(true);
         if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
@@ -1205,6 +1212,7 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                     hasVideo={hasVideo}
                     screenshots={screenshots}
                     renderExtraControls={renderExtraControls}
+                    onPip={document.pictureInPictureEnabled ? handlePip : null}
                 />
 
                 {/* LadyTube: 次のパートの自動再生 (秒読み。ExtWatchParts.jsx) */}
@@ -1254,6 +1262,8 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
                 {/* LadyTube: コマ送り (キー・Shift+ホイール・タッチ端末のボタン。ExtWatchParts.jsx)。
                     key は兄弟の <video key={video.id}> と重ねない (重なると再描画のたびに video が増えて落ちる) */}
                 <FrameStep key={'framestep-' + video.id} videoId={video.id} videoRef={videoElementRef} containerRef={containerRef} />
+                {/* LadyTube: OS のメディアの表示とメディアキー (v3.9.0。ExtWatchParts.jsx)。key は上と同じく video と重ねない */}
+                <ExtMediaSession key={'mediasession-' + video.id} video={video} videoRef={videoElementRef} seek={handleSeek} timeRef={currentTimeRef} durationRef={durationRef} onGo={onVideoSelect} />
             </div>
         </Fragment>
     );

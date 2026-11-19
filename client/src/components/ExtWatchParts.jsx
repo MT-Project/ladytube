@@ -24,6 +24,8 @@ import { Icon } from './ExtIcon';
 import ExtSlot from './ExtSlot';
 import { toast } from '../utils/toast';
 import { lightbox } from '../utils/imageDialogs';
+import { videoName } from '../utils/formatters';
+import { useUI } from '../contexts/UIContext';
 
 const SS_KEY = 'wlext_ss_size';
 const SS_MIN = 80, SS_MAX = 640, SS_DEFAULT = 160;   // 160px(本体の既定) の半分から横 640px まで
@@ -234,6 +236,14 @@ export function FrameStep({ videoId, videoRef, containerRef }) {
 //  同じ品番の動画 (/ext/api/video/:id/siblings の parts。ファイル名の自然順) に次があれば、秒読みのあと onGo で移る。
 //  プレイヤーの設定「次のパートを自動再生」(localStorage の wlext_autonext。SettingsDialog.jsx) がオフなら出さない
 const AUTONEXT_SEC = 5;
+// 同じ品番の前と次のパート ({ prev, next }。無ければ null)。ExtAutoNext と ExtMediaSession が使う
+function partsAround(videoId) {
+    return fetch('/ext/api/video/' + videoId + '/siblings').then(r => (r.ok ? r.json() : null)).then(j => {
+        const parts = (j && j.parts) || [];
+        const i = parts.findIndex(p => String(p.id) === String(videoId));
+        return { prev: (i > 0 && parts[i - 1]) || null, next: (i >= 0 && parts[i + 1]) || null };
+    }, () => ({ prev: null, next: null }));
+}
 export function ExtAutoNext({ videoId, onGo }) {
     const [next, setNext] = useState(null);
     const [left, setLeft] = useState(AUTONEXT_SEC);
@@ -242,11 +252,7 @@ export function ExtAutoNext({ videoId, onGo }) {
     useEffect(() => {
         if (localStorage.getItem('wlext_autonext') === '0') return;
         let stale = false;
-        fetch('/ext/api/video/' + videoId + '/siblings').then(r => (r.ok ? r.json() : null)).then(j => {
-            const parts = (j && j.parts) || [];
-            const i = parts.findIndex(p => String(p.id) === String(videoId));
-            if (!stale && i >= 0 && parts[i + 1]) setNext(parts[i + 1]);
-        }).catch(() => { });
+        partsAround(videoId).then(p => { if (!stale && p.next) setNext(p.next); });
         return () => { stale = true; };
     }, [videoId]);
     useEffect(() => {
@@ -266,4 +272,75 @@ export function ExtAutoNext({ videoId, onGo }) {
             </div>
         </div>
     );
+}
+
+// OS のメディアの表示とメディアキー (v3.9.0。Media Session): Player が枠の最後に置く。動画が変わると key で作り直す。
+//  ・名前は題 (document.title) と同じ videoName、画像はカバー (/ext/api/video/:id/cover)。カバーが無ければサムネイル
+//  ・「次へ」「前へ」(キーボードのメディアキー・小窓のボタン・スマホの通知) で同じ品番の次・前のパートへ。無ければその操作を出さない
+//  ・シーク (±10秒・位置の指定) は本体の handleSeek に渡す (変換再生では video の currentTime を直に変えても移れないため)
+//  ・再生と一時停止はブラウザの既定 (video をそのまま操作する) に任せる
+//  ・小窓 (ピクチャーインピクチャー) のまま別の動画へ移ると、本体がプレイヤーを作り直し、前の video が黒いまま小窓に残る。
+//    新しい video が読み込めたら小窓をこちらへ移す (小窓が開いている間は、押す操作が無くても移せる)。移せなければ閉じる。
+//    動画ページ (/watch/) を離れたときは閉じる
+const MS_ACTIONS = ['seekbackward', 'seekforward', 'seekto', 'previoustrack', 'nexttrack'];
+export function ExtMediaSession({ video, videoRef, seek, timeRef, durationRef, onGo }) {
+    const { showExtension, showDisplayName } = useUI();
+    const title = videoName(video, showExtension, showDisplayName);
+    const [art, setArt] = useState(null);
+    const [parts, setParts] = useState({ prev: null, next: null });
+    const seekRef = useRef(seek), goRef = useRef(onGo);   // 描くたびに作り直されるので deps に入れない
+    useEffect(() => { seekRef.current = seek; goRef.current = onGo; });
+    const id = video.id, thumb = video.has_thumbnail ? '/api/video/' + id + '/thumbnail?s=' + (video.thumbnail_size || 0) : null;
+
+    useEffect(() => {
+        let stale = false;
+        const img = new Image();
+        img.onload = () => { if (!stale) setArt(img.src); };
+        img.onerror = () => { if (!stale) setArt(thumb); };
+        img.src = '/ext/api/video/' + id + '/cover';
+        partsAround(id).then(p => { if (!stale) setParts(p); });
+        return () => { stale = true; };
+    }, [id, thumb]);
+
+    useEffect(() => {
+        const ms = navigator.mediaSession;
+        if (!ms || typeof MediaMetadata === 'undefined') return;
+        ms.metadata = new MediaMetadata({ title, artwork: art ? [{ src: new URL(art, location.href).href }] : [] });
+        return () => { ms.metadata = null; };
+    }, [title, art]);
+
+    useEffect(() => {
+        const ms = navigator.mediaSession;
+        if (!ms) return;
+        const set = (a, f) => { try { ms.setActionHandler(a, f); } catch { /* その操作に対応しないブラウザ */ } };
+        const by = (d, dir) => {
+            const t = timeRef.current + dir * ((d && d.seekOffset) || 10), dur = durationRef.current;
+            seekRef.current(Math.max(0, dur > 0 ? Math.min(dur, t) : t));
+        };
+        set('seekbackward', (d) => by(d, -1));
+        set('seekforward', (d) => by(d, 1));
+        set('seekto', (d) => seekRef.current(d.seekTime));
+        set('previoustrack', parts.prev && goRef.current ? () => goRef.current(parts.prev) : null);
+        set('nexttrack', parts.next && goRef.current ? () => goRef.current(parts.next) : null);
+        return () => MS_ACTIONS.forEach(a => set(a, null));
+    }, [parts, timeRef, durationRef]);
+
+    useEffect(() => {
+        const v = videoRef.current;
+        const p = document.pictureInPictureElement;
+        const exit = () => document.exitPictureInPicture().catch(() => { });
+        const carry = () => v.requestPictureInPicture().catch(exit);
+        const stale = v && p && p !== v && !p.isConnected;
+        if (stale && v.readyState >= 1) carry();
+        else if (stale) v.addEventListener('loadedmetadata', carry, { once: true });
+        return () => {
+            if (v) v.removeEventListener('loadedmetadata', carry);
+            // 外すときは location がもう移り先になっている。動画ページへ移るなら次の動画が引き継ぐ
+            setTimeout(() => {
+                const q = document.pictureInPictureElement;
+                if (q && !q.isConnected && !location.pathname.startsWith('/watch/')) exit();
+            });
+        };
+    }, [videoRef]);
+    return null;
 }

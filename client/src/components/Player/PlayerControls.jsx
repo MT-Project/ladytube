@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Camera, Settings, Maximize } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Camera, Settings, Maximize, PictureInPicture2 } from 'lucide-react';
 import { css } from '@linaria/core';
 import { theme } from '../../theme';
 
@@ -233,7 +233,8 @@ const PlayerControls = ({
     bufferedRanges = [],
     hasVideo = true,
     screenshots = [],
-    renderExtraControls   // LadyTube: 「プレイヤー設定」の右に足すボタン (標準モードの切替。ExtStandard.jsx)
+    renderExtraControls,  // LadyTube: 「プレイヤー設定」の右に足すボタン (標準モードの切替。ExtStandard.jsx)
+    onPip                 // LadyTube: ピクチャーインピクチャー (v3.9.0。対応しないブラウザでは Player が渡さない)
 }) => {
     const [isImageLoaded, setIsImageLoaded] = useState(false);
     const [hasImageError, setHasImageError] = useState(false);
@@ -415,6 +416,11 @@ const PlayerControls = ({
                         <Settings size={20} />
                     </button>
                     {renderExtraControls && renderExtraControls(styles.controlButton)}
+                    {hasVideo && onPip && (
+                        <button onClick={onPip} className={styles.controlButton + ' wlext-pip-btn'} title="ピクチャーインピクチャー">
+                            <PictureInPicture2 size={20} />
+                        </button>
+                    )}
                     <button onClick={handleFullScreen} className={styles.controlButton} title="フルスクリーン">
                         <Maximize size={20} />
                     </button>
