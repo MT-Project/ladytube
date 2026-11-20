@@ -81,7 +81,8 @@ function conditionsFor(query) {
     return { where, params };
 }
 
-// 値が none のとき「未設定」で引く列 (@maker:none など)。改行区切りの複数値は改行と空白だけなら未設定
+// 値が none のとき「未設定」で引く列 (@maker:none など)。改行区切りの複数値は改行と空白だけなら未設定。
+// 値が any なら逆に「設定あり」(v3.11.0。@model:any maker:none = 動画情報が未取得)
 const NONE_COLUMN = {
     maker: 'e.maker', series: 'e.series', label: 'e.label', model: 'e.model_no', release: 'e.release_date',
     director: 'e.directors', genre: 'e.genres', performer: 'e.performers', tag: 'm.tags',
@@ -110,6 +111,7 @@ function buildConditions(tokens) {
     const params = [];
     for (const { field, value } of tokens) {
         if (value === 'none' && NONE_COLUMN[field]) { where.push(noneSql(NONE_COLUMN[field])); continue; }
+        if (value === 'any' && NONE_COLUMN[field]) { where.push('NOT (' + noneSql(NONE_COLUMN[field]) + ')'); continue; }
         switch (field) {
             case 'play': where.push(PLAY_SQL[value] || '1 = 0'); break;
             case 'maker': where.push('e.maker = ? COLLATE NOCASE'); params.push(value); break;

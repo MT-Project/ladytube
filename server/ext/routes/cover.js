@@ -18,7 +18,8 @@ function settingsFor(req) {
     return {
         cover_folder: getSetting('ext_cover_folder', ''),
         dmm_api_id: local ? getSetting('ext_dmm_api_id', '') : '',
-        dmm_affiliate_id: local ? getSetting('ext_dmm_affiliate_id', '') : ''
+        dmm_affiliate_id: local ? getSetting('ext_dmm_affiliate_id', '') : '',
+        dmm_auto_fetch: getSetting('ext_dmm_auto_fetch', true) !== false,   // スキャンのあとに動画情報を自動で取得 (v3.11.0。既定オン)
     };
 }
 exports.getSettings = (req, res) => res.json(settingsFor(req));
@@ -32,6 +33,7 @@ exports.updateSettings = (req, res) => {
         if (b.cover_folder !== undefined) setSetting('ext_cover_folder', b.cover_folder);
         if (b.dmm_api_id !== undefined) setSetting('ext_dmm_api_id', String(b.dmm_api_id).trim());
         if (b.dmm_affiliate_id !== undefined) setSetting('ext_dmm_affiliate_id', String(b.dmm_affiliate_id).trim());
+        if (b.dmm_auto_fetch !== undefined) setSetting('ext_dmm_auto_fetch', !!b.dmm_auto_fetch);
         res.json({ success: true, ...settingsFor(req) });
     } catch (e) {
         res.status(500).json({ error: e.message });

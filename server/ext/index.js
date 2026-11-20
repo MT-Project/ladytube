@@ -6,7 +6,8 @@
 const path = require('path');
 const express = require('express');
 
-const { db, initSchema } = require('./db');
+const { db, initSchema, getSetting } = require('./db');
+const modelno = require('./modelno');
 const cover = require('./routes/cover');
 const meta = require('./routes/meta');
 const search = require('./routes/search');
@@ -94,6 +95,40 @@ module.exports = function setupExt(app) {
     // 2. 拡張 API 用の JSON ボディパーサ (画像アップロードのため大きめ)
     app.use('/ext/api', express.json({ limit: '25mb' }));
 
+    // 2.5 スキャンが終わったら (v3.11.0)
+    //   ・品番が空の動画に、ファイル名から品番を入れる (modelno.js。入っている品番は変えない)
+    //   ・動画情報の自動取得がオンで DMM の API ID があれば、このスキャンで増えた動画のうち品番があってメーカーが空のものの id を
+    //     応答の ext_fetch_ids に入れる (管理画面がそのまま一括取得を始める。SettingsPage.jsx)
+    //   本体の /api/scan は DB の同期まで終えてから res.json を返すので、その直前に割り込めば、画面が一覧を読み直す時点で品番が入っている。
+    //   増えた動画 = スキャン前の最大の id より後の行 (本体は新しいファイルを INSERT し、消えたファイルの行は最後に消す)
+    app.use((req, res, next) => {
+        if (req.method !== 'POST' || req.path !== '/api/scan') return next();
+        let before = null;
+        try { before = db.prepare('SELECT IFNULL(MAX(id), 0) AS m FROM files').get().m; } catch (e) { console.error('[ext scan]', e); }
+        const orig = res.json.bind(res);
+        res.json = (body) => {
+            if (res.statusCode < 300 && body && body.count !== undefined) {
+                try {
+                    const r = modelno.fillAllMissing();
+                    console.log(`[LadyTube] スキャン後の品番設定: ${r.set}件設定 / ${r.nomatch}件は規則に合わず`);
+                } catch (e) { console.error('[ext modelno scan]', e); }
+                try {
+                    if (before !== null && getSetting('ext_dmm_auto_fetch', true) && getSetting('ext_dmm_api_id', '') && getSetting('ext_dmm_affiliate_id', '')) {
+                        body.ext_fetch_ids = db.prepare(`SELECT f.id FROM files f JOIN ext_video_meta e ON e.hash = f.hash
+                            WHERE f.id > ? AND TRIM(IFNULL(e.model_no,'')) <> '' AND TRIM(IFNULL(e.maker,'')) = '' ORDER BY f.id`).all(before).map(r => r.id);
+                    }
+                } catch (e) { console.error('[ext scan fetch ids]', e); }
+            }
+            return orig(body);
+        };
+        next();
+    });
+    // 選んだ動画に、ファイル名から品番を入れる (一括操作とリスト表示の⋮。ExtVideoMenu.jsx)
+    app.post('/ext/api/model-no/bulk', (req, res) => {
+        try { res.json(modelno.fillByIds((req.body || {}).ids)); }
+        catch (e) { console.error('[ext modelno bulk]', e); res.status(500).json({ error: e.message }); }
+    });
+
     // 3. 拡張 API ルート
     // -- ライブラリ
     app.get('/ext/api/libraries', libraryRoutes.list);
@@ -103,6 +138,13 @@ module.exports = function setupExt(app) {
     app.put('/ext/api/libraries/:id', libraryRoutes.rename);
     app.post('/ext/api/libraries/:id/switch', libraryRoutes.switchTo);
     app.delete('/ext/api/libraries/:id', libraryRoutes.remove);
+    // LadyTube の終了 (右上のメニュー。v3.11.0)。DB を閉じて終了コード 0 で終わる (ladytube.bat は 0 なら窓を閉じる)。
+    // 止め方はライブラリの切り替え (library.js の switchTo) と同じ。スキャン中は断る
+    app.post('/ext/api/shutdown', pcOnly('LadyTube の終了'), (req, res) => {
+        if (require('../services/scanner').isScanning) return res.status(400).json({ error: 'スキャン中は終了できません。スキャンの完了か中止を待ってください' });
+        res.json({ ok: true });
+        setTimeout(() => { try { db.close(); } catch (e) { } process.exit(0); }, 400);
+    });
     // -- 設定 / カバー画像
     app.get('/ext/api/settings', cover.getSettings);
     app.post('/ext/api/settings', cover.updateSettings);

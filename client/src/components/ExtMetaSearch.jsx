@@ -130,7 +130,8 @@ async function fetchOne(vid, meta) {
     const r = fills || picked.imageLarge ? await extSend('POST', '/ext/api/dmm/apply', { id: vid, item: picked }) : {};
     return fills || r.coverSet ? 'filled' : 'same';
 }
-export function BulkMetaFetchDialog({ ids, onDone, onClose }) {
+// auto: 開いたらすぐ始める (スキャンのあとの自動取得。v3.11.0。SettingsPage.jsx)
+export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
     const [st, setSt] = useState(null);   // null = 始める前。{ n, filled, same, skipped: [{ vid, name, why, msg }], running, retry }
     const stop = useRef(false);
     useEffect(() => () => { stop.current = true; }, []);
@@ -178,6 +179,12 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose }) {
         show();
         if (s.filled) onDone?.();   // 一覧を取り直させる
     };
+    // 描画のあとで始める (effect の中で直に setState しない)
+    useEffect(() => {
+        if (!auto) return;
+        const t = setTimeout(start, 0);
+        return () => clearTimeout(t);
+    }, []);   // eslint-disable-line react-hooks/exhaustive-deps
     const pct = st ? Math.round(st.n / ids.length * 100) : 0;
     const halt = () => { stop.current = true; setSt(p => ({ ...p, stopping: true })); };
     return (
@@ -186,6 +193,7 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose }) {
             cancelLabel={!st ? null : st.running ? '中止' : '閉じる'}
             onSave={st ? null : start} saveLabel="取得する">
             <div style={{ fontSize: '0.85rem', lineHeight: 1.7 }}>
+                {auto && <div>スキャンで増えた動画のうち、品番があってメーカーが空の動画です。</div>}
                 <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つだけなら、<b>空の項目だけ</b>を埋めます。今の値がある項目は変えません。カバー画像は未設定のときだけ取得します。</div>
                 {st && <>
                     <div className="wlext-bulkfetch-bar"><div style={{ width: pct + '%' }} /></div>

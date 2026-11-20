@@ -37,7 +37,17 @@ set NODEJS=node-v24.13.0-win-x64
 set NODEJS_FILE=%NODEJS%.%ARCHIVE%
 set URL=https://nodejs.org/dist/v24.13.0/node-v24.13.0-win-x64.%ARCHIVE%
 
+rem ダウンロードしたものが無く、インストール済みの Node が 20 から 25 なら、それを使う (v3.11.0)
+rem 範囲は better-sqlite3 12 が動く版。Node の大きな版を上げたら、このセットアップをやり直す
+set "NODE_MAJOR=0"
 if not exist "%SYS_FOLDER%\%NODEJS%" (
+	for /f "tokens=1 delims=v." %%v in ('node -v 2^>nul') do set "NODE_MAJOR=%%v"
+)
+set "USE_SYSTEM_NODE="
+if %NODE_MAJOR% geq 20 if %NODE_MAJOR% leq 25 set "USE_SYSTEM_NODE=1"
+if defined USE_SYSTEM_NODE echo インストール済みの Node.js v%NODE_MAJOR% を使います。 
+
+if not defined USE_SYSTEM_NODE if not exist "%SYS_FOLDER%\%NODEJS%" (
 	if not exist "%SYS_FOLDER%\%NODEJS_FILE%" (
 	    echo NodeJSをダウンロード中... 
 	    curl -L %URL% -o "%SYS_FOLDER%\%NODEJS_FILE%"
@@ -55,7 +65,16 @@ set FFMPEG=ffmpeg-8.0.1-full_build-shared
 set FFMPEG_FILE=%FFMPEG%.%ARCHIVE%
 set FFMPEG_URL=https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-full_build-shared.%ARCHIVE%
 
+rem ダウンロードしたものが無く、インストール済みの ffmpeg と ffprobe があり、使う形式 (libx264 と libwebp) に対応していれば、それを使う (v3.11.0)
+set "USE_SYSTEM_FFMPEG="
 if not exist "%SYS_FOLDER%\%FFMPEG%" (
+	rem 動かせない ffmpeg をパイプの左に置くとバッチごと止まるので、パイプを使わずファイルに書いて調べる (v3.11.0)
+	ffprobe -version >nul 2>nul && ffmpeg -hide_banner -encoders >"%SYS_FOLDER%\encoders.txt" 2>nul && findstr /c:"libx264" "%SYS_FOLDER%\encoders.txt" >nul && findstr /c:"libwebp" "%SYS_FOLDER%\encoders.txt" >nul && set "USE_SYSTEM_FFMPEG=1"
+	del "%SYS_FOLDER%\encoders.txt" >nul 2>nul
+)
+if defined USE_SYSTEM_FFMPEG echo インストール済みの FFmpeg を使います。 
+
+if not defined USE_SYSTEM_FFMPEG if not exist "%SYS_FOLDER%\%FFMPEG%" (
 	if not exist "%SYS_FOLDER%\%FFMPEG_FILE%" (
 	    echo FFmpegをダウンロード中...
 	    curl -L %FFMPEG_URL% -o "%SYS_FOLDER%\%FFMPEG_FILE%"

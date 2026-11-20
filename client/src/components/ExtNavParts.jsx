@@ -4,12 +4,18 @@
 //  ・ExtMenuButton: 右上のメニュー (ハンバーガー)。管理画面以外で、本体の歯車 (管理) の代わりに置く。
 //    差し込み口 WL.navMenuExtras に足した「項目を作る関数 (close) => 要素」は「QRコード」の上に並ぶ (押したら close() を呼ぶ)。
 //    保存した検索 (utils/savedSearches.js) は「QRコード」と「管理」の間に並ぶ (v3.7.0)
+//    「LadyTube を終了」は「管理」の下。サーバーを動かしている PC からだけ出す (v3.11.0。/ext/api/shutdown)
 // 見た目は womanlive-ext.css の .wlext-help-* / .wlext-navmenu-*。
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { savedSearchHref, useSavedSearches } from '../utils/savedSearches';
+import { isLocalPC } from '../utils/library';
+import { openExtDialog } from '../utils/extDialog';
+import { ExtConfirm } from './ExtDialog';
+import { extSend } from '../services/extApi';
+import { toast } from '../utils/toast';
 
 const HelpRow = ({ code, desc }) => <div className="wlext-help-row"><code className="wlext-help-code">{code}</code><span className="wlext-help-desc">{desc}</span></div>;
 const HELP = <>
@@ -35,6 +41,7 @@ const HELP = <>
     <HelpRow code="@performer:ID" desc="出演者で検索" />
     <HelpRow code="@rating:4" desc="評価で検索（@rating:>=4 など演算子も可）" />
     <HelpRow code={'@releaseyear:"2024"'} desc={'公開年（@releasemonth:"2024-01" / @release:none も可）'} />
+    <HelpRow code="@maker:none" desc="未設定の動画（@maker:any で設定ありの動画。model / series / label / genre なども同様）" />
     <HelpRow code={'@bookmark:"名前"'} desc="ブックマークフォルダで検索" />
     <HelpRow code={'@notmaker:"名前"'} desc="除外（notseries / notlabel / notgenre / notdirector / notperformer）" />
 </>;
@@ -118,6 +125,18 @@ function NavMenu({ anchor, onClose }) {
     const go = (href) => () => { onClose(); navigate(href); };
     // QR コードは本体のホームのダイアログ (HomePage.jsx が受ける)。ほかのページからは /?qr=1 で開く
     const openQR = () => { onClose(); if (location.pathname === '/') window.dispatchEvent(new Event('wlext-open-qr')); else navigate('/?qr=1'); };
+    // LadyTube を終了 (確かめてから。終わったあとは通信できないので、通知だけ出す)
+    const quit = () => {
+        onClose();
+        openExtDialog(ExtConfirm, {
+            title: 'LadyTube を終了', saveLabel: '終了する',
+            body: 'LadyTube のサーバーを止めて、起動したときのターミナルを閉じます。もう一度使うときは ladytube.bat で起動してください。',
+            onSave: async (close) => {
+                try { await extSend('POST', '/ext/api/shutdown', {}); close(); toast('LadyTube を終了しました。このタブは閉じてかまいません', 'success'); }
+                catch (e) { toast('終了できません: ' + e.message, 'error'); }
+            },
+        });
+    };
     const item = (icon, label, onClick, ref) => <div key={label} ref={ref} className="wlext-navmenu-item" onClick={onClick}><Icon name={icon} size={18} /><span>{label}</span></div>;
     return createPortal(
         <>
@@ -129,6 +148,7 @@ function NavMenu({ anchor, onClose }) {
                 {saved.map((s, i) => <div key={'saved-' + i} className="wlext-navmenu-item" onClick={go(savedSearchHref(s))}><Icon name="filter" size={18} /><span>{s.name}</span></div>)}
                 <div className="wlext-navmenu-sep" />
                 {item('settings', '管理', go('/settings'))}
+                {isLocalPC && item('power', 'LadyTube を終了', quit)}
             </div>
         </>,
         document.body

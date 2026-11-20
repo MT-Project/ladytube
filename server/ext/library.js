@@ -35,7 +35,7 @@ const canRestart = () => process.env.LADYTUBE_RESTART === '1';   // ladytube.bat
 // 全ライブラリ共通の設定 (公開設定・プリセットタグ・FANZA API・出演者タグ)
 const SHARED_KEYS = [
     'allow_public', 'preset_tags', 'ext_video_tag_layout',
-    'ext_dmm_api_id', 'ext_dmm_affiliate_id',
+    'ext_dmm_api_id', 'ext_dmm_affiliate_id', 'ext_dmm_auto_fetch',
     'ext_performer_preset_tags', 'ext_performer_tag_rules',
 ];
 // 「設定を引き継いで作成」でも写さない設定 (動画や画像の置き場所はライブラリごとに違う)

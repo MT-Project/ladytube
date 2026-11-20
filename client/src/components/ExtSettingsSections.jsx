@@ -4,6 +4,7 @@
 // 置き場所と並びは SettingsPage.jsx が ExtSettingsSection name="..." で決める (ExtSettingsParts.jsx がここの部品を選ぶ)。
 // 見た目は womanlive-ext.css の .wlext-settings-section・.wlext-rule-*・.wlext-related-*。入力欄は押したときに欄の値を読む。
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ExtConfirm, ExtDialog } from './ExtDialog';
 import { Icon } from './ExtIcon';
 import FolderPicker from './FolderPicker';
@@ -49,9 +50,19 @@ export function ExtCoverSettings() {
     );
 }
 
+// 動画情報が取れていない動画 = 品番があってメーカーが空 (v3.11.0。検索の model:any と maker:none。@ は先頭にだけ付ける)
+const UNFETCHED_Q = '@model:any maker:none';
+
 export function ExtDmmSettings() {
-    const api = useRef(null), aff = useRef(null);
-    useEffect(() => { extSettings().then(s => { api.current.value = s.dmm_api_id || ''; aff.current.value = s.dmm_affiliate_id || ''; }, () => { }); }, []);
+    const navigate = useNavigate();
+    const api = useRef(null), aff = useRef(null), auto = useRef(null);
+    useEffect(() => { extSettings().then(s => { api.current.value = s.dmm_api_id || ''; aff.current.value = s.dmm_affiliate_id || ''; auto.current.checked = s.dmm_auto_fetch !== false; }, () => { }); }, []);
+    // スキャンのあとの自動取得 (v3.11.0)。押したらすぐ保存する
+    const saveAuto = async (e) => {
+        const on = e.target.checked;
+        try { await extSend('POST', '/ext/api/settings', { dmm_auto_fetch: on }); toast(on ? 'スキャンのあとに動画情報を自動で取得します' : 'スキャンのあとの自動取得をやめました', 'success'); }
+        catch (err) { e.target.checked = !on; toast('保存に失敗: ' + err.message, 'error'); }
+    };
     const save = async () => {
         try { await extSend('POST', '/ext/api/settings', { dmm_api_id: api.current.value.trim(), dmm_affiliate_id: aff.current.value.trim() }); toast('DMM API設定を保存しました', 'success'); }
         catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
@@ -63,6 +74,9 @@ export function ExtDmmSettings() {
             <div className="wlext-field"><label>API ID</label><input ref={api} className="wlext-input" placeholder={isLocalPC ? 'API ID' : ''} defaultValue="" disabled={!isLocalPC} /></div>
             <div className="wlext-field"><label>アフィリエイトID</label><input ref={aff} className="wlext-input" placeholder={isLocalPC ? 'アフィリエイトID (例: xxxxx-999)' : ''} defaultValue="" disabled={!isLocalPC} /></div>
             <div className="wlext-inline"><button className="wlext-btn wlext-btn-primary" onClick={save} disabled={!isLocalPC}>保存</button></div>
+            <label style={{ fontSize: '0.85rem', cursor: 'pointer', display: 'block', margin: '0.8rem 0 0.2rem' }}><input ref={auto} type="checkbox" defaultChecked onChange={saveAuto} />{' スキャンのあと、増えた動画の動画情報を自動で取得する'}</label>
+            <div style={desc('0.5rem')}>スキャンで増えた動画のうち、品番があってメーカーが空のものを、一括取得と同じやり方（空の項目だけ埋める）で取得します。品番はスキャンのときにファイル名から入ります。</div>
+            <div className="wlext-inline"><button className="wlext-btn" onClick={() => navigate('/search?q=' + encodeURIComponent(UNFETCHED_Q))}><Icon name="search" size={14} />動画情報が未取得の動画を検索</button></div>
         </Section>
     );
 }

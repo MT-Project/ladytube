@@ -7,6 +7,9 @@ import { api } from '../services/api';
 import { theme } from '../theme';
 import FolderPicker from '../components/FolderPicker';
 import { ExtSettingsSection, ExtMetaReplace, ExtSettingsNav } from '../components/ExtSettingsParts';
+// LadyTube: スキャンのあとの動画情報の自動取得 (v3.11.0)
+import { BulkMetaFetchDialog } from '../components/ExtMetaSearch';
+import { openExtDialog } from '../utils/extDialog';
 
 // LadyTube: 本体の「タグ置換」は描かず、拡張の「メタデータ置換」(タグも置換できる) を代わりに置く
 const SHOW_HOST_TAG_RENAME = false;
@@ -429,8 +432,10 @@ export default function SettingsPage() {
 
         try {
             startPolling();
-            await api.scan(repairMode, abortControllerRef.current.signal);
+            const scanned = await api.scan(repairMode, abortControllerRef.current.signal);
             showToast('スキャンが完了しました', 'success');
+            // LadyTube: 増えた動画の動画情報を取得する (v3.11.0。対象はサーバーが ext_fetch_ids で返す。server/ext/index.js)
+            if (scanned?.ext_fetch_ids?.length) openExtDialog(BulkMetaFetchDialog, { ids: scanned.ext_fetch_ids, auto: true, onDone: () => window.dispatchEvent(new Event('library-updated')) });
         } catch (e) {
             if (e.name === 'AbortError' || e.message === 'Cancelled' || e.status === 499) {
                 showToast('スキャンを中止しました', 'info');
