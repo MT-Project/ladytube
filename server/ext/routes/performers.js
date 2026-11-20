@@ -139,13 +139,14 @@ exports.cleanupUnused = (req, res) => {
         // 出演者は全ライブラリ共通なので、ほかのライブラリの動画に出ている人も「使用中」
         library.performerIdsUsedElsewhere(db).forEach(n => used.add(n));
 
-        const all = db.prepare('SELECT id FROM ext_performers').all();
-        const unused = all.filter(p => !used.has(p.id)).map(p => p.id);
+        const all = db.prepare('SELECT id, name FROM ext_performers').all();
+        const unused = all.filter(p => !used.has(p.id));
 
-        if (dryRun) return res.json({ count: unused.length, total: all.length });
+        // 確認画面に、消える人の名前を並べる
+        if (dryRun) return res.json({ count: unused.length, total: all.length, names: unused.map(p => p.name || '(無名)') });
 
         const del = db.prepare('DELETE FROM ext_performers WHERE id = ?');
-        db.transaction(() => unused.forEach(id => del.run(id)))();
+        db.transaction(() => unused.forEach(p => del.run(p.id)))();
         res.json({ success: true, deleted: unused.length });
     } catch (e) {
         console.error('[ext performers cleanup]', e);
@@ -177,7 +178,11 @@ exports.get = (req, res) => {
             FROM files f JOIN ext_video_meta e ON e.hash = f.hash
             WHERE ('\n' || IFNULL(e.performers,'') || '\n') LIKE ?
         `).get('%\n' + parseInt(req.params.id, 10) + '\n%').c;
-        res.json(Object.assign(rowToPerformer(row), { video_count: cnt }));
+        // ほかのライブラリの本数 (出演者は全ライブラリ共通。開けないファイルがあってもページは出す)
+        let others = [];
+        try { others = library.performerCountsElsewhere(db, row.id); }
+        catch (e) { console.error('[ext performer other libraries]', e.message); }
+        res.json(Object.assign(rowToPerformer(row), { video_count: cnt, other_libraries: others }));
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

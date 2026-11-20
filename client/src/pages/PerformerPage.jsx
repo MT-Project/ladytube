@@ -263,6 +263,10 @@ function PerformerView({ id }) {
             </div>
 
             <div className="wlext-pp-section-title">{'関連動画（' + (perf.video_count || 0) + '）'}</div>
+            {/* ほかのライブラリの本数 (そのライブラリへ切り替えないと開けないので、数だけ) */}
+            {perf.other_libraries?.length > 0 && (
+                <div className="wlext-pp-otherlibs">{'ほかのライブラリ: ' + perf.other_libraries.map(l => l.name + ' ' + l.count + '本').join('、')}</div>
+            )}
             <div className="wlext-video-grid">
                 {videos === null ? <div style={muted}>読み込み中...</div>
                     : videos === false ? null

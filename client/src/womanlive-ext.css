@@ -523,6 +523,13 @@ body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); 
 .wlext-pp-title-actions { margin-left: auto; display: inline-flex; gap: 0.4rem; }
 .wlext-pp-section-title .wlext-plist-sortbtn { font-weight: normal; font-size: 0.8rem; }
 .wlext-pp-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+/* 関連動画の見出しの下: ほかのライブラリの本数 (PerformerPage.jsx) */
+.wlext-pp-otherlibs { margin: -0.5rem 0 1rem; font-size: 0.85rem; color: var(--text-secondary, #888); }
+/* 関連動画のない出演者の一括削除: 確認画面の名前の一覧 (PerformersPage.jsx) */
+.wlext-cleanup-names {
+    max-height: 40vh; overflow-y: auto; margin: 0.5rem 0; padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border-primary, #ddd); border-radius: 0.25rem;
+}
 .wlext-pp-tag {
     font-size: 0.75rem; padding: 0.2rem 0.6rem;
     border: 1px solid var(--border-primary, #ddd); border-radius: 0.25rem;

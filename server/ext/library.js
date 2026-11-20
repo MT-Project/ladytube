@@ -274,6 +274,18 @@ function performerIdsUsedElsewhere(db) {
     forEachOtherLibrary(db, (conn, schema) => performerIdsIn(conn, schema, used), true);
     return used;
 }
+// ほかのライブラリで、その出演者が登録されている動画の本数 ([{ name, count }]。0本のライブラリは入れない)。
+// 数え方は出演者ページの関連動画と同じ (ファイルのある動画だけ)
+function performerCountsElsewhere(db, id) {
+    const out = [];
+    forEachOtherLibrary(db, (conn, schema, l) => {
+        if (!hasTable(conn, schema, 'ext_video_meta') || !hasTable(conn, schema, 'files')) return;
+        const c = conn.prepare(`SELECT COUNT(*) AS c FROM ${schema}.files f JOIN ${schema}.ext_video_meta e ON e.hash = f.hash
+            WHERE ('\n' || IFNULL(e.performers,'') || '\n') LIKE ?`).get('%\n' + id + '\n%').c;
+        if (c) out.push({ name: l.name, count: c });
+    }, true);
+    return out;
+}
 // ほかのライブラリの動画から、出演者 id の紐付けを外す (出演者を消したとき)
 function removePerformersElsewhere(db, ids) {
     const drop = new Set(ids.map(String));
@@ -492,7 +504,7 @@ function isLocal(req) {
 module.exports = {
     DEFAULT_ID, RESTART_CODE, SHARED_KEYS, runtime, canRestart,
     bootPath, opened, beforeSchema, sharedSchema, syncSharedOut,
-    performerIdsUsedElsewhere, removePerformersElsewhere,
+    performerIdsUsedElsewhere, performerCountsElsewhere, removePerformersElsewhere,
     list, clientInfo, create, importDb, rename, remove, switchTo, isLocal, readRegistry,
     // 検証用
     _internal: { mergePerformersIntoShared, mergeMakersIntoShared, copySharedIn, dbPathOf, LIB_DIR, DEFAULT_DB },

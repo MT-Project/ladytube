@@ -79,9 +79,13 @@ async function cleanupUnused(multiLib, onDone) {
     if (!pv.count) { toast('関連動画のない出演者はいません', 'success'); return; }
     openExtDialog(ExtConfirm, {
         title: '関連動画のない出演者を削除', saveLabel: '削除する',
-        body: <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>{'関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'
-            + (multiLib ? '\n出演者は全ライブラリ共通のため、どのライブラリの動画にも登録されていない人だけが対象です。' : '')
-            + '\nこの操作は元に戻せません。よろしいですか？'}</div>,
+        body: <div style={{ fontSize: '0.9rem', lineHeight: '1.6' }}>
+            <div>{'関連動画が無い出演者 ' + pv.count + ' 名（全 ' + pv.total + ' 名中）を削除します。'}</div>
+            {multiLib && <div>出演者は全ライブラリ共通のため、どのライブラリの動画にも登録されていない人だけが対象です。</div>}
+            {/* 消える人の名前 (多いときは枠の中だけスクロール) */}
+            <div className="wlext-cleanup-names">{(pv.names || []).slice().sort(nameCompare).map((n, i) => <div key={i}>{n}</div>)}</div>
+            <div>この操作は元に戻せません。よろしいですか？</div>
+        </div>,
         onSave: async (close) => {
             try { const r = await extApi.cleanupUnusedPerformers(false); toast(r.deleted + ' 名を削除しました', 'success'); close(); onDone(); }
             catch (e) { toast('削除に失敗: ' + e.message, 'error'); }
