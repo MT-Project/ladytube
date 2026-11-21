@@ -5,6 +5,7 @@
 // =============================================================
 const { db, getSetting, splitList, joinList, hashOfVideo } = require('../db');
 const cover = require('./cover');
+const library = require('../library');
 
 // 品番を英字部分と数字部分に分ける  例: AP-147 -> { alpha:'ap', num:147 }
 function parseModelNo(pn) {
@@ -260,7 +261,14 @@ exports.apply = async (req, res) => {
             catch (e) { console.warn('[ext dmm] カバー取得失敗:', e.message); }
         }
 
-        res.json({ success: true, performers: performerIds.length, coverSet });
+        // ファイル名のルールで名前も変える (v3.12.0。確認画面のチェックか、一括取得で設定がオンのとき。rename.js)。PC からだけ
+        let renamed = null;
+        if (req.body.rename) {
+            renamed = library.isLocal(req)
+                ? require('../rename').applyRule([id])[0]
+                : { status: 'error', error: 'ファイル名の変更は、サーバーを動かしている PC（localhost）からのみ行えます' };
+        }
+        res.json({ success: true, performers: performerIds.length, coverSet, renamed });
     } catch (e) {
         console.error('[ext dmm apply]', e);
         res.status(500).json({ error: e.message });

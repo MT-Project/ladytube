@@ -1,6 +1,6 @@
 // LadyTube: 動画ページの拡張メタデータの表示 (v3.1.13 までの server/ext/public/videometa.js の表示部分を移したもの)。
 //  ・ExtRating: タイトルの下の評価 (★)。押すと保存する
-//  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者・品番などの表
+//  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者・品番などの表。「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)
 //  ・ExtWatchFabs: 右下の丸ボタン (ブックマーク / 動画情報を検索 / タグを編集 / 詳細情報を編集)。本体のタグ編集ボタンの代わり。
 //    ブックマークは ExtCardParts.jsx の ExtBookmarkButton (v3.1.15 までは bookmark.js が body に足していた)
 // 詳細情報の読み書きとタグ編集は utils/videoMeta.js、編集ダイアログは ExtMetaEdit.jsx (v3.2.1 までは videometa.js)。
@@ -20,6 +20,8 @@ import { formatYmd, formatYmAgo, formatAgeYm, searchToken } from '../utils/forma
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
 import { openMetaSearch } from '../utils/metaSearch';
 import { openExtDialog } from '../utils/extDialog';
+import { isLocalPC } from '../utils/library';
+import { openRenameDialog } from '../utils/fileRule';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 
@@ -81,12 +83,14 @@ function PerformerImage({ p }) {
     );
 }
 
-export function ExtMetaBlock({ meta }) {
+export function ExtMetaBlock({ meta, videoId }) {
     const navigate = useNavigate();
     const rows = [];
     const row = (key, val) => rows.push(<div key={key + ':k'} className="wlext-key">{key}:</div>, <div key={key + ':v'} className="wlext-val">{val}</div>);
     if (meta.release_date) row('公開日', <>{formatYmd(meta.release_date)}<span className="wlext-release-ago">{formatYmAgo(meta.release_date)}</span></>);
-    if (meta.file_name) row('動画ファイル名', meta.file_name);
+    if (meta.file_name) row('動画ファイル名', <>{meta.file_name}{isLocalPC && videoId != null && (
+        <button className="wlext-rename-btn" title="ファイル名を変更" onClick={() => openRenameDialog(String(videoId))}><Icon name="pencil" size={13} /></button>
+    )}</>);
     if (meta.model_no) row('品番', <LinkVal text={meta.model_no} token={'@' + searchToken('model', meta.model_no)} />);
     if (meta.series) row('シリーズ名', <ValEx text={meta.series} field="series" />);
     if (meta.maker) row('メーカー', <ValEx text={meta.maker} field="maker" />);

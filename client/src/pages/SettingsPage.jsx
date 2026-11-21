@@ -728,6 +728,8 @@ export default function SettingsPage() {
                 </div>
 
                 <ExtSettingsSection name="dmm" />
+                {/* LadyTube: ファイル名のルール (v3.12.0) */}
+                <ExtSettingsSection name="fileRule" />
                 <ExtSettingsSection name="backup" />
                 {/* 個人用モジュールなどが足した項目は末尾 */}
                 <ExtSettingsSection />

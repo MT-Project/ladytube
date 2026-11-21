@@ -498,8 +498,8 @@ export default function WatchPage() {
             const d = e.detail || {};
             if (!d.meta) return;
             setExtMeta({ id: String(d.id), meta: d.meta });
-            // タイトルの表示動画名 (以前は拡張が h1 の文字を直に書き換えていた)
-            setVideo(v => (v && String(v.id) === String(d.id) ? { ...v, ext_display_name: d.meta.display_name || null } : v));
+            // タイトルの表示動画名 (以前は拡張が h1 の文字を直に書き換えていた)。ファイル名を変えたときは filename も (v3.12.0)
+            setVideo(v => (v && String(v.id) === String(d.id) ? { ...v, ext_display_name: d.meta.display_name || null, filename: d.meta.file_name || v.filename } : v));
         };
         window.addEventListener('wlext-meta-updated', onMeta);
         return () => window.removeEventListener('wlext-meta-updated', onMeta);
@@ -1245,7 +1245,7 @@ export default function WatchPage() {
                     {/* Left: Info details */}
                     <div className={styles.infoLeftColumn}>
                         {/* LadyTube: ジャンル・出演者・品番などの拡張メタデータ */}
-                        {meta && <ExtMetaBlock meta={meta} />}
+                        {meta && <ExtMetaBlock meta={meta} videoId={video.id} />}
                         {/* Additional Info Section */}
                         <div className={styles.infoBox} style={{ marginTop: 0 }}>
                             <div className={styles.detailGrid}>

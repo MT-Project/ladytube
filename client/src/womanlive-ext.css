@@ -1145,6 +1145,22 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-bulkfetch-list .why { flex-shrink: 0; width: 6.5em; color: var(--text-secondary, #888); }
 .wlext-bulkfetch-list a { overflow: hidden; text-overflow: ellipsis; color: inherit; }
 
+/* ファイル名の変更 (v3.12.0。ExtRename.jsx と、動画ページの「動画ファイル名」の行のボタン ExtWatchMeta.jsx) */
+.wlext-rename-btn {
+    display: inline-flex; align-items: center; vertical-align: middle; margin-left: 0.4rem; padding: 0.1rem 0.25rem;
+    background: none; border: 1px solid transparent; border-radius: 0.25rem; color: var(--text-secondary, #888); cursor: pointer;
+}
+.wlext-rename-btn:hover { border-color: var(--border-primary, #ccc); color: inherit; }
+.wlext-rename-cur { font-size: 0.8rem; color: var(--text-secondary, #888); margin-bottom: 0.5rem; word-break: break-all; }
+.wlext-rename-input { flex: 1; min-width: 0; }
+.wlext-rename-ext { flex-shrink: 0; color: var(--text-secondary, #888); }
+.wlext-rename-list { margin-top: 0.6rem; max-height: 50vh; overflow-y: auto; font-size: 0.85rem; }
+.wlext-rename-row { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) auto minmax(0, 1fr); gap: 0.5rem; padding: 0.2rem 0; border-bottom: 1px solid var(--border-color, #eee); }
+.wlext-rename-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-rename-row .st, .wlext-rename-row .arrow { color: var(--text-secondary, #888); }
+.wlext-rename-row.same, .wlext-rename-row.error { opacity: 0.6; }
+.wlext-rename-row.error .to { color: var(--status-error, #d33); }
+
 /* ---- 次のパートの自動再生 (ExtWatchParts.jsx の ExtAutoNext。プレイヤーの枠の右下、下のコントロール行の上) ---- */
 .wlext-autonext {
     position: absolute; right: 1.5rem; bottom: 5.5rem; z-index: 21;

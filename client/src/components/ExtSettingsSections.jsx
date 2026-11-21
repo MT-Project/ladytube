@@ -14,6 +14,7 @@ import { currentLibrary, isLocalPC, PC_ONLY } from '../utils/library';
 import { loadSavedSearches, saveSavedSearches } from '../utils/savedSearches';
 import { HOME_COUNTS, HOME_ROWS, homeRowName, loadHomeLayout, normalizeHomeLayout, saveHomeLayout } from '../utils/homeLayout';
 import { toast } from '../utils/toast';
+import { DEFAULT_RULE, RULE_FIELDS as NAME_FIELDS, ruleStem } from '../utils/fileRule';
 
 const desc = (mb) => ({ fontSize: '0.8rem', color: 'var(--text-secondary,#777)', marginBottom: mb });
 const resultStyle = { fontSize: '0.82rem', marginTop: '0.6rem', whiteSpace: 'pre-wrap' };
@@ -82,6 +83,39 @@ export function ExtDmmSettings() {
 }
 
 // 参照されていない拡張データ。本家の「クリーンアップ」でも同じ掃除が走るが、件数を確かめてから単独でも消せる
+// ファイル名のルール (v3.12.0。server/ext/filerule.mjs)。名前を変えるのは PC からだけ (rename.js)
+const RULE_SAMPLE = { model_no: 'ABC-123', title: 'タイトル', performers: ['出演者A', '出演者B'], maker: 'メーカー', label: 'レーベル', series: 'シリーズ', release_date: '2024-01-31' };
+
+export function ExtFileRuleSettings() {
+    const [rule, setRule] = useState(null);   // null = 読み込み中
+    const onFetch = useRef(null);
+    useEffect(() => { extSettings().then(s => { setRule(s.rename_rule || DEFAULT_RULE); onFetch.current.checked = !!s.rename_on_fetch; }, () => setRule(DEFAULT_RULE)); }, []);
+    const save = async () => {
+        try { await extSend('POST', '/ext/api/settings', { rename_rule: rule }); toast('ファイル名のルールを保存しました', 'success'); }
+        catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
+    };
+    const saveOnFetch = async (e) => {
+        const on = e.target.checked;
+        try { await extSend('POST', '/ext/api/settings', { rename_on_fetch: on }); toast(on ? '動画情報を取得したら、ファイル名もルールで変えます' : '動画情報を取得しても、ファイル名は変えません', 'success'); }
+        catch (err) { e.target.checked = !on; toast('保存に失敗: ' + err.message, 'error'); }
+    };
+    const sample = rule === null ? '' : ruleStem(rule, RULE_SAMPLE, 'ABC-123_2');
+    return (
+        <Section title="ファイル名のルール" icon="pencil">
+            <div style={desc('0.6rem')}>動画のファイル名を変えるときの名前の作り方です。動画ページの「動画ファイル名」の変更ボタンの「ルールで作る」、一括操作の「ファイル名をルールで変更」、FANZA の確認画面の「ファイル名」の行で使います。名前を変えられるのは、サーバーを動かしている PC からだけです。</div>
+            <div className="wlext-inline">
+                <input className="wlext-input" value={rule ?? ''} onChange={e => setRule(e.target.value)} placeholder={DEFAULT_RULE} disabled={rule === null} />
+                <button className="wlext-btn wlext-btn-primary" onClick={save} disabled={rule === null}>保存</button>
+            </div>
+            <div style={desc('0.3rem')}>{'使える項目: ' + NAME_FIELDS.map(f => '{' + f + '}').join(' ')}</div>
+            <div style={desc('0.3rem')}>{'例: ' + (sample ? sample + '.mp4' : '（項目が空なので名前を作れません）') + '　（ABC-123_2.mp4 の場合）'}</div>
+            <div style={desc('0.6rem')}>今の名前の末尾のパート番号（_2 など）は自動で付けます。タイトルは60文字、出演者は3人までで、ファイル名に使えない文字は全角に置き換えます。拡張子は変わりません。</div>
+            <label style={{ fontSize: '0.85rem', cursor: 'pointer', display: 'block', margin: '0.2rem 0' }}><input ref={onFetch} type="checkbox" onChange={saveOnFetch} />{' 動画情報を取得したら、ファイル名もルールで変える'}</label>
+            <div style={desc('0.5rem')}>一括取得とスキャン後の自動取得で、項目を埋めた動画の名前を変えます。1本ずつの確認画面では、「ファイル名」の行の最初のチェックになります。</div>
+        </Section>
+    );
+}
+
 export function ExtMaintenanceSettings() {
     const [state, setState] = useState({ text: '確認中...', can: false });
     const paint = (d) => setState(d.total

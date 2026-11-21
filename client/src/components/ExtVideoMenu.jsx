@@ -1,7 +1,8 @@
 // LadyTube: 検索画面の動画の操作メニュー (v3.2.1 までは拡張の server/ext/public/bulkselect.js)。openExtDialog で開く:
 //  ・選択モードの一括操作の丸ボタン (ExtSelection.jsx): anchor なし。右下に出て、見出しは「N件を一括操作」
 //  ・リスト表示の「⋮」(VideoList.jsx): anchor にボタンの要素を渡すと、その下に出る。まとめたカードなら見出し「まとめた N本を操作」
-// 操作: タグ追加 / 詳細情報編集 / 動画情報を取得 / ブックマーク追加 / 品番をファイル名から設定 (v3.11.0) / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
+// 操作: タグ追加 / 詳細情報編集 / 動画情報を取得 / ブックマーク追加 / 品番をファイル名から設定 (v3.11.0) /
+//   ファイル名を変更 (1本のとき) かファイル名をルールで変更 (2本以上。どちらも v3.12.0・PC だけ。ExtRename.jsx) / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
 // タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog、動画情報を取得は ExtMetaSearch.jsx の BulkMetaFetchDialog。
@@ -16,6 +17,7 @@ import { setBookmarked } from '../utils/bookmarks';
 import { openExtDialog } from '../utils/extDialog';
 import { isLocalPC, PC_ONLY } from '../utils/library';
 import { toast } from '../utils/toast';
+import { openRenameDialog, openRuleRenameDialog } from '../utils/fileRule';
 import ExtPresetTagDialog from './ExtPresetTagDialog';
 import { loadVideoTagPresets, saveVideoTagPresets } from '../utils/tagPresets';
 
@@ -68,6 +70,9 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
                 <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(BulkMetaFetchDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="search" size={15} /><span>動画情報を取得</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doModelNo)}><Icon name="hash" size={15} /><span>品番をファイル名から設定</span></div>
+                <div className={'wlext-sel-menu-item' + (isLocalPC ? '' : ' disabled')} title={isLocalPC ? '' : 'ファイル名の変更は、' + PC_ONLY}
+                    onClick={run((ids) => (!isLocalPC ? toast('ファイル名の変更は、' + PC_ONLY, 'error') : ids.length === 1 ? openRenameDialog(String(ids[0])) : openRuleRenameDialog(ids)))}>
+                    <Icon name="pencil" size={15} /><span>{ids.length === 1 ? 'ファイル名を変更' : 'ファイル名をルールで変更'}</span></div>
                 <div ref={del} className={'wlext-sel-menu-item danger' + (isLocalPC ? '' : ' disabled')} title={isLocalPC ? '' : '動画の削除は、' + PC_ONLY}
                     onClick={run((ids, done) => (isLocalPC ? openExtDialog(DeleteDialog, { ids, done }) : toast('動画の削除は、' + PC_ONLY, 'error')))}><Icon name="trash" size={15} /><span>動画の削除</span></div>
             </div>

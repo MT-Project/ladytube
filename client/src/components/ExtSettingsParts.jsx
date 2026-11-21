@@ -1,5 +1,5 @@
 // LadyTube: 管理画面 (SettingsPage.jsx) の拡張の部品 (v3.1.15 までの server/ext/public/settings.js・library.js の差し込みと settingsnav.js)。
-//  ・ExtSettingsSection: 拡張機能の項目を、この位置に置く。カバー画像・DMM・タグの自動付与・関連動画・ホーム画面・保存した検索・メンテナンス・バックアップは
+//  ・ExtSettingsSection: 拡張機能の項目を、この位置に置く。カバー画像・DMM・ファイル名のルール・タグの自動付与・関連動画・ホーム画面・保存した検索・メンテナンス・バックアップは
 //    ExtSettingsSections.jsx の部品 (v3.2.1 までは拡張の settings.js)、ライブラリは ExtLibrary.jsx の ExtLibrarySettings (v3.2.1 までは library.js)。
 //    name を付けないと、個人用モジュールなどが WLExt.settingsExtras に足した項目を、足した順にすべて置く (管理画面の末尾)。
 //    項目は本体の項目と同じ親の直下に並べる (ExtSettingsNav がその並びを見る)。目印に見えない <template> を残し、その前に差し込む。
@@ -15,11 +15,11 @@ import ExtSlot from './ExtSlot';
 import { ExtLibrarySettings } from './ExtLibrary';
 import { ExtConfirm } from './ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
-import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtHomeSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtSavedSearchSettings, ExtTagRuleSettings } from './ExtSettingsSections';
+import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtFileRuleSettings, ExtHomeSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtSavedSearchSettings, ExtTagRuleSettings } from './ExtSettingsSections';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 
-const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, dmm: ExtDmmSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, home: ExtHomeSettings, savedSearch: ExtSavedSearchSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
+const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, dmm: ExtDmmSettings, fileRule: ExtFileRuleSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, home: ExtHomeSettings, savedSearch: ExtSavedSearchSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
 
 export function ExtSettingsSection({ name }) {
     const Section = SECTIONS[name];

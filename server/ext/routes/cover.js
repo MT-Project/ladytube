@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { db, getSetting, setSetting, imageContentType, IMG_EXTS, sharp } = require('../db');
 const library = require('../library');
+const { DEFAULT_RULE } = require('../filerule.mjs');
 
 const MIME = {
     '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
@@ -20,6 +21,8 @@ function settingsFor(req) {
         dmm_api_id: local ? getSetting('ext_dmm_api_id', '') : '',
         dmm_affiliate_id: local ? getSetting('ext_dmm_affiliate_id', '') : '',
         dmm_auto_fetch: getSetting('ext_dmm_auto_fetch', true) !== false,   // スキャンのあとに動画情報を自動で取得 (v3.11.0。既定オン)
+        rename_rule: getSetting('ext_rename_rule', '') || DEFAULT_RULE,     // ファイル名のルール (v3.12.0。filerule.mjs)
+        rename_on_fetch: getSetting('ext_rename_on_fetch', false) === true, // 動画情報を取得したらルールで名前を変える (既定オフ)
     };
 }
 exports.getSettings = (req, res) => res.json(settingsFor(req));
@@ -34,6 +37,8 @@ exports.updateSettings = (req, res) => {
         if (b.dmm_api_id !== undefined) setSetting('ext_dmm_api_id', String(b.dmm_api_id).trim());
         if (b.dmm_affiliate_id !== undefined) setSetting('ext_dmm_affiliate_id', String(b.dmm_affiliate_id).trim());
         if (b.dmm_auto_fetch !== undefined) setSetting('ext_dmm_auto_fetch', !!b.dmm_auto_fetch);
+        if (b.rename_rule !== undefined) setSetting('ext_rename_rule', String(b.rename_rule).trim());
+        if (b.rename_on_fetch !== undefined) setSetting('ext_rename_on_fetch', !!b.rename_on_fetch);
         res.json({ success: true, ...settingsFor(req) });
     } catch (e) {
         res.status(500).json({ error: e.message });

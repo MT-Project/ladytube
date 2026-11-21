@@ -8,6 +8,7 @@ const express = require('express');
 
 const { db, initSchema, getSetting } = require('./db');
 const modelno = require('./modelno');
+const rename = require('./rename');
 const cover = require('./routes/cover');
 const meta = require('./routes/meta');
 const search = require('./routes/search');
@@ -122,6 +123,16 @@ module.exports = function setupExt(app) {
             return orig(body);
         };
         next();
+    });
+    // ファイル名の変更 (v3.12.0。rename.js)。PC からだけ (動画の削除と同じ)
+    //   POST /ext/api/video/:id/rename { name }   名前 (拡張子なし) を指定して変える (動画ページ・リスト表示の⋮)
+    //   POST /ext/api/rename/rule { ids, dryRun } ファイル名のルールで変える。dryRun なら変える前と後の一覧だけ
+    const renameFail = (res, e) => { if (!e.status) console.error('[ext rename]', e); res.status(e.status || 500).json({ error: e.message }); };
+    app.post('/ext/api/video/:id/rename', pcOnly('ファイル名の変更'), (req, res) => {
+        try { res.json(rename.renameVideo(req.params.id, (req.body || {}).name)); } catch (e) { renameFail(res, e); }
+    });
+    app.post('/ext/api/rename/rule', pcOnly('ファイル名の変更'), (req, res) => {
+        try { const b = req.body || {}; res.json({ items: b.dryRun ? rename.ruleTargets(b.ids) : rename.applyRule(b.ids) }); } catch (e) { renameFail(res, e); }
     });
     // 選んだ動画に、ファイル名から品番を入れる (一括操作とリスト表示の⋮。ExtVideoMenu.jsx)
     app.post('/ext/api/model-no/bulk', (req, res) => {
