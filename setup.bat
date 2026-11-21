@@ -37,15 +37,22 @@ set NODEJS=node-v24.13.0-win-x64
 set NODEJS_FILE=%NODEJS%.%ARCHIVE%
 set URL=https://nodejs.org/dist/v24.13.0/node-v24.13.0-win-x64.%ARCHIVE%
 
-rem ダウンロードしたものが無く、インストール済みの Node が 20 から 25 なら、それを使う (v3.11.0)
-rem 範囲は better-sqlite3 12 が動く版。Node の大きな版を上げたら、このセットアップをやり直す
+rem ダウンロードしたものが無く、インストール済みの Node が 20.19 以降・22.12 以降・23 から 25 なら、それを使う (v3.11.0)
+rem 上限は better-sqlite3 12 が動く版。下限は require で .mjs を読める版 (server/ext/db.js が namekey.mjs を読む。v3.12.0)
+rem Node の大きな版を上げたら、このセットアップをやり直す
 set "NODE_MAJOR=0"
+set "NODE_MINOR=0"
 if not exist "%SYS_FOLDER%\%NODEJS%" (
-	for /f "tokens=1 delims=v." %%v in ('node -v 2^>nul') do set "NODE_MAJOR=%%v"
+	for /f "tokens=1,2 delims=v." %%a in ('node -v 2^>nul') do (
+		set "NODE_MAJOR=%%a"
+		set "NODE_MINOR=%%b"
+	)
 )
 set "USE_SYSTEM_NODE="
-if %NODE_MAJOR% geq 20 if %NODE_MAJOR% leq 25 set "USE_SYSTEM_NODE=1"
-if defined USE_SYSTEM_NODE echo インストール済みの Node.js v%NODE_MAJOR% を使います。 
+if %NODE_MAJOR% equ 20 if %NODE_MINOR% geq 19 set "USE_SYSTEM_NODE=1"
+if %NODE_MAJOR% equ 22 if %NODE_MINOR% geq 12 set "USE_SYSTEM_NODE=1"
+if %NODE_MAJOR% geq 23 if %NODE_MAJOR% leq 25 set "USE_SYSTEM_NODE=1"
+if defined USE_SYSTEM_NODE echo インストール済みの Node.js v%NODE_MAJOR%.%NODE_MINOR% を使います。 
 
 if not defined USE_SYSTEM_NODE if not exist "%SYS_FOLDER%\%NODEJS%" (
 	if not exist "%SYS_FOLDER%\%NODEJS_FILE%" (
