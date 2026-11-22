@@ -505,6 +505,16 @@ body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); 
 .wlext-pp-namecol { flex: 1; min-width: 0; }
 .wlext-pp-rating { flex-shrink: 0; }
 .wlext-pp-rating .wlext-rating { margin: 0.2rem 0 0; }
+/* 評価の下の関連URL (v3.13.0)。右寄せで、入りきらなければ折り返す */
+.wlext-pp-rating { display: flex; flex-direction: column; align-items: flex-end; }
+.wlext-pp-links { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px 8px; margin-top: 0.5rem; max-width: 11rem; }
+.wlext-pp-link { display: inline-flex; color: var(--text-secondary, #888); cursor: pointer; }
+.wlext-pp-link:hover { color: var(--accent, #007acc); }
+.wlext-pp-link-add { font-size: 0.8rem; }
+.wlext-url-row { margin-bottom: 0.4rem; }
+.wlext-url-row .wlext-input { flex: 1; min-width: 0; }
+.wlext-url-row .wlext-btn, .wlext-url-add { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.wlext-url-row .wlext-btn { padding: 0.4rem 0.6rem; }
 .wlext-pp-name { font-size: 1.6rem; font-weight: bold; margin: 0; cursor: pointer; }
 .wlext-pp-name:hover { color: var(--accent, #007acc); }
 .wlext-pp-furigana { color: var(--text-secondary, #888); font-size: 0.9rem; margin-top: 0.15rem; cursor: pointer; }

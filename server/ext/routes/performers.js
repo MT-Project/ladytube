@@ -3,6 +3,7 @@
 // =============================================================
 const { db, splitList, joinList, getSetting, setSetting, imageContentType, sharp } = require('../db');
 const library = require('../library');
+const { normalizeUrl } = require('../perfurl.mjs');   // 本体の画面 (PerformerPage.jsx) と同じもの
 
 const PERFORMER_TAGS_KEY = 'ext_performer_preset_tags';
 
@@ -52,6 +53,7 @@ function rowToPerformer(row, includeImageFlag = true) {
         aliases: splitList(row.aliases),
         rating: row.rating || 0,
         tags: splitList(row.tags),
+        urls: splitList(row.urls),
         has_image: includeImageFlag ? !!row.has_image : undefined,
     };
 }
@@ -211,17 +213,19 @@ exports.update = (req, res) => {
             rating: Math.max(0, Math.min(5, parseInt(b.rating, 10) || 0)),
             tags: joinList(b.tags),
         };
+        // 関連URL (v3.13.0)。http/https だけを残し、同じものは1つに。送られてこなかったときは今の値を残す (古い呼び出しで消さない)
+        const urls = Array.isArray(b.urls) ? joinList([...new Set(b.urls.map(normalizeUrl).filter(Boolean))]) : undefined;
 
         try {
             db.prepare(`
                 UPDATE ext_performers SET
                     name=?, furigana=?, birthday=?, height=?, weight=?, bust=?, cup=?, waist=?, hip=?,
-                    blood_type=?, aliases=?, rating=?, tags=?, updated_at=CURRENT_TIMESTAMP
+                    blood_type=?, aliases=?, rating=?, tags=?,${urls === undefined ? '' : ' urls=?,'} updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
             `).run(
                 fields.name, fields.furigana, fields.birthday, fields.height, fields.weight,
                 fields.bust, fields.cup, fields.waist, fields.hip, fields.blood_type,
-                fields.aliases, fields.rating, fields.tags, id
+                fields.aliases, fields.rating, fields.tags, ...(urls === undefined ? [] : [urls]), id
             );
         } catch (err) {
             if (String(err.message).includes('UNIQUE')) {

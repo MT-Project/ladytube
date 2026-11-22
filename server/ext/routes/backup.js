@@ -10,7 +10,7 @@ const b64dec = (s) => (s ? Buffer.from(s, 'base64') : null);
 function pick(o, keys) { const r = {}; keys.forEach(k => { r[k] = (o && o[k] !== undefined) ? o[k] : null; }); return r; }
 
 const META_KEYS = ['hash', 'rating', 'display_name', 'model_no', 'release_date', 'series', 'maker', 'label', 'directors', 'genres', 'performers', 'updated_at'];
-const PERF_KEYS = ['id', 'name', 'furigana', 'birthday', 'height', 'weight', 'bust', 'cup', 'waist', 'hip', 'blood_type', 'aliases', 'rating', 'tags', 'created_at', 'updated_at'];
+const PERF_KEYS = ['id', 'name', 'furigana', 'birthday', 'height', 'weight', 'bust', 'cup', 'waist', 'hip', 'blood_type', 'aliases', 'rating', 'tags', 'urls', 'created_at', 'updated_at'];
 const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'site_url', 'image_view', 'updated_at'];
 
 // GET /ext/api/backup/export
@@ -67,8 +67,8 @@ exports.importAll = (req, res) => {
             db.prepare('DELETE FROM ext_performers').run();
             if (Array.isArray(d.performers)) {
                 const s = db.prepare(`INSERT OR REPLACE INTO ext_performers
-                    (id,name,furigana,birthday,height,weight,bust,cup,waist,hip,blood_type,aliases,rating,tags,image,created_at,updated_at)
-                    VALUES (@id,@name,@furigana,@birthday,@height,@weight,@bust,@cup,@waist,@hip,@blood_type,@aliases,@rating,@tags,@image,@created_at,@updated_at)`);
+                    (id,name,furigana,birthday,height,weight,bust,cup,waist,hip,blood_type,aliases,rating,tags,urls,image,created_at,updated_at)
+                    VALUES (@id,@name,@furigana,@birthday,@height,@weight,@bust,@cup,@waist,@hip,@blood_type,@aliases,@rating,@tags,@urls,@image,@created_at,@updated_at)`);
                 d.performers.forEach(p => s.run({ ...pick(p, PERF_KEYS), image: b64dec(p.image) }));
                 stats.performers = d.performers.length;
             }

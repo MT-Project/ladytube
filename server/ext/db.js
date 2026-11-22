@@ -109,6 +109,7 @@ function initSchema() {
             aliases    TEXT,                  -- 別名 (改行区切り)
             rating     INTEGER DEFAULT 0,
             tags       TEXT,                  -- 出演者タグ (改行区切り)
+            urls       TEXT,                  -- 関連URL (v3.13.0。改行区切り。http/https だけ)
             image      BLOB,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -120,6 +121,13 @@ function initSchema() {
     ['site_url TEXT', 'image_view TEXT'].forEach(def => {
         if (!makerCols.includes(def.split(' ')[0])) db.exec(`ALTER TABLE ${S}ext_makers ADD COLUMN ${def}`);
     });
+
+    // v3.13.0 で足した列: 出演者の関連URL (共通)
+    const addCol = (schema, table, def) => {
+        const cols = db.prepare(`PRAGMA ${schema}table_info(${table})`).all().map(c => c.name);
+        if (!cols.includes(def.split(' ')[0])) db.exec(`ALTER TABLE ${schema}${table} ADD COLUMN ${def}`);
+    };
+    addCol(S, 'ext_performers', 'urls TEXT');
 
     initialized = true;
     console.log('[LadyTube] スキーマを初期化しました');

@@ -1,5 +1,6 @@
 // LadyTube: 出演者のページ (/performer/:id)。写真・氏名・ふりがな・評価・身長などの情報、関連動画、関連スクリーンショット。
 // 情報は押すとその場で編集して保存する (氏名・ふりがな・身長・体重・血液型・誕生日。スリーサイズ・別名・出演者タグはダイアログ)。
+// 関連URL (v3.13.0) は評価の下に種類のアイコンで並べ、横の鉛筆 (無ければ「＋関連URL」) で編集する。URL の扱いは server/ext/perfurl.mjs。
 // 写真は押すと拡大 (無ければ画像を選んで正方形に切り取る)。スクリーンショットは「最近」か「ランダム」(押すたびに抽選)で、数は ShotGrid が決める。
 // 差し込み口 WL.performerExtras に「部品を作る関数 (id) => 要素」を足すと、ページを開くたびに置く (ExtSlot。丸ボタンなどは position: fixed で)。
 // v3.2.1 までは拡張の server/ext/public/performer.js。見た目は拡張のときと同じ womanlive-ext.css のクラス。
@@ -20,6 +21,7 @@ import { formatAgeYm, formatDuration, formatYmd } from '../utils/formatters';
 import { toDateInput } from '../utils/videoMeta';
 import ExtPresetTagDialog from '../components/ExtPresetTagDialog';
 import { cropDialog, lightbox } from '../utils/imageDialogs';
+import { normalizeUrl, urlKind } from '../../../server/ext/perfurl.mjs';
 
 const muted = { color: 'var(--text-secondary,#888)' };
 const isEmpty = (v) => v === null || v === undefined || v === '';
@@ -116,6 +118,48 @@ function ChipRow({ label, values, onEdit }) {
                     <span className="wlext-link" style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }} onClick={onEdit}><Icon name="pencil" size={12} />編集</span>
                 </div>
             </Row>
+        </div>
+    );
+}
+
+// 関連URL の編集。欄は最初は1つで、「URL を追加」で増やし、×で消す
+function UrlsDialog({ urls, onSave, onClose }) {
+    const [list, setList] = useState(urls.length ? urls : ['']);
+    const setAt = (i, v) => setList(l => l.map((x, j) => (j === i ? v : x)));
+    const ok = async () => {
+        const bad = list.find(s => s.trim() && !normalizeUrl(s));
+        if (bad) { toast('URL として読めません: ' + bad, 'error'); return; }
+        await onSave([...new Set(list.map(normalizeUrl).filter(Boolean))]);
+        onClose();
+    };
+    return (
+        <ExtDialog title="関連URLを編集" onClose={onClose} onSave={ok}>
+            {list.map((u, i) => (
+                <div key={i} className="wlext-inline wlext-url-row">
+                    <input className="wlext-input" value={u} placeholder="https://" onChange={(e) => setAt(i, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') ok(); }} />
+                    <button type="button" className="wlext-btn" title="この欄を消す" onClick={() => setList(l => (l.length > 1 ? l.filter((_, j) => j !== i) : ['']))}><Icon name="x" size={14} /></button>
+                </div>
+            ))}
+            <button type="button" className="wlext-btn wlext-url-add" onClick={() => setList(l => [...l, ''])}><Icon name="plus" size={14} />URL を追加</button>
+            <div style={{ ...muted, fontSize: '0.8rem', marginTop: '0.6rem' }}>公式サイト・X・Instagram・TikTok・YouTube・Wikipedia・ブログなどの URL を入れると、種類に合わせたアイコンで出ます（http と https だけ）。</div>
+        </ExtDialog>
+    );
+}
+
+// 評価の下の関連URL。押すと新しいタブで開く
+function PerfLinks({ urls, onEdit }) {
+    return (
+        <div className="wlext-pp-links">
+            {urls.map(u => {
+                const k = urlKind(u);
+                let shown = u;
+                try { shown = decodeURI(u); } catch { /* 読めなければそのまま */ }   // 説明は %E3… でなく読める形で
+                return <a key={u} className="wlext-pp-link" href={u} target="_blank" rel="noopener noreferrer" title={k.label + ': ' + shown}><Icon name={k.icon} size={18} /></a>;
+            })}
+            {urls.length
+                ? <span className="wlext-pp-link edit" title="関連URLを編集" onClick={onEdit}><Icon name="pencil" size={14} /></span>
+                : <span className="wlext-link wlext-pp-link-add" onClick={onEdit}><Icon name="plus" size={12} />関連URL</span>}
         </div>
     );
 }
@@ -235,7 +279,10 @@ function PerformerView({ id }) {
                             <HeaderEdit as="h1" className="wlext-pp-name" value={perf.name} empty="(名称未設定)" big onSave={(v) => save({ name: v })} />
                             <HeaderEdit as="div" className="wlext-pp-furigana" value={perf.furigana} empty="ふりがな未設定" onSave={(v) => save({ furigana: v })} />
                         </div>
-                        <div className="wlext-pp-rating"><ExtStarsEdit value={perf.rating || 0} onChange={(n) => save({ rating: n })} /></div>
+                        <div className="wlext-pp-rating">
+                            <ExtStarsEdit value={perf.rating || 0} onChange={(n) => save({ rating: n })} />
+                            <PerfLinks urls={perf.urls || []} onEdit={() => openExtDialog(UrlsDialog, { urls: perf.urls || [], onSave: (arr) => save({ urls: arr }) })} />
+                        </div>
                     </div>
                     <div className="wlext-pp-grid">
                         <Row label="身長">{plain('height')}</Row>
