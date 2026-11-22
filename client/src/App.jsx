@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
 import WatchPage from './pages/WatchPage';
-import ScreenshotGalleryPage from './pages/ScreenshotGalleryPage';
 import ExtPage from './components/ExtPage';
 import { UIProvider } from './contexts/UIContext';
 import { ExtDialogHost } from './components/ExtDialog';
@@ -19,6 +18,8 @@ const PerformerPage = lazy(() => import('./pages/PerformerPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 // LadyTube: カレンダーも開いたときに読む (v3.6.0 で書き直して大きくなったため)
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+// LadyTube: 本体のスクリーンショットのギャラリーも開いたときに読む (v3.13.0。最初に読む JS が 500KB を超えたため)
+const ScreenshotGalleryPage = lazy(() => import('./pages/ScreenshotGalleryPage'));
 
 function App() {
   return (

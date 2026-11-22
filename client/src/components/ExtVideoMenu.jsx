@@ -5,11 +5,10 @@
 //   ファイル名を変更 (1本のとき) かファイル名をルールで変更 (2本以上。どちらも v3.12.0・PC だけ。ExtRename.jsx) / 削除。ids は対象の動画 (まとめたカードは中の動画すべて。呼ぶ側が広げる)。
 // 差し込み口 WL.videoMenuExtras に足した「項目を作る関数 (ids, close) => 要素」は「動画の削除」の上に並ぶ。
 // done は操作が終わったら呼ぶ (選択の解除)。見た目は womanlive-ext.css の .wlext-sel-menu-* / .wlext-bm-dlg-*。
-// タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog、動画情報を取得は ExtMetaSearch.jsx の BulkMetaFetchDialog。
+// タグ追加は ExtPresetTagDialog.jsx、詳細情報編集は ExtMetaEdit.jsx の ExtBulkMetaDialog (開くときに読む。v3.13.0)、動画情報を取得は ExtMetaSearch.jsx の BulkMetaFetchDialog。
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ExtDialog } from './ExtDialog';
-import { ExtBulkMetaDialog } from './ExtMetaEdit';
 import { BulkMetaFetchDialog } from './ExtMetaSearch';
 import { Icon } from './ExtIcon';
 import { extGet, extSend } from '../services/extApi';
@@ -66,7 +65,7 @@ export default function ExtVideoMenu({ ids, anchor, done, onClose }) {
             <div ref={menu} className={'wlext-sel-menu' + (anchor ? ' wlext-sel-menu-anchored' : '')}>
                 {head && <div className="wlext-sel-menu-head">{head}</div>}
                 <div className="wlext-sel-menu-item" onClick={run(doTags)}><Icon name="tag" size={15} /><span>タグ追加</span></div>
-                <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="pencil" size={15} /><span>詳細情報編集</span></div>
+                <div className="wlext-sel-menu-item" onClick={run((ids, done) => import('./ExtMetaEdit').then(m => openExtDialog(m.ExtBulkMetaDialog, { ids, onDone: () => afterAction(done) })))}><Icon name="pencil" size={15} /><span>詳細情報編集</span></div>
                 <div className="wlext-sel-menu-item" onClick={run((ids, done) => openExtDialog(BulkMetaFetchDialog, { ids, onDone: () => afterAction(done) }))}><Icon name="search" size={15} /><span>動画情報を取得</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doBookmark)}><Icon name="bookmark-add" size={15} /><span>ブックマーク追加</span></div>
                 <div className="wlext-sel-menu-item" onClick={run(doModelNo)}><Icon name="hash" size={15} /><span>品番をファイル名から設定</span></div>

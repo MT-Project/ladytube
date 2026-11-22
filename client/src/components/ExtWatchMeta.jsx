@@ -20,7 +20,6 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
-import { ExtMetaEditDialog } from './ExtMetaEdit';
 import { formatYmd, formatYmAgo, formatAgeYm, searchToken, formatDuration, formatDateTime, formatFileSize, getFolderPath, getFolderName } from '../utils/formatters';
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
 import { openMetaSearch } from '../utils/metaSearch';
@@ -205,7 +204,8 @@ export function ExtWatchFabs({ videoId }) {
     const editMeta = () => {
         const meta = cachedMeta(vid);
         if (!meta) { toast('詳細情報を読み込み中です'); return; }
-        openExtDialog(ExtMetaEditDialog, { vid, meta });
+        // 編集ダイアログは開くときに読む (v3.13.0。最初に読む JS を 500KB 未満に保つため)
+        import('./ExtMetaEdit').then(m => openExtDialog(m.ExtMetaEditDialog, { vid, meta }));
     };
     return createPortal(
         <>
