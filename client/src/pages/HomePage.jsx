@@ -335,7 +335,7 @@ export default function HomePage() {
                     </Link>
                     <Link to="/search?path=root" className={styles.menuItem}>
                         <Folder size={13} />
-                        カテゴリー
+                        フォルダ
                     </Link>
                     {EXT_HOME_LINKS.map(l => (
                         <a key={l.href} href={l.href} className={styles.menuItem + ' wlext-home-link'}>

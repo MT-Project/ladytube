@@ -94,8 +94,8 @@ export function ExtHelpButton({ content = HELP, tooltip = '検索のヘルプ' }
 const NAV_ITEMS = [
     ['/screenshots', 'image', 'スクリーンショット'],
     ['/calendar', 'calendar', 'カレンダー'],
-    // 本家 ver.260914 で /folder-tree は廃止され、検索画面のフォルダ絞り込み (カテゴリー) になった
-    ['/search?path=root', 'folder', 'カテゴリー'],
+    // 本家 ver.260914 で /folder-tree は廃止され、検索画面のフォルダ絞り込み (v3.15.0 から表記は「フォルダ」) になった
+    ['/search?path=root', 'folder', 'フォルダ'],
     ['/bookmarks', 'bookmark', 'ブックマーク'],
     ['/makers', 'factory', 'メーカー一覧'],
     ['/series', 'library', 'シリーズ一覧'],

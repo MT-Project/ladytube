@@ -1,4 +1,4 @@
-// LadyTube: 保存した検索 (v3.7.0)。検索語・並び順・カテゴリーのフォルダを名前付きで、DB の設定 (ライブラリごと) に置く。
+// LadyTube: 保存した検索 (v3.7.0)。検索語・並び順・フォルダを名前付きで、DB の設定 (ライブラリごと) に置く。
 // API は server/ext/routes/saved.js。保存は検索画面の「この条件を保存」(components/ExtSavedSearch.jsx)、
 // 名前の変更・並べ替え・削除は管理画面の「保存した検索」(ExtSettingsSections.jsx)。並べるのはホームと右上のメニュー。
 // 変えたら wlext-saved-searches を投げ、並べている画面が読み直す

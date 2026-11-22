@@ -292,10 +292,10 @@ const styles = {
 function buildBreadcrumbs(categoryPath, scanFolders) {
   if (!categoryPath) return [];
   if (categoryPath === 'root') {
-    return [{ label: 'カテゴリー', path: 'root', isCurrent: true }];
+    return [{ label: 'フォルダ', path: 'root', isCurrent: true }];
   }
 
-  const breadcrumbs = [{ label: 'カテゴリー', path: 'root', isCurrent: false }];
+  const breadcrumbs = [{ label: 'フォルダ', path: 'root', isCurrent: false }];
 
   // パスの正規化（セパレータを統一）
   const normalizedCurrent = categoryPath.replace(/\\/g, '/').replace(/\/+$/, '');
