@@ -15,11 +15,11 @@ import ExtSlot from './ExtSlot';
 import { ExtLibrarySettings } from './ExtLibrary';
 import { ExtConfirm } from './ExtDialog';
 import { openExtDialog } from '../utils/extDialog';
-import { ExtBackupSettings, ExtCoverSettings, ExtDmmSettings, ExtFileRuleSettings, ExtHomeSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtSavedSearchSettings, ExtTagRuleSettings } from './ExtSettingsSections';
+import { ExtBackupSettings, ExtBrowserSettings, ExtCoverSettings, ExtDmmSettings, ExtFileRuleSettings, ExtHomeSettings, ExtMaintenanceSettings, ExtRelatedSettings, ExtSavedSearchSettings, ExtTagRuleSettings } from './ExtSettingsSections';
 import { toast } from '../utils/toast';
 import { extApi } from '../services/extApi';
 
-const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, dmm: ExtDmmSettings, fileRule: ExtFileRuleSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, home: ExtHomeSettings, savedSearch: ExtSavedSearchSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
+const SECTIONS = { library: ExtLibrarySettings, cover: ExtCoverSettings, browser: ExtBrowserSettings, dmm: ExtDmmSettings, fileRule: ExtFileRuleSettings, tagRule: ExtTagRuleSettings, related: ExtRelatedSettings, home: ExtHomeSettings, savedSearch: ExtSavedSearchSettings, maintenance: ExtMaintenanceSettings, backup: ExtBackupSettings };
 
 export function ExtSettingsSection({ name }) {
     const Section = SECTIONS[name];

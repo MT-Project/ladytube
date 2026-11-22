@@ -727,6 +727,8 @@ export default function SettingsPage() {
                     </div>
                 </div>
 
+                {/* LadyTube: 起動時に開くブラウザ (v3.14.0。ネットワークの設定の下) */}
+                <ExtSettingsSection name="browser" />
                 <ExtSettingsSection name="dmm" />
                 {/* LadyTube: ファイル名のルール (v3.12.0) */}
                 <ExtSettingsSection name="fileRule" />

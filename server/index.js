@@ -92,16 +92,9 @@ if (fs.existsSync(clientDistPath)) {
 
 const openBrowser = process.argv.includes('-browser') || process.argv.includes('--browser');
 
+// LadyTube: 開くブラウザは管理画面の「起動時に開くブラウザ」に従う (既定のブラウザ / 指定した exe / 開かない。server/ext/browser.js。v3.14.0)
 function openInBrowser(url) {
-    const { exec } = require('child_process');
-    const startCmd = process.platform === 'win32' ? `start "" "${url}"` :
-        process.platform === 'darwin' ? `open "${url}"` :
-            `xdg-open "${url}"`;
-    exec(startCmd, (err) => {
-        if (err) {
-            logger.error('ブラウザ起動エラー', err);
-        }
-    });
+    require('./ext/browser').openUrl(url);
 }
 
 const hostSetting = db.prepare('SELECT value FROM settings WHERE key = ?').get('allow_public');

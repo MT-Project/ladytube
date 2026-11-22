@@ -17,7 +17,8 @@ const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'site_url', 'i
 exports.exportAll = (req, res) => {
     try {
         const settings = {};
-        db.prepare("SELECT key, value FROM settings WHERE key LIKE 'ext_%'").all()
+        // 起動時に開くブラウザ (ext_browser) は PC ごとなので入れない (browser.js)
+        db.prepare("SELECT key, value FROM settings WHERE key LIKE 'ext_%' AND key != 'ext_browser'").all()
             .forEach(r => { try { settings[r.key] = JSON.parse(r.value); } catch (e) { settings[r.key] = r.value; } });
 
         const data = {
@@ -47,7 +48,7 @@ exports.importAll = (req, res) => {
             // 設定 (ext_ キー)
             if (d.settings && typeof d.settings === 'object') {
                 const st = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
-                Object.keys(d.settings).forEach(k => { if (k.indexOf('ext_') === 0) st.run(k, JSON.stringify(d.settings[k])); });
+                Object.keys(d.settings).forEach(k => { if (k.indexOf('ext_') === 0 && k !== 'ext_browser') st.run(k, JSON.stringify(d.settings[k])); });
             }
 
             // 関連動画キャッシュは作り直しになるためクリア

@@ -1,5 +1,5 @@
 // LadyTube: 管理画面の LadyTube の項目 (v3.2.1 までは拡張の server/ext/public/settings.js)。
-// カバー画像 / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / ホーム画面 / 保存した検索 / 参照されていないデータの削除 / バックアップ。
+// カバー画像 / 起動時に開くブラウザ / DMM 商品検索API / 出演者タグ 自動付与ルール / 関連動画の重み付け / ホーム画面 / 保存した検索 / 参照されていないデータの削除 / バックアップ。
 // 見出しは本体の項目と同じく名前だけ (v3.3.1 までは「拡張機能：」とパズルのアイコン)。
 // 置き場所と並びは SettingsPage.jsx が ExtSettingsSection name="..." で決める (ExtSettingsParts.jsx がここの部品を選ぶ)。
 // 見た目は womanlive-ext.css の .wlext-settings-section・.wlext-rule-*・.wlext-related-*。入力欄は押したときに欄の値を読む。
@@ -78,6 +78,68 @@ export function ExtDmmSettings() {
             <label style={{ fontSize: '0.85rem', cursor: 'pointer', display: 'block', margin: '0.8rem 0 0.2rem' }}><input ref={auto} type="checkbox" defaultChecked onChange={saveAuto} />{' スキャンのあと、増えた動画の動画情報を自動で取得する'}</label>
             <div style={desc('0.5rem')}>スキャンで増えた動画のうち、品番があってメーカーが空のものを、一括取得と同じやり方（空の項目だけ埋める）で取得します。品番はスキャンのときにファイル名から入ります。</div>
             <div className="wlext-inline"><button className="wlext-btn" onClick={() => navigate('/search?q=' + encodeURIComponent(UNFETCHED_Q))}><Icon name="search" size={14} />動画情報が未取得の動画を検索</button></div>
+        </Section>
+    );
+}
+
+// 起動時に開くブラウザ (v3.14.0。server/ext/browser.js)。読むのも変えるのも PC からだけ。
+// 選ぶ値: 'default' / 'none' / 'exe:<この PC に登録されたブラウザの場所>' / 'custom' (場所を入力)
+export function ExtBrowserSettings() {
+    const [data, setData] = useState(null);   // null = 読み込み中 / { browsers } / { error }
+    const [pick, setPick] = useState('default');
+    const [custom, setCustom] = useState('');
+    const [args, setArgs] = useState('');
+    useEffect(() => {
+        if (!isLocalPC) return;
+        extGet('/ext/api/browser').then(d => {
+            const s = d.setting || {};
+            const hit = s.mode === 'exe' && (d.browsers || []).find(b => b.path.toLowerCase() === String(s.path).toLowerCase());
+            setPick(s.mode === 'exe' ? (hit ? 'exe:' + hit.path : 'custom') : (s.mode || 'default'));
+            setCustom(s.mode === 'exe' && !hit ? s.path : '');
+            setArgs(s.args || '');
+            setData(d);
+        }, e => setData({ error: e.message }));
+    }, []);
+    const isExe = pick === 'custom' || pick.startsWith('exe:');
+    const body = () => (isExe ? { mode: 'exe', path: pick === 'custom' ? custom : pick.slice(4), args } : { mode: pick });
+    const save = async () => {
+        try { await extSend('PUT', '/ext/api/browser', body()); toast('起動時に開くブラウザを保存しました（次に ladytube.bat で起動したときから）', 'success'); }
+        catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
+    };
+    const test = async () => {
+        try { const r = await extSend('POST', '/ext/api/browser/test', body()); toast(r.opened ? 'ブラウザで LadyTube を開きました' : '「開かない」なので、ブラウザは開きません', 'success'); }
+        catch (e) { toast('開けません: ' + e.message, 'error'); }
+    };
+    return (
+        <Section title="起動時に開くブラウザ" icon="globe">
+            <div style={desc('0.6rem')}>ladytube.bat で起動したときに LadyTube を開くブラウザです。ライブラリを切り替えたときの再起動では開きません。</div>
+            {!isLocalPC ? <div style={desc('0.6rem')}>{'表示と変更は、' + PC_ONLY + '。'}</div>
+                : !data ? <div style={desc('0.6rem')}>ブラウザを調べています...</div>
+                    : <>
+                        {data.error && <div style={desc('0.6rem')}>{'この PC のブラウザを読めませんでした（' + data.error + '）。場所を指定してください。'}</div>}
+                        <div className="wlext-field">
+                            <label>開くブラウザ</label>
+                            <select className="wlext-input" value={pick} onChange={e => setPick(e.target.value)}>
+                                <option value="default">既定のブラウザ</option>
+                                {(data.browsers || []).map(b => <option key={b.path} value={'exe:' + b.path}>{b.name}</option>)}
+                                <option value="custom">場所を指定（.exe）</option>
+                                <option value="none">開かない</option>
+                            </select>
+                        </div>
+                        {pick === 'custom' && <div className="wlext-field"><label>ブラウザの場所</label>
+                            <input className="wlext-input" value={custom} onChange={e => setCustom(e.target.value)} placeholder="C:\Program Files\Google\Chrome\Application\chrome.exe" /></div>}
+                        {pick.startsWith('exe:') && <div style={desc('0.6rem')}>{pick.slice(4)}</div>}
+                        {isExe && <div className="wlext-field"><label>起動のオプション（任意）</label>
+                            <input className="wlext-input" value={args} onChange={e => setArgs(e.target.value)} placeholder={'例: --profile-directory="Profile 2"'} />
+                            <div style={{ ...desc('0'), marginTop: '0.3rem' }}>
+                                URL の前に渡します。空白を含むときは "…" で囲みます。プライベートウィンドウは Chrome・Brave・Vivaldi が --incognito、Edge が --inprivate、Firefox 系が -private-window です（プライベートウィンドウでは、テーマや表示形式などの画面の設定がブラウザに残りません）。
+                            </div>
+                        </div>}
+                        <div className="wlext-inline">
+                            <button className="wlext-btn wlext-btn-primary" onClick={save}>保存</button>
+                            <button className="wlext-btn" onClick={test}>今の入力内容で開いて試す</button>
+                        </div>
+                    </>}
         </Section>
     );
 }

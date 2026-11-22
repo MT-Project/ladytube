@@ -31,6 +31,7 @@ const createInject = require('./inject');
 const libraryRoutes = require('./routes/library');
 const library = require('./library');
 const autobackup = require('./autobackup');
+const browser = require('./browser');
 
 // サーバーを動かしている PC からだけ使える API に付ける (LAN の端末からは 403)
 const pcOnly = (what) => (req, res, next) => (library.isLocal(req) ? next()
@@ -155,6 +156,19 @@ module.exports = function setupExt(app) {
         if (require('../services/scanner').isScanning) return res.status(400).json({ error: 'スキャン中は終了できません。スキャンの完了か中止を待ってください' });
         res.json({ ok: true });
         setTimeout(() => { try { db.close(); } catch (e) { } process.exit(0); }, 400);
+    });
+    // -- 起動時に開くブラウザ (v3.14.0。browser.js)。読むのも PC からだけ (exe の場所を LAN へ出さない)
+    app.get('/ext/api/browser', pcOnly('起動時に開くブラウザの設定'), async (req, res) => {
+        res.json({ setting: browser.current(), browsers: await browser.list() });
+    });
+    app.put('/ext/api/browser', pcOnly('起動時に開くブラウザの設定'), (req, res) => {
+        try { browser.save(req.body); res.json({ success: true, setting: browser.current() }); }
+        catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    // 今の入力内容で開いて試す (保存しない)。開くのはこの LadyTube のトップ
+    app.post('/ext/api/browser/test', pcOnly('起動時に開くブラウザの設定'), (req, res) => {
+        try { res.json({ opened: browser.launch(browser.check(req.body), 'http://localhost:' + req.socket.localPort) }); }
+        catch (e) { res.status(400).json({ error: e.message }); }
     });
     // -- 設定 / カバー画像
     app.get('/ext/api/settings', cover.getSettings);
