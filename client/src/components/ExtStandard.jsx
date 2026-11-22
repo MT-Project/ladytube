@@ -1,7 +1,8 @@
 // LadyTube: 動画ページの標準モード (v3.1.7 までの server/ext/public/standard.js を移したもの)。
 // 動画が横いっぱいの本家の表示 (シアターモード) に、動画の右へ情報欄を置く「標準モード」を足す。
 //  ・切替はプレイヤーの「プレイヤー設定」の右 (ExtLayoutButton)。状態は端末に保存 (既定はシアター)
-//  ・標準モードは ヘッダー / 動画 / 右の情報欄 / タイトルの行 だけを1画面に収める
+//  ・標準モードは ヘッダー / 動画 / 右の情報欄 / タイトルの行 だけを1画面に収める。ページはスクロールせず、動画の下の欄 (タイトル・タグ・
+//    作品紹介) だけが欄の中でスクロールする (動画がいつも見えるように。v3.13.0)
 //  ・右の情報欄は上の矢印か項目名で切り替え、欄の中だけスクロールする
 //      サムネイル = 本体のスクリーンショット欄 (カバーも) / 動画情報 = 本体の詳細欄 / イメージリスト = 本体のイメージリスト
 //      (開いている間だけ項目が出る) / 同じシリーズ・関連動画 = ExtVideoRow.jsx の ExtStdSeries / ExtStdRelated (v3.2.1 までは拡張の standard.js)
@@ -92,19 +93,27 @@ export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, 
     }, [active, curTab]);
     useLayoutEffect(() => () => document.body.classList.remove('wlext-std'), []);
 
-    // 大きさ: 動画の高さを「画面 − タイトルの行」に収める
+    // 大きさ: 動画の高さを「画面 − タイトルの行」に収め、動画の下の欄 (data-wlext-std="content") は画面の下端までの高さにする
+    // (欄の中だけがスクロールする。高さは --wlext-std-rest、CSS は womanlive-ext.css の body.wlext-std)
     useLayoutEffect(() => {
         if (!active) return;
         const layout = () => {
+            if (window.scrollY) window.scrollTo(0, 0);   // ページはスクロールしない (シアターモードで下まで送っていたとき)
             const nav = document.querySelector('#root nav');
             document.body.style.setProperty('--wlext-std-top', ((nav ? Math.round(nav.getBoundingClientRect().bottom) : 48) + 8) + 'px');
             const player = document.querySelector('#root [data-wlext-std="player"]');
             const title = document.querySelector('#root [data-wlext-std="title"]');
-            if (!player || !title) return;
-            // 動画の下端からタイトルの行の下端までは動画の高さに依らないので、その分を画面から引く
-            const reserve = title.getBoundingClientRect().bottom - player.getBoundingClientRect().bottom + 16;
+            const content = document.querySelector('#root [data-wlext-std="content"]');
+            if (!player || !title || !content) return;
+            // 動画の下端からタイトルの行の下端までは動画の高さに依らないので、その分を画面から引く。
+            // 欄の中をスクロールしていても同じになるよう、タイトルの行の下端は欄の先頭からの位置で測る
+            const ct = content.getBoundingClientRect().top;
+            const titleEnd = title.getBoundingClientRect().bottom - ct + content.scrollTop;
+            const reserve = (ct - player.getBoundingClientRect().bottom) + titleEnd + 16;
             const hgt = Math.max(200, Math.floor(window.innerHeight - player.getBoundingClientRect().top - reserve));
             document.body.style.setProperty('--wlext-std-player-h', hgt + 'px');
+            // 動画の高さを決めたあとの欄の位置から、画面の下端までを欄の高さにする
+            document.body.style.setProperty('--wlext-std-rest', Math.max(0, Math.floor(window.innerHeight - content.getBoundingClientRect().top)) + 'px');
         };
         layout();
         const title = document.querySelector('#root [data-wlext-std="title"]');
@@ -113,6 +122,12 @@ export default function ExtStandard({ vid, standard, imageListOpen, relatedIds, 
         window.addEventListener('resize', layout);
         return () => { if (ro) ro.disconnect(); window.removeEventListener('resize', layout); };
     }, [active, curTab, vid, imageListOpen]);
+
+    // 動画が変わったら、動画の下の欄を先頭へ戻す (欄はページを移っても同じ要素なので、スクロールの位置が残る)
+    useLayoutEffect(() => {
+        const content = document.querySelector('#root [data-wlext-std="content"]');
+        if (content) content.scrollTop = 0;
+    }, [vid]);
 
     const chipsRef = useRef(null);
 

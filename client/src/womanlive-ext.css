@@ -1419,6 +1419,12 @@ body.wlext-std [data-wlext-std="player"] { width: auto; }   /* 本家は幅を�
 body.wlext-std [data-wlext-std="page"] { padding-bottom: 0; }   /* 1画面に収めるので下の余白は要らない */
 body.wlext-std [data-wlext-std="player-wrapper"] { max-height: var(--wlext-std-player-h, 60vh); }
 body.wlext-std [data-wlext-std="related"] { display: none !important; }
+/* ページはスクロールさせず、動画の下の欄 (タイトル・タグ・作品紹介) だけを欄の中でスクロールする。高さは ExtStandard.jsx が測って入れる (v3.13.0)。
+   右欄の項目は position: fixed なので、この欄のスクロールでは動かない */
+body.wlext-std { overflow: hidden; }
+body.wlext-std [data-wlext-std="content"] { height: var(--wlext-std-rest, auto); overflow-y: auto; box-sizing: border-box; }
+/* スクロールする欄の中ではタイトルの上の余白が動画の下の余白と重ならなくなる (13px 下がる) ので、消して前と同じ位置にする */
+body.wlext-std [data-wlext-std="title"] > h1:first-child { margin-top: 0; }
 
 body.wlext-std [data-wlext-std="screenshots"],
 body.wlext-std [data-wlext-std="info"],
