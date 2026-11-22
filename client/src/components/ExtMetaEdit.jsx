@@ -1,5 +1,5 @@
 // LadyTube: 詳細情報の編集ダイアログ (openExtDialog で開く。見た目は womanlive-ext.css の .wlext-field・.wlext-chips・.wlext-suggest)。
-//  ・ExtMetaEditDialog: 動画ページの「詳細情報を編集」(ExtWatchMeta.jsx)。v3.2.1 までは拡張の videometa.js
+//  ・ExtMetaEditDialog: 動画ページの「詳細情報を編集」(ExtWatchMeta.jsx)。v3.2.1 までは拡張の videometa.js。作品紹介の欄はこちらだけ (v3.13.0)
 //  ・ExtBulkMetaDialog: 検索画面の一括操作 / ⋮ の「詳細情報編集」(ExtVideoMenu.jsx)。入力した項目だけ上書きし、表示動画名は無い
 // 入力欄は ExtChipInput.jsx (監督・ジャンル) とここの PerformerInput (出演者)。拡張の WL.chipInput / WL.performerInput と同じ形と動き。
 import { useRef, useState } from 'react';
@@ -90,8 +90,9 @@ function useMetaForm(m) {
 
 export function ExtMetaEditDialog({ vid, meta, onClose }) {
     const { fields, read, displayName } = useMetaForm({ ...metaToPayload(meta), performersFull: meta.performers });
+    const summary = useRef(null);   // 作品紹介 (v3.13.0。一括の編集には無い)
     const save = async () => {
-        try { await saveMeta(vid, { ...read(), display_name: displayName() }); toast('保存しました', 'success'); onClose(); }
+        try { await saveMeta(vid, { ...read(), display_name: displayName(), summary: summary.current.value }); toast('保存しました', 'success'); onClose(); }
         catch (e) { toast('保存に失敗: ' + e.message, 'error'); }
     };
     return (
@@ -102,6 +103,9 @@ export function ExtMetaEditDialog({ vid, meta, onClose }) {
                 <Field label="出演者">{fields.performers}</Field>
                 <Field label="ジャンル">{fields.genres}</Field>
                 {fields.rest}
+                <Field label="作品紹介 (改行と、太字・リンクなど一部のタグが使えます)">
+                    <textarea ref={summary} className="wlext-input wlext-summary-input" rows={5} defaultValue={meta.summary || ''} />
+                </Field>
             </div>
         </ExtDialog>
     );

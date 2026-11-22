@@ -7,7 +7,7 @@ import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
-import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtWatchFabs } from '../components/ExtWatchMeta';
+import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtSummary, ExtWatchFabs } from '../components/ExtWatchMeta';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -1238,6 +1238,9 @@ export default function WatchPage() {
                     {/* LadyTube: 本体のタグ編集ボタン (FAB) の代わりに、動画情報を検索 / タグを編集 (グループ対応) / 詳細情報を編集 の丸ボタン */}
                     <ExtWatchFabs videoId={video.id} />
                 </div>
+
+                {/* LadyTube: 標準モードの作品紹介 (v3.13.0)。右欄 (詳細欄の中) ではなくタイトルの下に出す。詳細欄の中のものとは CSS (body.wlext-std) で出し分ける */}
+                {meta?.summary && <ExtSummary key={video.id + ':' + meta.summary} text={meta.summary} className="wlext-summary-std" />}
 
                 {/* Information, Transcode, Folder & Next Video Row */}
                 <div className={styles.infoLayoutContainer} data-wlext-std="info">

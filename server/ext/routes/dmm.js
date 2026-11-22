@@ -252,6 +252,8 @@ exports.apply = async (req, res) => {
             joinList(genres),
             performerIds.length ? joinList(performerIds) : (cur.performers || null)
         );
+        // 作品紹介 (v3.13.0)。FANZA の API は返さないので、返す情報源 (item.summary) のときだけ。空なら今の値を残す
+        if (sv(item.summary)) db.prepare('UPDATE ext_video_meta SET summary = ? WHERE hash = ?').run(sv(item.summary), hash);
 
         // カバー画像: 未設定かつ URL があれば取得して保存
         let coverSet = false;

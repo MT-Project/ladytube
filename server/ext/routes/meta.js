@@ -6,7 +6,7 @@ const { db, splitList, joinList, hashOfVideo } = require('../db');
 const EMPTY = {
     rating: 0, display_name: '', model_no: '', release_date: '',
     series: '', maker: '', label: '',
-    directors: [], genres: [], performers: []
+    directors: [], genres: [], performers: [], summary: ''
 };
 
 function expandPerformers(idsCsvLines) {
@@ -46,6 +46,7 @@ exports.getMeta = (req, res) => {
             meta.directors = splitList(row.directors);
             meta.genres = splitList(row.genres);
             meta.performers = expandPerformers(row.performers);
+            meta.summary = row.summary || '';
         }
         res.json(meta);
     } catch (e) {
@@ -89,6 +90,10 @@ exports.putMeta = (req, res) => {
             joinList(b.genres),
             joinList(performerIds)
         );
+        // 作品紹介 (v3.13.0) は送られてきたときだけ書く (評価の保存など、作品紹介を持たない呼び出しで消さない)
+        if (typeof b.summary === 'string') {
+            db.prepare('UPDATE ext_video_meta SET summary = ? WHERE hash = ?').run(b.summary.trim() || null, hash);
+        }
 
         res.json({ success: true });
     } catch (e) {

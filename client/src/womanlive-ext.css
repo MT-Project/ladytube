@@ -218,6 +218,20 @@
 .wlext-fold.closed .wlext-fold-head { margin: 0; }
 .wlext-fold.closed .wlext-fold-head .wlext-ico { transform: rotate(-90deg); }
 
+/* 作品紹介 (ExtWatchMeta.jsx の ExtSummary。v3.13.0)。閉じているときは2行だけ。見出しは上の .wlext-fold-head */
+.wlext-summary { margin-bottom: 1rem; font-size: 0.875rem; }
+.wlext-summary .wlext-fold-head { margin: 0 0 0.3rem; }
+.wlext-summary:not(.open) .wlext-fold-head .wlext-ico { transform: rotate(-90deg); }
+.wlext-summary-body { line-height: 1.6; color: var(--text-primary, #333); overflow-wrap: anywhere; }
+.wlext-summary-body.plain { white-space: pre-line; }
+.wlext-summary-body p, .wlext-summary-body ul, .wlext-summary-body ol { margin: 0 0 0.5em; }
+.wlext-summary:not(.open) .wlext-summary-body { max-height: 3.2em; overflow: hidden; cursor: pointer; }
+.wlext-summary-input { resize: vertical; min-height: 6em; font-family: inherit; line-height: 1.5; }
+/* 標準モードでは、右欄 (詳細欄) の中のものを隠し、タイトルの下のもの (WatchPage.jsx) を出す。動画の大きさの計算 (ExtStandard.jsx) はタイトルの欄までなので変わらない */
+.wlext-summary-std { display: none; }
+body.wlext-std .wlext-summary-std { display: block; }
+body.wlext-std .wlext-meta-block .wlext-summary { display: none; }
+
 /* ---- ジャンル ---- */
 .wlext-genres {
     display: flex;

@@ -4,6 +4,8 @@
 //  ・ExtFileInfo: その下のファイル情報の欄 (場所・動画ファイル名・カテゴリー・長さ・サイズ・前回再生・更新日・登録日。v3.12.0 までは本体の詳細欄)。
 //    「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)
 //  ・ExtFoldBox: 作品情報とファイル情報の欄。見出しを押すと折りたたむ (閉じた欄は端末に覚える。v3.13.0)
+//  ・ExtSummary: ジャンルの下の作品紹介 (v3.13.0)。最初は2行だけ出し、押すと全文。許可したタグだけを出す (utils/richText.js)。
+//    標準モードでは右欄の中ではなくタイトルの下に出す (WatchPage が className="wlext-summary-std" でもう1つ置き、CSS の body.wlext-std で出し分ける)
 //  ・ExtWatchFabs: 右下の丸ボタン (ブックマーク / 動画情報を検索 / タグを編集 / 詳細情報を編集)。本体のタグ編集ボタンの代わり。
 //    ブックマークは ExtCardParts.jsx の ExtBookmarkButton (v3.1.15 までは bookmark.js が body に足していた)
 // 詳細情報の読み書きとタグ編集は utils/videoMeta.js、編集ダイアログは ExtMetaEdit.jsx (v3.2.1 までは videometa.js)。
@@ -26,6 +28,7 @@ import { openExtDialog } from '../utils/extDialog';
 import { isLocalPC } from '../utils/library';
 import { openRenameDialog } from '../utils/fileRule';
 import { toast } from '../utils/toast';
+import { richText } from '../utils/richText';
 import { extApi } from '../services/extApi';
 
 const WL = () => window.WLExt;
@@ -129,6 +132,21 @@ export function ExtFileInfo({ video }) {
     );
 }
 
+// 作品紹介。閉じているときは2行だけ (押すと開く)。開閉は覚えない (動画を開くたびに閉じた状態から)
+export function ExtSummary({ text, className }) {
+    const [open, setOpen] = useState(false);
+    const { nodes, plain } = richText(text);
+    return (
+        <div className={'wlext-summary' + (open ? ' open' : '') + (className ? ' ' + className : '')}>
+            <button type="button" className="wlext-fold-head" aria-expanded={open} title={open ? '折りたたむ' : '全文を表示'} onClick={() => setOpen(!open)}>
+                <Icon name="chevron-down" size={14} /><span>作品紹介</span>
+            </button>
+            <div className={'wlext-summary-body' + (plain ? ' plain' : '')} title={open ? undefined : '押すと全文を表示'}
+                onClick={open ? undefined : () => setOpen(true)}>{nodes}</div>
+        </div>
+    );
+}
+
 export function ExtMetaBlock({ meta }) {
     const navigate = useNavigate();
     const rows = [];
@@ -153,6 +171,7 @@ export function ExtMetaBlock({ meta }) {
                     ))}
                 </div>
             )}
+            {meta.summary && <ExtSummary key={meta.summary} text={meta.summary} />}
             {meta.performers && meta.performers.length > 0 && (
                 <div className="wlext-performers">
                     {meta.performers.map(p => {

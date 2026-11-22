@@ -34,6 +34,7 @@ function initSchema() {
             directors    TEXT,                -- 作品監督 (改行区切りで複数)
             genres       TEXT,                -- ジャンル   (改行区切りで複数)
             performers   TEXT,                -- 出演者     (改行区切りの performer id)
+            summary      TEXT,                -- 作品紹介 (v3.13.0。改行や一部のタグを含む。表示は ExtWatchMeta.jsx が許可したタグだけにする)
             updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -122,11 +123,12 @@ function initSchema() {
         if (!makerCols.includes(def.split(' ')[0])) db.exec(`ALTER TABLE ${S}ext_makers ADD COLUMN ${def}`);
     });
 
-    // v3.13.0 で足した列: 出演者の関連URL (共通)
+    // v3.13.0 で足した列: 作品紹介 (ライブラリごと) と出演者の関連URL (共通)
     const addCol = (schema, table, def) => {
         const cols = db.prepare(`PRAGMA ${schema}table_info(${table})`).all().map(c => c.name);
         if (!cols.includes(def.split(' ')[0])) db.exec(`ALTER TABLE ${schema}${table} ADD COLUMN ${def}`);
     };
+    addCol('', 'ext_video_meta', 'summary TEXT');
     addCol(S, 'ext_performers', 'urls TEXT');
 
     initialized = true;

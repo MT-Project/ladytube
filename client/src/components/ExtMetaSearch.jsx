@@ -13,6 +13,7 @@ import { cachedMeta, loadMeta } from '../utils/videoMeta';
 import { toast } from '../utils/toast';
 import { isLocalPC } from '../utils/library';
 import { ruleStem } from '../utils/fileRule';
+import { briefText } from '../utils/richText';
 
 // 取り込む項目 (キーはサーバーの dmm.js mapItem の戻りに合わせる)。list は複数値、merge は今の値を消さずに足す
 const FIELDS = [
@@ -24,6 +25,8 @@ const FIELDS = [
     { key: 'maker', label: 'メーカー', cur: (m) => m.maker || '' },
     { key: 'label', label: 'レーベル', cur: (m) => m.label || '' },
     { key: 'directors', label: '作品監督', list: true, cur: (m) => m.directors || [] },
+    // 作品紹介 (v3.13.0)。FANZA の API は返さないので、返す情報源のときだけ出る。長いので短くして見せる
+    { key: 'summary', label: '作品紹介', cur: (m) => briefText(m.summary), show: (v) => briefText(v) },
 ];
 const splitExt = (fn) => { const m = /^(.*?)(\.[^.]*)?$/.exec(fn || ''); return [m[1], m[2] || '']; };
 const mergeList = (cur, add) => { const out = (cur || []).slice(); (add || []).forEach(v => { if (!out.includes(v)) out.push(v); }); return out; };
