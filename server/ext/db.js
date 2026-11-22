@@ -35,6 +35,7 @@ function initSchema() {
             genres       TEXT,                -- ジャンル   (改行区切りで複数)
             performers   TEXT,                -- 出演者     (改行区切りの performer id)
             summary      TEXT,                -- 作品紹介 (v3.13.0。改行や一部のタグを含む。表示は ExtWatchMeta.jsx が許可したタグだけにする)
+            url          TEXT,                -- 作品のページの URL (v3.15.0。1つだけ。http/https。動画ページのタイトルの後ろにリンク)
             updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -130,6 +131,7 @@ function initSchema() {
     };
     addCol('', 'ext_video_meta', 'summary TEXT');
     addCol(S, 'ext_performers', 'urls TEXT');
+    addCol('', 'ext_video_meta', 'url TEXT');   // v3.15.0: 作品のページの URL
 
     initialized = true;
     console.log('[LadyTube] スキーマを初期化しました');

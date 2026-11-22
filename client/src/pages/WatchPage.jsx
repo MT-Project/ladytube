@@ -7,7 +7,7 @@ import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
-import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtSummary, ExtWatchFabs } from '../components/ExtWatchMeta';
+import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtSummary, ExtWatchFabs, ExtTitleUrl, ExtPerformerPills } from '../components/ExtWatchMeta';
 import { ExtPickWord } from '../components/ExtSearchWords';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
@@ -1212,9 +1212,11 @@ export default function WatchPage() {
                     {/* LadyTube: 文字を選ぶと「検索ワード」のボタン (data-wlext-pick。ExtSearchWords.jsx の ExtPickWord。v3.14.0) */}
                     <h1 className={styles.videoInfoTitle} data-wlext-pick="">
                         {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
+                        {/* LadyTube: 作品のページへのリンク (詳細情報の URL。v3.15.0) */}
+                        {meta?.url && <ExtTitleUrl url={meta.url} />}
                     </h1>
                     {/* LadyTube: 再生回数・公開日・評価 (★) を1行に (v3.13.0)。公開日は「N年Mヶ月前」だけで、年月日はマウスを載せると出る。
-                        ファイルの更新日時とフォルダ名 (カテゴリー) は詳細欄のファイル情報 (ExtFileInfo)。評価は保存し直したら作り直す */}
+                        ファイルの更新日時とフォルダ名は詳細欄のファイル情報 (ExtFileInfo)。評価は保存し直したら作り直す */}
                     <div className={styles.videoInfoMeta + ' wlext-watch-subrow'}>
                         <span>
                             {(video.play_count || 0) + ' 回再生'}
@@ -1222,6 +1224,9 @@ export default function WatchPage() {
                         </span>
                         {meta && <ExtRating key={video.id + ':' + (meta.rating || 0)} videoId={video.id} value={meta.rating} />}
                     </div>
+
+                    {/* LadyTube: 出演者 (タグの上に、タグと同じ高さの枠で。v3.15.0) */}
+                    {meta && <ExtPerformerPills meta={meta} />}
 
                     {/* Tags */}
                     <div className={styles.tagList}>
@@ -1250,9 +1255,9 @@ export default function WatchPage() {
                 <div className={styles.infoLayoutContainer} data-wlext-std="info">
                     {/* Left: Info details */}
                     <div className={styles.infoLeftColumn}>
-                        {/* LadyTube: ジャンル・出演者と作品情報 (品番など) の拡張メタデータ */}
+                        {/* LadyTube: ジャンルと作品情報 (品番など) の拡張メタデータ (出演者は v3.15.0 からタイトルの下) */}
                         {meta && <ExtMetaBlock meta={meta} />}
-                        {/* LadyTube: 本体の詳細 (長さ・サイズ・日時・場所) の代わりに、ファイル情報の欄 (動画ファイル名・カテゴリーも。v3.13.0) */}
+                        {/* LadyTube: 本体の詳細 (長さ・サイズ・日時・場所) の代わりに、ファイル情報の欄 (動画ファイル名・フォルダ名も。v3.13.0) */}
                         <ExtFileInfo video={video} />
 
                         {/* Transcode Section */}

@@ -1,6 +1,7 @@
-// LadyTube: 出演者の関連URL (v3.13.0)。サーバー (routes/performers.js) と本体の画面 (pages/PerformerPage.jsx) で同じものを使う。
+// LadyTube: 出演者の関連URL (v3.13.0) と動画の URL (v3.15.0)。サーバー (routes/performers.js・meta.js・dmm.js) と本体の画面 (pages/PerformerPage.jsx・WatchPage.jsx) で同じものを使う。
 //  ・normalizeUrl: 入力を http/https の URL にそろえる (スキームが無ければ https://)。使えないものは ''
-//  ・urlKind: URL の種類 (アイコンの名前と説明)。ドメインで決める。アイコンの名前は本体の画面の ExtIcon.jsx の ICONS 表
+//  ・urlKind: URL の種類 (アイコンの名前と説明)。ドメインで決める。アイコンの名前は本体の画面の ExtIcon.jsx の ICONS 表。
+//    動画のサイト (VIDEO_SITES) は site: true を付けて返す (動画ページのタイトルの後ろでは、アイコンにサイト名を添える)
 // 自己チェック: node server/ext/perfurl.mjs
 
 export function normalizeUrl(input) {
@@ -24,12 +25,23 @@ const KINDS = [
     [['wikipedia.org'], 'book-open', 'Wikipedia'],
     [['ameblo.jp', 'note.com', 'lineblog.me', 'livedoor.jp', 'blog.jp', 'blog.fc2.com', 'hatenablog.com', 'hatenablog.jp', 'seesaa.net', 'exblog.jp', 'jugem.jp'], 'pen-line', 'ブログ'],
 ];
+// 動画の販売・情報サイト ([ドメインの末尾, 名前])。線画のブランドアイコンが無いので、共通のアイコン (film) に名前を添える。
+// 名前はサイトの一般的な呼び方
+const VIDEO_SITES = [
+    [['dmm.co.jp'], 'FANZA'], [['mgstage.com'], 'MGS'], [['duga.jp'], 'DUGA'], [['sod.co.jp'], 'SOD'],
+    [['faleno.jp'], 'FALENO'], [['dahlia-av.jp'], 'DAHLIA'], [['avbase.net'], 'AVBASE'],
+    [['contents.fc2.com'], 'FC2'], [['fc2db.net'], 'FC2DB'], [['ppvdatabank.com'], 'PPVデータ保管庫'],
+    [['1pondo.tv'], '1Pondo'], [['10musume.com'], '10musume'], [['caribbeancom.com'], 'Caribbeancom'], [['caribbeancompr.com'], 'CaribbeancomPR'],
+    [['heyzo.com'], 'HEYZO'], [['heydouga.com'], 'HeyDouga'], [['tokyo-hot.com'], 'TOKYO-HOT'], [['pacopacomama.com'], 'PACOPACOMAMA'],
+    [['muramura.tv'], 'MURAMURA'], [['mywife.cc'], 'MYWIFE'], [['c0930.com'], 'C0930'], [['h0930.com'], 'H0930'], [['h4610.com'], 'H4610'],
+    [['kin8tengoku.com'], 'KIN8'],
+];
 export function urlKind(href) {
     let host = '';
     try { host = new URL(href).hostname.toLowerCase(); } catch { /* 下の既定 */ }
-    for (const [domains, icon, label] of KINDS) {
-        if (domains.some(d => host === d || host.endsWith('.' + d))) return { icon, label };
-    }
+    const hit = (domains) => domains.some(d => host === d || host.endsWith('.' + d));
+    for (const [domains, label] of VIDEO_SITES) if (hit(domains)) return { icon: 'film', label, site: true };
+    for (const [domains, icon, label] of KINDS) if (hit(domains)) return { icon, label };
     return { icon: 'globe', label: 'Webサイト' };
 }
 
@@ -53,5 +65,11 @@ if (typeof process !== 'undefined' && process.argv[1] && /perfurl\.mjs$/.test(pr
     eq(urlKind('https://ameblo.jp/abc').icon, 'pen-line');
     eq(urlKind('https://notx.com/').icon, 'globe');
     eq(urlKind('https://diaz-g.com/model/abc').icon, 'globe');
+    eq(urlKind('https://video.dmm.co.jp/av/content/?id=abc00123').label, 'FANZA');
+    eq(urlKind('https://www.dmm.co.jp/mono/dvd/-/detail/=/cid=abc123/').site, true);
+    eq(urlKind('https://www.mgstage.com/product/product_detail/300MIUM-1000/').label, 'MGS');
+    eq(urlKind('https://adult.contents.fc2.com/article/1234567/').label, 'FC2');
+    eq(urlKind('https://notdmm.co.jp/').site, undefined);
+    eq(urlKind('https://x.com/abc').site, undefined);
     console.log('perfurl: ok');
 }

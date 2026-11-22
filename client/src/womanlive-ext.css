@@ -111,57 +111,60 @@
     cursor: pointer;
 }
 
-/* ---- 出演者欄 ---- */
-.wlext-performers {
+/* ---- 出演者 (タイトルの下・タグの上。ExtWatchMeta.jsx の ExtPerformerPills。v3.15.0) ----
+   高さは本体のタグ (WatchPage.jsx の tagLink: 文字 0.75rem・上下の余白 0.25rem・枠 1px) と同じになるよう、名前の側で同じ値を使う。
+   丸い画像は枠の内側の高さいっぱい (1行の高さ 1lh＋上下の余白)。色はテーマごと (ダークは .dark で上書き) */
+.wlext-pills {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin: 0.5rem 0 1rem;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
 }
-.wlext-performer-card {
-    width: 110px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+.wlext-pill {
+    display: inline-flex;
+    align-items: stretch;
+    max-width: 100%;
+    font-size: 0.75rem;
+    color: var(--text-primary, #1e1e1e);
+    background-color: var(--bg-secondary, #f3f3f3);
+    border: 1px solid var(--border-secondary, #d4d4d4);
+    border-radius: 999px;
+    text-decoration: none;
+    overflow: hidden;
 }
-.wlext-performer-img {
-    width: 96px;
-    height: 96px;
+.wlext-pill:hover { border-color: var(--accent, #007acc); }
+.wlext-pill:hover .wlext-pill-name { color: var(--accent, #007acc); }
+.wlext-pill-img {
+    flex: none;
+    width: calc(1lh + 0.5rem);
+    height: calc(1lh + 0.5rem);
+    align-self: center;
     border-radius: 50%;
-    object-fit: cover;
-    background-color: var(--bg-tertiary, #eee);
-    border: 1px solid var(--border-primary, #ddd);
-    cursor: pointer;
+    border-right: 1px solid var(--border-secondary, #d4d4d4);
+    background-color: var(--bg-tertiary, #f8f8f8);
+    color: var(--text-secondary, #616161);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary, #888);
-    font-size: 1.6rem;
     overflow: hidden;
 }
-.wlext-performer-img img { width: 100%; height: 100%; object-fit: cover; }
-.wlext-performer-name-row {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    margin-top: 0.35rem;
-    max-width: 110px;
-}
-.wlext-performer-name {
-    font-size: 0.85rem;
-    color: var(--text-primary, #222);
-    cursor: pointer;
+.wlext-pill-img img { width: 100%; height: 100%; object-fit: cover; }
+.wlext-pill-name {
+    padding: 0.25rem 0 0.25rem 0.45rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.wlext-performer-name:hover { color: var(--accent, #007acc); text-decoration: underline; }
-.wlext-performer-age {
-    font-size: 0.72rem;
-    color: var(--text-secondary, #888);
-    margin-top: 0.1rem;
+.wlext-pill-age {
+    padding: 0.25rem 0 0.25rem 0.4rem;
+    font-size: 0.68rem;
+    align-self: center;
+    color: var(--text-secondary, #616161);
+    white-space: nowrap;
 }
+.wlext-pill > :last-child { padding-right: 0.75rem; }
+.dark .wlext-pill { background-color: var(--bg-tertiary, #363636); }
+.dark .wlext-pill-img { background-color: var(--bg-secondary, #252525); }
 
 /* ---- 拡張情報ブロック (型番/シリーズ等) ---- */
 .wlext-infobox {
@@ -1182,6 +1185,9 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-home-edit a:hover { color: var(--accent, #007acc); }
 
 /* ---- 動画情報の一括取得 (ExtMetaSearch.jsx の BulkMetaFetchDialog) ---- */
+.wlext-bulkfetch-keys { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; margin: 0.6rem 0 0.2rem; padding: 0.5rem 0.7rem; border: 1px solid var(--border-primary, #ccc); border-radius: 6px; }
+.wlext-bulkfetch-keys label { display: inline-flex; align-items: center; gap: 0.3rem; cursor: pointer; white-space: nowrap; }
+.wlext-bulkfetch-keys label.all { flex-basis: 100%; font-weight: 600; }
 .wlext-bulkfetch-bar { height: 6px; margin: 0.8rem 0 0.4rem; border-radius: 3px; background: var(--bg-hover, #ececec); overflow: hidden; }
 .wlext-bulkfetch-bar > div { height: 100%; background: var(--accent, #007acc); transition: width 0.2s; }
 .wlext-bulkfetch-list { margin-top: 0.6rem; max-height: 14rem; overflow-y: auto; border-top: 1px solid var(--border-color, #ddd); padding-top: 0.4rem; }
@@ -1530,3 +1536,22 @@ body.wlext-std [data-wlext-std="screenshots"] [data-wlext-std="screenshot-image"
 /* カバーは画像の縦横比のまま (DMM のカバーは 800×538 で 16:9 より縦長。16:9 の枠に収めると左右が空く) */
 body.wlext-std [data-wlext-std="screenshots"] .wlext-cover-card { width: 100% !important; height: auto !important; aspect-ratio: auto; }
 body.wlext-std .wlext-cover-card img { height: auto; }
+
+/* ---- 動画ページのタイトルの後ろの、作品のページへのリンク (ExtWatchMeta.jsx の ExtTitleUrl。v3.15.0) ---- */
+.wlext-title-url {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    margin-left: 0.5rem;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: normal;
+    vertical-align: middle;
+    color: var(--text-secondary, #888);
+    border: 1px solid var(--border-primary, #ccc);
+    border-radius: 0.25rem;
+    text-decoration: none;
+    white-space: nowrap;
+    user-select: none;
+}
+.wlext-title-url:hover { color: var(--accent, #007acc); border-color: var(--accent, #007acc); }

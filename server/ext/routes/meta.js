@@ -2,11 +2,13 @@
 // 動画の拡張メタデータ ルート
 // =============================================================
 const { db, splitList, joinList, hashOfVideo } = require('../db');
+const { normalizeUrl } = require('../perfurl.mjs');
+const { hasCover } = require('./cover');   // 本体の画面 (ExtMetaEdit.jsx) と同じもの
 
 const EMPTY = {
     rating: 0, display_name: '', model_no: '', release_date: '',
     series: '', maker: '', label: '',
-    directors: [], genres: [], performers: [], summary: ''
+    directors: [], genres: [], performers: [], summary: '', url: ''
 };
 
 function expandPerformers(idsCsvLines) {
@@ -24,7 +26,7 @@ function expandPerformers(idsCsvLines) {
 // GET /ext/api/video/:id/meta
 exports.getMeta = (req, res) => {
     try {
-        const file = db.prepare('SELECT hash, filename, updated_at FROM files WHERE id = ?').get(req.params.id);
+        const file = db.prepare('SELECT hash, filename, path, updated_at FROM files WHERE id = ?').get(req.params.id);
         if (!file) return res.status(404).json({ error: 'video not found' });
 
         const row = db.prepare('SELECT * FROM ext_video_meta WHERE hash = ?').get(file.hash);
@@ -33,6 +35,7 @@ exports.getMeta = (req, res) => {
             ...EMPTY,
             file_name: file.filename,
             video_date: file.updated_at,   // 動画の作成日時(ファイル更新日時) 年齢計算の既定基準
+            has_cover: hasCover(file),     // カバー画像があるか (v3.15.0。一括取得が、カバーだけを取りに行くかを決める)
         };
 
         if (row) {
@@ -47,6 +50,7 @@ exports.getMeta = (req, res) => {
             meta.genres = splitList(row.genres);
             meta.performers = expandPerformers(row.performers);
             meta.summary = row.summary || '';
+            meta.url = row.url || '';
         }
         res.json(meta);
     } catch (e) {
@@ -68,6 +72,9 @@ exports.putMeta = (req, res) => {
             : [];
 
         const rating = Math.max(0, Math.min(5, parseInt(b.rating, 10) || 0));
+        // 作品のページの URL (v3.15.0)。http/https だけ (スキームが無ければ https を補う)
+        const url = typeof b.url === 'string' ? normalizeUrl(b.url) : undefined;
+        if (url === '' && b.url.trim()) return res.status(400).json({ error: 'URL は http か https で始まるものだけです' });
 
         db.prepare(`
             INSERT INTO ext_video_meta
@@ -94,6 +101,8 @@ exports.putMeta = (req, res) => {
         if (typeof b.summary === 'string') {
             db.prepare('UPDATE ext_video_meta SET summary = ? WHERE hash = ?').run(b.summary.trim() || null, hash);
         }
+        // URL も送られてきたときだけ書く (同じ理由)
+        if (url !== undefined) db.prepare('UPDATE ext_video_meta SET url = ? WHERE hash = ?').run(url || null, hash);
 
         res.json({ success: true });
     } catch (e) {

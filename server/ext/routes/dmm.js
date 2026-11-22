@@ -6,6 +6,7 @@
 const { db, getSetting, splitList, joinList, hashOfVideo } = require('../db');
 const cover = require('./cover');
 const library = require('../library');
+const { normalizeUrl } = require('../perfurl.mjs');
 
 // 品番を英字部分と数字部分に分ける  例: AP-147 -> { alpha:'ap', num:147 }
 function parseModelNo(pn) {
@@ -87,6 +88,7 @@ function mapItem(it) {
         label: blankIfDashes(firstName(ii.label)),
         actresses: names(ii.actress),
         directors: names(ii.director),
+        url: it.URL || '',   // 作品のページ (v3.15.0。アフィリエイトの affiliateURL ではなく URL)
         imageLarge: largeImageUrl(img) || img,
         imageAlt: img          // 大判が無かったとき用のフォールバック
     };
@@ -254,6 +256,9 @@ exports.apply = async (req, res) => {
         );
         // 作品紹介 (v3.13.0)。FANZA の API は返さないので、返す情報源 (item.summary) のときだけ。空なら今の値を残す
         if (sv(item.summary)) db.prepare('UPDATE ext_video_meta SET summary = ? WHERE hash = ?').run(sv(item.summary), hash);
+        // 作品のページの URL (v3.15.0)。同じく空なら今の値を残す
+        const url = normalizeUrl(item.url);
+        if (url) db.prepare('UPDATE ext_video_meta SET url = ? WHERE hash = ?').run(url, hash);
 
         // カバー画像: 未設定かつ URL があれば取得して保存
         let coverSet = false;

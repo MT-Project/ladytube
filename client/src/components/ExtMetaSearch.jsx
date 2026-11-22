@@ -3,7 +3,8 @@
 //  ・MetaPreviewDialog: 取り込む項目の確認。チェックを付けた項目だけを /ext/api/dmm/apply で反映する
 //    (サーバーは空の項目を今の値のまま残すので、チェックを外した項目は空にして送る)。
 //    PC では、ファイル名のルールで作る名前が今と違えば「ファイル名」の行も出す (v3.12.0。既定のチェックは設定「動画情報を取得したらルールで変える」)
-//  ・BulkMetaFetchDialog: 一括操作と「⋮」の「動画情報を取得」(ExtVideoMenu.jsx が開く)。今の値がある項目を空にして送り、空の項目だけを埋める
+//  ・BulkMetaFetchDialog: 一括操作と「⋮」の「動画情報を取得」(ExtVideoMenu.jsx が開く)。今の値がある項目を空にして送り、空の項目だけを埋める。
+//    取得する項目を選べる (v3.15.0)。選んだ項目がすべて埋まっている動画は検索しない
 // 見た目は womanlive-ext.css の .wlext-dmm-* / .wlext-prev-* / .wlext-bulkfetch-*。
 import { useEffect, useRef, useState } from 'react';
 import { ExtDialog } from './ExtDialog';
@@ -27,6 +28,8 @@ const FIELDS = [
     { key: 'directors', label: '作品監督', list: true, cur: (m) => m.directors || [] },
     // 作品紹介 (v3.13.0)。FANZA の API は返さないので、返す情報源のときだけ出る。長いので短くして見せる
     { key: 'summary', label: '作品紹介', cur: (m) => briefText(m.summary), show: (v) => briefText(v) },
+    // 作品のページ (v3.15.0)。FANZA は API の URL
+    { key: 'url', label: 'URL', cur: (m) => m.url || '' },
 ];
 const splitExt = (fn) => { const m = /^(.*?)(\.[^.]*)?$/.exec(fn || ''); return [m[1], m[2] || '']; };
 const mergeList = (cur, add) => { const out = (cur || []).slice(); (add || []).forEach(v => { if (!out.includes(v)) out.push(v); }); return out; };
@@ -162,27 +165,40 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
 // 動いている間の「中止」(✕・Esc も) は今の1本を終えてから止まる。ほかのダイアログに替わったときも止まる
 const WHY = { none: '品番なし', notfound: '見つからない', multi: '候補が複数', error: '失敗', rename: 'ファイル名' };
 const isSet = (f, v) => (f.list ? (v || []).length > 0 : !!v);
-// 1本分。戻りは [結果, 名前の変更の結果]。結果は 'filled' (埋めた) / 'same' (埋める項目なし) / 'none' / 'notfound' / 'multi'。検索や反映の失敗は投げる。
-// rename: 埋めたらファイル名もルールで変える (v3.12.0。設定「動画情報を取得したらルールで変える」)
-async function fetchOne(vid, meta, rename) {
+// 一括取得で選べる項目 (v3.15.0)。作品紹介は FANZA が返さないので出さない。image はカバー画像
+const BULK_KEYS = FIELDS.filter(f => f.key !== 'summary').map(f => [f.key, f.label]).concat([['image', 'カバー画像']]);
+// ファイル名のルールが使う項目。これを埋めたときだけ名前を変える (URL だけ埋めて名前が変わらないように)
+const RULE_KEYS = ['title', 'date', 'actresses', 'maker', 'label', 'series'];
+// 1本分。戻りは [結果, 名前の変更の結果]。結果は 'filled' (埋めた) / 'same' (埋める項目なし) / 'have' (選んだ項目に値がある。検索しない) /
+// 'none' / 'notfound' / 'multi'。検索や反映の失敗は投げる。keys は選んだ項目 (BULK_KEYS のキーの Set)。
+// rename: ルールが使う項目を埋めたらファイル名もルールで変える (v3.12.0。設定「動画情報を取得したらルールで変える」)
+async function fetchOne(vid, meta, rename, keys) {
     if (!meta.model_no) return ['none'];
+    const want = FIELDS.filter(f => keys.has(f.key) && !isSet(f, f.cur(meta)));
+    const wantImage = keys.has('image') && !meta.has_cover;
+    if (!want.length && !wantImage) return ['have'];
     const items = (await window.WLExt.dmmSearch(vid)).items || [];
     if (items.length !== 1) return [items.length ? 'multi' : 'notfound'];
     const picked = { ...items[0] };
-    FIELDS.forEach(f => { if (isSet(f, f.cur(meta))) picked[f.key] = f.list ? [] : ''; });
-    const fills = FIELDS.some(f => isSet(f, picked[f.key]));
+    FIELDS.forEach(f => { if (!want.includes(f)) picked[f.key] = f.list ? [] : ''; });
+    if (!wantImage) { picked.imageLarge = ''; picked.imageAlt = ''; }
+    const filled = want.filter(f => isSet(f, picked[f.key]));
     // 埋める項目が無く、カバー画像も無ければ送らない (サーバーは更新日時だけを変えてしまう)
-    const r = fills || picked.imageLarge ? await extSend('POST', '/ext/api/dmm/apply', { id: vid, item: picked, rename: !!rename && fills }) : {};
-    return [fills || r.coverSet ? 'filled' : 'same', r.renamed];
+    const r = filled.length || picked.imageLarge
+        ? await extSend('POST', '/ext/api/dmm/apply', { id: vid, item: picked, rename: !!rename && filled.some(f => RULE_KEYS.includes(f.key)) }) : {};
+    return [filled.length || r.coverSet ? 'filled' : 'same', r.renamed];
 }
 // auto: 開いたらすぐ始める (スキャンのあとの自動取得。v3.11.0。SettingsPage.jsx)
 export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
-    const [st, setSt] = useState(null);   // null = 始める前。{ n, filled, same, skipped: [{ vid, name, why, msg }], running, retry }
+    const [st, setSt] = useState(null);   // null = 始める前。{ n, filled, same, have, skipped: [{ vid, name, why, msg }], running, retry }
+    const [keys, setKeys] = useState(() => new Set(BULK_KEYS.map(k => k[0])));   // 取得する項目。最初はすべて (今までと同じ)。覚えない
+    const setKey = (k, on) => setKeys(s => { const n = new Set(s); if (on) n.add(k); else n.delete(k); return n; });
     const stop = useRef(false);
     useEffect(() => () => { stop.current = true; }, []);
     const start = async () => {
+        if (!keys.size) { toast('取得する項目を選んでください', 'error'); return; }
         stop.current = false;
-        const s = { n: 0, filled: 0, same: 0, renamed: 0, skipped: [], running: true, retry: 0 };
+        const s = { n: 0, filled: 0, same: 0, have: 0, renamed: 0, skipped: [], running: true, retry: 0 };
         const cfg = isLocalPC ? await extGet('/ext/api/settings').catch(() => ({})) : {};
         const show = () => setSt({ ...s, skipped: s.skipped.slice(), stopping: stop.current });
         let fatal = false;
@@ -191,8 +207,8 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
             try {
                 const meta = await loadMeta(vid);
                 name = (meta.model_no ? meta.model_no + '  ' : '') + (meta.file_name || '');
-                const [res, rn] = await fetchOne(vid, meta, cfg.rename_on_fetch);
-                if (res === 'filled') s.filled++; else if (res === 'same') s.same++; else s.skipped.push({ vid, name, why: res });
+                const [res, rn] = await fetchOne(vid, meta, cfg.rename_on_fetch, keys);
+                if (res === 'filled') s.filled++; else if (res === 'same') s.same++; else if (res === 'have') s.have++; else s.skipped.push({ vid, name, why: res });
                 if (rn?.status === 'done') s.renamed++;
                 if (rn?.status === 'error') s.skipped.push({ vid, name, why: 'rename', msg: rn.error });   // 詳細情報は埋めた。飛ばした数には入れない
             } catch (e) {
@@ -242,11 +258,16 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
             onSave={st ? null : start} saveLabel="取得する">
             <div style={{ fontSize: '0.85rem', lineHeight: 1.7 }}>
                 {auto && <div>スキャンで増えた動画のうち、品番があってメーカーが空の動画です。</div>}
-                <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つだけなら、<b>空の項目だけ</b>を埋めます。今の値がある項目は変えません。カバー画像は未設定のときだけ取得します。</div>
+                <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つだけなら、下で選んだ項目のうち<b>空のものだけ</b>を埋めます。今の値がある項目は変えません。選んだ項目がすべて埋まっている動画は、検索せずに飛ばします。カバー画像は未設定のときだけ取得します。</div>
+                {!st && <div className="wlext-bulkfetch-keys">
+                    <label className="all"><input type="checkbox" checked={keys.size === BULK_KEYS.length} onChange={(e) => setKeys(new Set(e.target.checked ? BULK_KEYS.map(k => k[0]) : []))}
+                        ref={(el) => { if (el) el.indeterminate = keys.size > 0 && keys.size < BULK_KEYS.length; }} />すべて</label>
+                    {BULK_KEYS.map(([k, label]) => <label key={k}><input type="checkbox" checked={keys.has(k)} onChange={(e) => setKey(k, e.target.checked)} />{label}</label>)}
+                </div>}
                 {st && <>
                     <div className="wlext-bulkfetch-bar"><div style={{ width: pct + '%' }} /></div>
                     <div>{st.n + ' / ' + ids.length + ' 本' + (st.running ? (st.stopping ? '（中止しています…）' : st.retry ? '（失敗した ' + st.retry + '本をやり直しています…）' : '') : (st.n < ids.length ? '（中止しました）' : '（終わりました）'))}</div>
-                    <div>{'埋めた ' + st.filled + '本・埋める項目なし ' + st.same + '本・飛ばした ' + st.skipped.filter(x => x.why !== 'rename').length + '本'
+                    <div>{'埋めた ' + st.filled + '本・埋める項目なし ' + st.same + '本' + (st.have ? '・値がある ' + st.have + '本' : '') + '・飛ばした ' + st.skipped.filter(x => x.why !== 'rename').length + '本'
                         + (st.renamed ? '・ファイル名を変えた ' + st.renamed + '本' : '')}</div>
                     {st.skipped.length > 0 && <div className="wlext-bulkfetch-list">
                         {st.skipped.map(x => (

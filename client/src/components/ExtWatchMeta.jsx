@@ -1,7 +1,10 @@
 // LadyTube: 動画ページの拡張メタデータの表示 (v3.1.13 までの server/ext/public/videometa.js の表示部分を移したもの)。
 //  ・ExtRating: タイトルの下の評価 (★)。押すと保存する。v3.13.0 から再生回数・公開日と同じ行の右端
-//  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者と、作品情報 (公開日・品番・シリーズ名・メーカー・レーベル・作品監督) の欄
-//  ・ExtFileInfo: その下のファイル情報の欄 (場所・動画ファイル名・カテゴリー・長さ・サイズ・前回再生・更新日・登録日。v3.12.0 までは本体の詳細欄)。
+//  ・ExtTitleUrl: タイトルの後ろの、作品のページへのリンク (v3.15.0)。種類のアイコン (server/ext/perfurl.mjs の urlKind)。動画のサイトなら名前も添える
+//  ・ExtPerformerPills: タイトルの下 (タグの上) の出演者。丸い画像・名前・出演時の年齢を、タグと同じ高さの枠に並べる。押すと出演者ページ (v3.15.0。
+//    v3.14.0 までは詳細欄の先頭に縦長のカード)
+//  ・ExtMetaBlock: 詳細欄の先頭のジャンルと、作品情報 (公開日・品番・シリーズ名・メーカー・レーベル・作品監督) の欄
+//  ・ExtFileInfo: その下のファイル情報の欄 (場所・動画ファイル名・フォルダ名・長さ・サイズ・前回再生・更新日・登録日。v3.12.0 までは本体の詳細欄)。
 //    「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)。空白で区切った語は押すと検索ワードに足す (v3.14.0。ExtSearchWords.jsx)
 //  ・ExtFoldBox: 作品情報とファイル情報の欄。見出しを押すと折りたたむ (閉じた欄は端末に覚える。v3.13.0)
 //  ・ExtSummary: ジャンルの下の作品紹介 (v3.13.0)。最初は2行だけ出し、押すと全文。許可したタグだけを出す (utils/richText.js)。
@@ -17,7 +20,7 @@
 // 中クリックは data-wlext-href を下で拾って新しいタブで開く (ボタンを中に持つチップがあり <a> にできないため。v3.2.1 までは拡張の core.js)。
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { formatYmd, formatYmAgo, formatAgeYm, searchToken, formatDuration, formatDateTime, formatFileSize, getFolderPath, getFolderName } from '../utils/formatters';
@@ -30,6 +33,7 @@ import { toast } from '../utils/toast';
 import { richText } from '../utils/richText';
 import { ExtFileWords } from './ExtSearchWords';
 import { extApi } from '../services/extApi';
+import { urlKind } from '../../../server/ext/perfurl.mjs';
 
 const WL = () => window.WLExt;
 const searchHref = (token) => '/search?q=' + encodeURIComponent(token);
@@ -51,6 +55,18 @@ export function ExtRating({ videoId, value }) {
         <div className="wlext-rating-host">
             <ExtStarsEdit value={value} onChange={(n) => saveRating(videoId, n)} />
         </div>
+    );
+}
+
+// 作品のページへのリンク。新しいタブで開く。タイトルの文字を選ぶとき (検索ワード) に入らないよう、CSS で選べなくしてある
+export function ExtTitleUrl({ url }) {
+    const k = urlKind(url);
+    let shown = url;
+    try { shown = decodeURI(url); } catch { /* 読めなければそのまま */ }   // 説明は %E3… でなく読める形で
+    return (
+        <a className="wlext-title-url" href={url} target="_blank" rel="noopener noreferrer" title={k.label + ': ' + shown}>
+            <Icon name={k.icon} size="1.15em" />{k.site && <span>{k.label}</span>}
+        </a>
     );
 }
 
@@ -77,16 +93,26 @@ function ValEx({ text, field }) {
         </span>
     );
 }
-function PerformerImage({ p }) {
+// 出演者1人の枠。画像が無ければ人の線画。年齢は公開日 (無ければ動画の日付) の時点で、誕生日が無ければ出さない
+function PerformerPill({ p, at }) {
     const [failed, setFailed] = useState(false);
-    const navigate = useNavigate();
+    const age = formatAgeYm(p.birthday, at);
     return (
-        <div className="wlext-performer-img" title="出演者ページを開く" data-wlext-href={'/performer/' + p.id} onClick={() => navigate('/performer/' + p.id)}>
-            {p.has_image && !failed
-                ? <img alt={p.name} src={extApi.performerImageUrl(p.id)} onError={() => setFailed(true)} />
-                : <Icon name="user" size="1.2em" sw={1.5} />}
-        </div>
+        <Link className="wlext-pill" to={'/performer/' + p.id} title="出演者ページを開く">
+            <span className="wlext-pill-img">
+                {p.has_image && !failed
+                    ? <img alt="" src={extApi.performerImageUrl(p.id)} onError={() => setFailed(true)} />
+                    : <Icon name="user" size="70%" sw={1.5} />}
+            </span>
+            <span className="wlext-pill-name">{p.name}</span>
+            {age && <span className="wlext-pill-age">{age}</span>}
+        </Link>
     );
+}
+export function ExtPerformerPills({ meta }) {
+    if (!meta.performers || !meta.performers.length) return null;
+    const at = meta.release_date || meta.video_date;
+    return <div className="wlext-pills">{meta.performers.map(p => <PerformerPill key={p.id} p={p} at={at} />)}</div>;
 }
 
 // 作品情報とファイル情報の欄。閉じた欄の名前を端末に覚える (JSON の配列)
@@ -121,7 +147,7 @@ export function ExtFileInfo({ video }) {
                 ['動画ファイル名', <><span data-wlext-pick=""><ExtFileWords filename={video.filename} /></span>{isLocalPC && (
                     <button className="wlext-rename-btn" title="ファイル名を変更" onClick={() => openRenameDialog(String(video.id))}><Icon name="pencil" size={13} /></button>
                 )}</>],
-                ['カテゴリー', getFolderName(video.path)],
+                ['フォルダ名', getFolderName(video.path)],
                 ['長さ', video.duration === null ? '不明' : formatDuration(video.duration)],
                 ['サイズ', formatFileSize(video.size)],
                 ['前回再生', video.last_played_at ? formatDateTime(video.last_played_at) : '未再生'],
@@ -157,7 +183,6 @@ export function ExtMetaBlock({ meta }) {
     if (meta.maker) row('メーカー', <ValEx text={meta.maker} field="maker" />);
     if (meta.label) row('レーベル', <ValEx text={meta.label} field="label" />);
     if (meta.directors && meta.directors.length) row('作品監督', <span className="wlext-multi">{meta.directors.map(d => <ValEx key={d} text={d} field="director" />)}</span>);
-    const ref = meta.release_date || meta.video_date;
     return (
         <div className="wlext-meta-block">
             {meta.genres && meta.genres.length > 0 && (
@@ -172,24 +197,6 @@ export function ExtMetaBlock({ meta }) {
                 </div>
             )}
             {meta.summary && <ExtSummary key={meta.summary} text={meta.summary} />}
-            {meta.performers && meta.performers.length > 0 && (
-                <div className="wlext-performers">
-                    {meta.performers.map(p => {
-                        const age = formatAgeYm(p.birthday, ref);
-                        return (
-                            <div key={p.id} className="wlext-performer-card">
-                                <PerformerImage p={p} />
-                                <div className="wlext-performer-name-row">
-                                    <span className="wlext-performer-name" title={'「' + p.name + '」で検索'} data-wlext-href={searchHref('@performer:' + p.id)}
-                                        onClick={() => navigate(searchHref('@performer:' + p.id))}>{p.name}</span>
-                                    <ExcludeBtn token={'@notperformer:' + p.id} label={p.name} />
-                                </div>
-                                {age && <div className="wlext-performer-age">{age}</div>}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
             <ExtFoldBox name="work" title="作品情報">
                 {rows.length
                     ? <div className="wlext-detail-grid">{gridRows(rows)}</div>

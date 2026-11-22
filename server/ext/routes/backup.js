@@ -9,7 +9,7 @@ const b64enc = (buf) => (buf ? Buffer.from(buf).toString('base64') : null);
 const b64dec = (s) => (s ? Buffer.from(s, 'base64') : null);
 function pick(o, keys) { const r = {}; keys.forEach(k => { r[k] = (o && o[k] !== undefined) ? o[k] : null; }); return r; }
 
-const META_KEYS = ['hash', 'rating', 'display_name', 'model_no', 'release_date', 'series', 'maker', 'label', 'directors', 'genres', 'performers', 'summary', 'updated_at'];
+const META_KEYS = ['hash', 'rating', 'display_name', 'model_no', 'release_date', 'series', 'maker', 'label', 'directors', 'genres', 'performers', 'summary', 'url', 'updated_at'];
 const PERF_KEYS = ['id', 'name', 'furigana', 'birthday', 'height', 'weight', 'bust', 'cup', 'waist', 'hip', 'blood_type', 'aliases', 'rating', 'tags', 'urls', 'created_at', 'updated_at'];
 const MAKER_KEYS = ['name', 'furigana', 'catch_copy', 'list_url', 'site_url', 'image_view', 'updated_at'];
 
@@ -58,8 +58,8 @@ exports.importAll = (req, res) => {
             db.prepare('DELETE FROM ext_video_meta').run();
             if (Array.isArray(d.video_meta)) {
                 const s = db.prepare(`INSERT OR REPLACE INTO ext_video_meta
-                    (hash,rating,display_name,model_no,release_date,series,maker,label,directors,genres,performers,summary,updated_at)
-                    VALUES (@hash,@rating,@display_name,@model_no,@release_date,@series,@maker,@label,@directors,@genres,@performers,@summary,@updated_at)`);
+                    (hash,rating,display_name,model_no,release_date,series,maker,label,directors,genres,performers,summary,url,updated_at)
+                    VALUES (@hash,@rating,@display_name,@model_no,@release_date,@series,@maker,@label,@directors,@genres,@performers,@summary,@url,@updated_at)`);
                 d.video_meta.forEach(r => s.run(pick(r, META_KEYS)));
                 stats.video_meta = d.video_meta.length;
             }
