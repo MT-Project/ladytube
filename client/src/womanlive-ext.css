@@ -337,6 +337,9 @@ body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); 
     font-size: 0.85rem; cursor: pointer;
 }
 .wlext-prev-row:last-child { border-bottom: none; }
+/* 「すべて」の行 (ExtMetaSearch.jsx。v3.13.0)。項目の行と同じ並びで、見出しのように太字と実線 */
+.wlext-prev-row.wlext-prev-all { font-weight: bold; border-bottom-style: solid; }
+.wlext-prev-all .wlext-prev-cur { grid-column: 3 / -1; font-weight: normal; }
 .wlext-prev-label { color: var(--text-secondary, #888); }
 .wlext-prev-cur { color: var(--text-secondary, #999); overflow-wrap: anywhere; }
 .wlext-prev-arrow { color: var(--text-secondary, #888); }

@@ -83,6 +83,10 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
             </label>
         );
     }).filter(Boolean);
+    // 「すべて」の行 (v3.13.0): 項目とカバー画像のチェックをまとめて付け外しする。ファイル名は含めない (名前を変えるかは設定と個別のチェックで決める)
+    const allKeys = rows.map(r => r.key).concat(item.imageLarge ? ['image'] : []);
+    const onCount = allKeys.filter(k => !off[k]).length;
+    const setAll = (on) => setOff(o => ({ ...o, ...Object.fromEntries(allKeys.map(k => [k, !on])) }));
     // ルールで作る名前。チェックした項目を反映したあとの値で作る (実際に変えるのはサーバーの rename.js で、同じ filerule.mjs を使う)
     let newName = '';
     if (cfg && meta.file_name) {
@@ -123,6 +127,12 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
                 </div>
                 {rows.length || item.imageLarge
                     ? <div className="wlext-prev-grid">
+                        {allKeys.length > 1 && <label className="wlext-prev-row wlext-prev-all">
+                            <input type="checkbox" checked={onCount === allKeys.length} onChange={(e) => setAll(e.target.checked)}
+                                ref={(el) => { if (el) el.indeterminate = onCount > 0 && onCount < allKeys.length; }} />
+                            <span className="wlext-prev-label">すべて</span>
+                            <span className="wlext-prev-cur">{onCount + ' / ' + allKeys.length + ' 項目を設定'}</span>
+                        </label>}
                         {rows}
                         {/* カバー画像は「未設定のときだけ取得」なので、設定済みなら押しても変わらない */}
                         {item.imageLarge && <label className="wlext-prev-row">
