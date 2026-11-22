@@ -40,6 +40,7 @@ const HELP = <>
     <HelpRow code={'@tag:"名前"'} desc="タグで検索" />
     <HelpRow code="@performer:ID" desc="出演者で検索" />
     <HelpRow code="@rating:4" desc="評価で検索（@rating:>=4 など演算子も可）" />
+    <HelpRow code="@duration:>=30" desc="再生時間（分）で検索（@duration:<=60 も可。絞り込みのスライダーが使う形）" />
     <HelpRow code={'@releaseyear:"2024"'} desc={'公開年（@releasemonth:"2024-01" / @release:none も可）'} />
     <HelpRow code="@maker:none" desc="未設定の動画（@maker:any で設定ありの動画。model / series / label / genre なども同様）" />
     <HelpRow code={'@bookmark:"名前"'} desc="ブックマークフォルダで検索" />

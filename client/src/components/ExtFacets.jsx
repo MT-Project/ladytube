@@ -1,5 +1,5 @@
 // LadyTube: 検索結果のサイドメニュー (絞り込み)。v3.1.6 までの server/ext/public/searchfacets.js を移したもの。
-// 評価 (範囲スライダー) と ジャンル / タグ / メーカー / 出演者 / シリーズ を出し、押すと今の検索に足す (もう一度押すと外す)。
+// 評価と再生時間 (範囲スライダー) と ジャンル / タグ / メーカー / 出演者 / シリーズ を出し、押すと今の検索に足す (もう一度押すと外す)。
 // 上位5件を出し、残りは折りたたむ。候補はサーバーの /ext/api/search/facets (一覧と同じ母集団を数える)。
 // 画面左上の「絞り込み」ボタンで開閉 (位置は固定)。既定は PC=開く / モバイル=閉じる、切り替えた状態はその端末に覚える。
 // 見た目は womanlive-ext.css の .wlext-facets* (管理画面のサイドメニュー ExtSettingsParts.jsx の ExtSettingsNav と共用) と、body の
@@ -9,7 +9,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import { searchToken } from '../utils/formatters';
 
-// 表示順は上から 視聴 → タグ → ジャンル → メーカー → 出演者 → シリーズ (評価はその上)。
+// 表示順は上から 視聴 → タグ → ジャンル → メーカー → 出演者 → シリーズ (評価と再生時間はその上)。
 // 各項目の先頭の「未設定」は値 none (サーバーの search.js の @xxx:none)
 const SECTIONS = [
     { key: 'play', field: 'play', label: '視聴', icon: 'play' },
@@ -48,41 +48,57 @@ function buildQuery(tokens, keyword) {
     return '@' + parts.join(' ');
 }
 
-/* ---------- 評価の範囲 (rating トークン ⇔ 0〜5) ---------- */
-// rating トークンは AND なので、範囲は ">=下限" と "<=上限" の2つで表せる。下限0は未評価も含む
-function ratingRange(tokens) {
-    let min = 0, max = MAX_RATING;
-    tokens.filter(t => t.field === 'rating').forEach(t => {
-        const m = /^(>=|<=|>|<|=)?\s*(\d)/.exec(String(t.value).trim());
+/* ---------- 範囲のスライダー (評価 0〜5 と、再生時間の分) ---------- */
+// トークンは AND なので、範囲は ">=下限" と "<=上限" の2つで表せる。つまみは目盛り (stops) の上だけを動く。
+// 下限が先頭の目盛りなら下限のトークンを付けない (評価は未評価、再生時間は長さがわからない動画も含む)。
+// 上限が最後の目盛りなら上限のトークンを付けない (再生時間の最後の目盛りは「上限なし」)
+const RANGES = {
+    rating: {
+        field: 'rating', label: '評価', icon: 'star', stops: [0, 1, 2, 3, 4, 5], scale: ['0', String(MAX_RATING)],
+        text: (lo, hi, all) => (all ? 'すべて' : (lo === hi ? String(lo) : lo + '〜' + hi)),
+    },
+    // 再生時間 (v3.13.0)。目盛りは等間隔でない (短い動画の多いライブラリと長い動画の多いライブラリのどちらでも使えるように)
+    duration: {
+        field: 'duration', label: '再生時間', icon: 'clock', stops: [0, 15, 30, 45, 60, 90, 120, 180, 240], scale: ['0分', '240分〜'],
+        text: (lo, hi, all, top) => (all ? 'すべて' : top ? lo + '分〜' : lo === 0 ? '〜' + hi + '分' : (lo === hi ? lo + '分' : lo + '〜' + hi + '分')),
+    },
+};
+// トークン → 目盛りの番号。目盛りに無い値 (手で書いたもの) は、その値を含む広めの範囲として読む
+function rangeOf(tokens, { field, stops }) {
+    let lo = stops[0], hi = Infinity;
+    tokens.filter(t => t.field === field).forEach(t => {
+        const m = /^(>=|<=|>|<|=)?\s*(\d+)/.exec(String(t.value).trim());
         if (!m) return;
         const op = m[1] || '=', n = parseInt(m[2], 10);
-        if (op === '>=') min = Math.max(min, n);
-        else if (op === '>') min = Math.max(min, n + 1);
-        else if (op === '<=') max = Math.min(max, n);
-        else if (op === '<') max = Math.min(max, n - 1);
-        else { min = Math.max(min, n); max = Math.min(max, n); }
+        if (op === '>=') lo = Math.max(lo, n);
+        else if (op === '>') lo = Math.max(lo, n + 1);
+        else if (op === '<=') hi = Math.min(hi, n);
+        else if (op === '<') hi = Math.min(hi, n - 1);
+        else { lo = Math.max(lo, n); hi = Math.min(hi, n); }
     });
-    min = Math.max(0, Math.min(MAX_RATING, min));
-    max = Math.max(min, Math.min(MAX_RATING, max));
-    return { min, max };
+    const last = stops.length - 1;
+    const min = Math.max(0, stops.findLastIndex(s => s <= lo));
+    const at = stops.findIndex(s => s >= hi);
+    return { min, max: Math.max(min, at < 0 ? last : at) };
 }
-function withRating(tokens, min, max) {
-    const rest = tokens.filter(t => t.field !== 'rating');
-    if (min > 0) rest.push({ field: 'rating', value: '>=' + min });
-    if (max < MAX_RATING) rest.push({ field: 'rating', value: '<=' + max });
+function withRange(tokens, { field, stops }, min, max) {
+    const rest = tokens.filter(t => t.field !== field);
+    if (min > 0) rest.push({ field, value: '>=' + stops[min] });
+    if (max < stops.length - 1) rest.push({ field, value: '<=' + stops[max] });
     return rest;
 }
 
-// 0〜5 の点を並べ、両端のつまみをドラッグ (またはクリック) して範囲を決める。指を離した時点で検索し直す
-function RatingSection({ tokens, keyword, onApply }) {
-    const cur = ratingRange(tokens);
+// 目盛りの点を並べ、両端のつまみをドラッグ (またはクリック) して範囲を決める。指を離した時点で検索し直す
+function RangeSection({ spec, tokens, keyword, onApply }) {
+    const cur = rangeOf(tokens, spec);
     const [range, setRange] = useState(cur);
     const trackRef = useRef(null);
     const dragging = useRef(null);   // 'min' | 'max'
+    const last = spec.stops.length - 1;
     const indexAt = (e) => {
         const r = trackRef.current.getBoundingClientRect();
         const ratio = r.width ? (e.clientX - r.left) / r.width : 0;
-        return Math.round(Math.min(1, Math.max(0, ratio)) * MAX_RATING);
+        return Math.round(Math.min(1, Math.max(0, ratio)) * last);
     };
     // 範囲の外を押したらその側、内側なら近いほうのつまみを動かす
     const grab = (i, { min, max }) => (i < min ? 'min' : i > max ? 'max' : ((i - min) <= (max - i) ? 'min' : 'max'));
@@ -93,13 +109,13 @@ function RatingSection({ tokens, keyword, onApply }) {
         if (!dragging.current) return;
         dragging.current = null;
         const { min, max } = latest.current;
-        if (min !== cur.min || max !== cur.max) onApply(buildQuery(withRating(tokens, min, max), keyword));
+        if (min !== cur.min || max !== cur.max) onApply(buildQuery(withRange(tokens, spec, min, max), keyword));
     };
     const { min, max } = range;
     return (
         <div className="wlext-facet-section wlext-facet-range">
-            <div className="wlext-facet-title"><Icon name="star" size={15} /><span>評価</span></div>
-            <div className="wlext-facet-range-value">{(min === 0 && max === MAX_RATING) ? 'すべて' : (min === max ? String(min) : min + '〜' + max)}</div>
+            <div className="wlext-facet-title"><Icon name={spec.icon} size={15} /><span>{spec.label}</span></div>
+            <div className="wlext-facet-range-value">{spec.text(spec.stops[min], spec.stops[max], min === 0 && max === last, max === last)}</div>
             <div ref={trackRef} className="wlext-facet-track" title="ドラッグで範囲を変更"
                 onPointerDown={(e) => {
                     const i = indexAt(e);
@@ -110,13 +126,13 @@ function RatingSection({ tokens, keyword, onApply }) {
                 onPointerMove={(e) => { if (dragging.current) move(indexAt(e)); }}
                 onPointerUp={release} onPointerCancel={release}
             >
-                <div className="wlext-facet-track-fill" style={{ left: (min / MAX_RATING * 100) + '%', width: ((max - min) / MAX_RATING * 100) + '%' }} />
-                {Array.from({ length: MAX_RATING + 1 }, (_, i) => (
+                <div className="wlext-facet-track-fill" style={{ left: (min / last * 100) + '%', width: ((max - min) / last * 100) + '%' }} />
+                {spec.stops.map((_, i) => (
                     <div key={i} className={'wlext-facet-dot' + (i >= min && i <= max ? ' on' : '') + (i === min || i === max ? ' handle' : '')}
-                        style={{ left: (i / MAX_RATING * 100) + '%' }} />
+                        style={{ left: (i / last * 100) + '%' }} />
                 ))}
             </div>
-            <div className="wlext-facet-scale"><span>0</span><span>{String(MAX_RATING)}</span></div>
+            <div className="wlext-facet-scale"><span>{spec.scale[0]}</span><span>{spec.scale[1]}</span></div>
         </div>
     );
 }
@@ -233,8 +249,9 @@ export default function ExtFacets({ q, path, sort, group, onApply, contentRef })
                         {data && data.error && <div className="wlext-facets-msg">{'読み込みに失敗しました: ' + data.error}</div>}
                         {data && !data.error && (
                             <>
-                                {/* 評価はジャンルの上。候補が無くても (結果0件でも) 出して、範囲を広げ直せるようにする */}
-                                <RatingSection key={scopeKey}tokens={tokens} keyword={keyword} onApply={onApply} />
+                                {/* 評価と再生時間はジャンルの上。候補が無くても (結果0件でも) 出して、範囲を広げ直せるようにする */}
+                                <RangeSection key={'rating|' + scopeKey} spec={RANGES.rating} tokens={tokens} keyword={keyword} onApply={onApply} />
+                                <RangeSection key={'duration|' + scopeKey} spec={RANGES.duration} tokens={tokens} keyword={keyword} onApply={onApply} />
                                 {sections.map(sec => (
                                     <Section key={sec.key + '|' + scopeKey}sec={sec} items={data[sec.key]} tokens={tokens} keyword={keyword} onApply={onApply} />
                                 ))}

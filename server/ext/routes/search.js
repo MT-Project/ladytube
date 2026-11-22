@@ -139,6 +139,15 @@ function buildConditions(tokens) {
                 }
                 break;
             }
+            // 再生時間 (分。v3.13.0)。絞り込みのスライダー (ExtFacets.jsx) は ">=下限" と "<=上限"。長さがわからない動画は 0 分として数える
+            case 'duration': {
+                const mm = /^(>=|<=|>|<|=)?\s*(\d+)/.exec(value);
+                if (mm) {
+                    where.push(`IFNULL(m.duration,0) ${mm[1] || '='} ?`);
+                    params.push(parseInt(mm[2], 10) * 60);
+                }
+                break;
+            }
             case 'releasemonth': // YYYY-MM
                 where.push("substr(IFNULL(e.release_date,''),1,7) = ?");
                 params.push(value);
