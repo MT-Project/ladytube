@@ -7,12 +7,13 @@ import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
-import { ExtRating, ExtMetaBlock, ExtWatchFabs } from '../components/ExtWatchMeta';
+import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtWatchFabs } from '../components/ExtWatchMeta';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
 
-import { formatDuration, formatDate, formatDateTime, formatFileSize, getFolderPath, getFolderName, videoName, formatYmd, formatYmAgo } from '../utils/formatters';
+// LadyTube: 長さ・サイズ・日時・場所は ExtFileInfo (ExtWatchMeta.jsx) が出す (v3.13.0)
+import { formatDuration, formatDate, videoName, formatYmd, formatYmAgo } from '../utils/formatters';
 import { api } from '../services/api';
 // LadyTube: 拡張メタデータの読み込み
 import { loadMeta } from '../utils/videoMeta';
@@ -1210,16 +1211,14 @@ export default function WatchPage() {
                     <h1 className={styles.videoInfoTitle}>
                         {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
                     </h1>
-                    {/* LadyTube: 評価 (★)。保存し直したら作り直す */}
-                    {meta && <ExtRating key={video.id + ':' + (meta.rating || 0)} videoId={video.id} value={meta.rating} />}
-
-                    <div className={styles.videoInfoFolder}>
-                        {getFolderName(video.path)}
-                    </div>
-
-                    {/* LadyTube: ファイルの更新日時の代わりに公開日 (更新日は詳細欄の「前回再生:」の下) */}
-                    <div className={styles.videoInfoMeta}>
-                        {(video.play_count || 0) + ' 回再生' + (releaseDate ? '   公開日 ' + formatYmd(releaseDate) + '（' + formatYmAgo(releaseDate) + '）' : '')}
+                    {/* LadyTube: 再生回数・公開日・評価 (★) を1行に (v3.13.0)。公開日は「N年Mヶ月前」だけで、年月日はマウスを載せると出る。
+                        ファイルの更新日時とフォルダ名 (カテゴリー) は詳細欄のファイル情報 (ExtFileInfo)。評価は保存し直したら作り直す */}
+                    <div className={styles.videoInfoMeta + ' wlext-watch-subrow'}>
+                        <span>
+                            {(video.play_count || 0) + ' 回再生'}
+                            {releaseDate && <span title={'公開日 ' + formatYmd(releaseDate)}>{'・' + formatYmAgo(releaseDate)}</span>}
+                        </span>
+                        {meta && <ExtRating key={video.id + ':' + (meta.rating || 0)} videoId={video.id} value={meta.rating} />}
                     </div>
 
                     {/* Tags */}
@@ -1244,31 +1243,10 @@ export default function WatchPage() {
                 <div className={styles.infoLayoutContainer} data-wlext-std="info">
                     {/* Left: Info details */}
                     <div className={styles.infoLeftColumn}>
-                        {/* LadyTube: ジャンル・出演者・品番などの拡張メタデータ */}
-                        {meta && <ExtMetaBlock meta={meta} videoId={video.id} />}
-                        {/* Additional Info Section */}
-                        <div className={styles.infoBox} style={{ marginTop: 0 }}>
-                            <div className={styles.detailGrid}>
-                                <div>長さ:</div>
-                                <div>{video.duration === null ? '不明' : formatDuration(video.duration)}</div>
-
-                                <div>サイズ:</div>
-                                <div>{formatFileSize(video.size)}</div>
-
-                                <div>前回再生:</div>
-                                <div>{video.last_played_at ? formatDateTime(video.last_played_at) : '未再生'}</div>
-
-                                {/* LadyTube: ファイルの更新日時 (本家はタイトルの下に出していた) */}
-                                <div>更新日:</div>
-                                <div>{formatDateTime(video.updated_at)}</div>
-
-                                <div>登録日:</div>
-                                <div>{video.created_at ? formatDateTime(video.created_at) : '-'}</div>
-
-                                <div>場所:</div>
-                                <div className={styles.pathText}>{getFolderPath(video.path)}</div>
-                            </div>
-                        </div>
+                        {/* LadyTube: ジャンル・出演者と作品情報 (品番など) の拡張メタデータ */}
+                        {meta && <ExtMetaBlock meta={meta} />}
+                        {/* LadyTube: 本体の詳細 (長さ・サイズ・日時・場所) の代わりに、ファイル情報の欄 (動画ファイル名・カテゴリーも。v3.13.0) */}
+                        <ExtFileInfo video={video} />
 
                         {/* Transcode Section */}
                         <div className={styles.infoBox}>

@@ -201,6 +201,23 @@
 .wlext-exclude-btn:hover { opacity: 1; }
 .wlext-release-ago { color: var(--text-secondary, #888); margin-left: 0.4rem; font-size: 0.8rem; }
 
+/* 動画ページのタイトルの下の1行: 左に再生回数と公開日、右端に評価 (WatchPage.jsx。v3.13.0) */
+.wlext-watch-subrow { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.wlext-watch-subrow > .wlext-rating-host { margin-left: auto; }
+.wlext-watch-subrow .wlext-rating { margin: 0; }
+
+/* 作品情報・ファイル情報の欄の見出し (ExtWatchMeta.jsx の ExtFoldBox)。押すと折りたたむ */
+.wlext-fold-head {
+    display: flex; align-items: center; gap: 4px; width: 100%;
+    margin: -0.25rem 0 0.6rem; padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-weight: bold; color: var(--text-primary, #333); text-align: left;
+}
+.wlext-fold-head:hover { color: var(--accent, #007acc); }
+.wlext-fold-head .wlext-ico { transition: transform 0.15s; }
+.wlext-fold.closed { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+.wlext-fold.closed .wlext-fold-head { margin: 0; }
+.wlext-fold.closed .wlext-fold-head .wlext-ico { transform: rotate(-90deg); }
+
 /* ---- ジャンル ---- */
 .wlext-genres {
     display: flex;

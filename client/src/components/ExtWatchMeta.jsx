@@ -1,6 +1,9 @@
 // LadyTube: 動画ページの拡張メタデータの表示 (v3.1.13 までの server/ext/public/videometa.js の表示部分を移したもの)。
-//  ・ExtRating: タイトルの下の評価 (★)。押すと保存する
-//  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者・品番などの表。「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)
+//  ・ExtRating: タイトルの下の評価 (★)。押すと保存する。v3.13.0 から再生回数・公開日と同じ行の右端
+//  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者と、作品情報 (公開日・品番・シリーズ名・メーカー・レーベル・作品監督) の欄
+//  ・ExtFileInfo: その下のファイル情報の欄 (場所・動画ファイル名・カテゴリー・長さ・サイズ・前回再生・更新日・登録日。v3.12.0 までは本体の詳細欄)。
+//    「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)
+//  ・ExtFoldBox: 作品情報とファイル情報の欄。見出しを押すと折りたたむ (閉じた欄は端末に覚える。v3.13.0)
 //  ・ExtWatchFabs: 右下の丸ボタン (ブックマーク / 動画情報を検索 / タグを編集 / 詳細情報を編集)。本体のタグ編集ボタンの代わり。
 //    ブックマークは ExtCardParts.jsx の ExtBookmarkButton (v3.1.15 までは bookmark.js が body に足していた)
 // 詳細情報の読み書きとタグ編集は utils/videoMeta.js、編集ダイアログは ExtMetaEdit.jsx (v3.2.1 までは videometa.js)。
@@ -16,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
 import { ExtBookmarkButton, ExtStarsEdit } from './ExtCardParts';
 import { ExtMetaEditDialog } from './ExtMetaEdit';
-import { formatYmd, formatYmAgo, formatAgeYm, searchToken } from '../utils/formatters';
+import { formatYmd, formatYmAgo, formatAgeYm, searchToken, formatDuration, formatDateTime, formatFileSize, getFolderPath, getFolderName } from '../utils/formatters';
 import { cachedMeta, openTagEditor, saveRating } from '../utils/videoMeta';
 import { openMetaSearch } from '../utils/metaSearch';
 import { openExtDialog } from '../utils/extDialog';
@@ -83,14 +86,54 @@ function PerformerImage({ p }) {
     );
 }
 
-export function ExtMetaBlock({ meta, videoId }) {
+// 作品情報とファイル情報の欄。閉じた欄の名前を端末に覚える (JSON の配列)
+const FOLD_KEY = 'wlext_watch_fold';
+const foldedNames = () => { try { const a = JSON.parse(localStorage.getItem(FOLD_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+export function ExtFoldBox({ name, title, children }) {
+    const [closed, setClosed] = useState(() => foldedNames().includes(name));
+    const toggle = () => {
+        const next = !closed;
+        setClosed(next);
+        try { localStorage.setItem(FOLD_KEY, JSON.stringify(foldedNames().filter(n => n !== name).concat(next ? [name] : []))); } catch { /* 覚えられなくても開閉はする */ }
+    };
+    return (
+        <div className={'wlext-infobox wlext-fold' + (closed ? ' closed' : '')}>
+            <button type="button" className="wlext-fold-head" aria-expanded={!closed} title={closed ? '開く' : '折りたたむ'} onClick={toggle}>
+                <Icon name="chevron-down" size={14} /><span>{title}</span>
+            </button>
+            {!closed && children}
+        </div>
+    );
+}
+
+// 表の行 ([項目名, 値] の並び → 「項目名:」と値のセル)
+const gridRows = (list) => list.flatMap(([key, val]) => [<div key={key + ':k'} className="wlext-key">{key}:</div>, <div key={key + ':v'} className="wlext-val">{val}</div>]);
+
+// ファイル情報 (本体の動画の情報だけで作るので、詳細情報を読む前から出す)
+export function ExtFileInfo({ video }) {
+    return (
+        <ExtFoldBox name="file" title="ファイル情報">
+            <div className="wlext-detail-grid">{gridRows([
+                ['場所', getFolderPath(video.path)],
+                ['動画ファイル名', <>{video.filename}{isLocalPC && (
+                    <button className="wlext-rename-btn" title="ファイル名を変更" onClick={() => openRenameDialog(String(video.id))}><Icon name="pencil" size={13} /></button>
+                )}</>],
+                ['カテゴリー', getFolderName(video.path)],
+                ['長さ', video.duration === null ? '不明' : formatDuration(video.duration)],
+                ['サイズ', formatFileSize(video.size)],
+                ['前回再生', video.last_played_at ? formatDateTime(video.last_played_at) : '未再生'],
+                ['更新日', formatDateTime(video.updated_at)],
+                ['登録日', video.created_at ? formatDateTime(video.created_at) : '-'],
+            ])}</div>
+        </ExtFoldBox>
+    );
+}
+
+export function ExtMetaBlock({ meta }) {
     const navigate = useNavigate();
     const rows = [];
-    const row = (key, val) => rows.push(<div key={key + ':k'} className="wlext-key">{key}:</div>, <div key={key + ':v'} className="wlext-val">{val}</div>);
+    const row = (key, val) => rows.push([key, val]);
     if (meta.release_date) row('公開日', <>{formatYmd(meta.release_date)}<span className="wlext-release-ago">{formatYmAgo(meta.release_date)}</span></>);
-    if (meta.file_name) row('動画ファイル名', <>{meta.file_name}{isLocalPC && videoId != null && (
-        <button className="wlext-rename-btn" title="ファイル名を変更" onClick={() => openRenameDialog(String(videoId))}><Icon name="pencil" size={13} /></button>
-    )}</>);
     if (meta.model_no) row('品番', <LinkVal text={meta.model_no} token={'@' + searchToken('model', meta.model_no)} />);
     if (meta.series) row('シリーズ名', <ValEx text={meta.series} field="series" />);
     if (meta.maker) row('メーカー', <ValEx text={meta.maker} field="maker" />);
@@ -128,11 +171,11 @@ export function ExtMetaBlock({ meta, videoId }) {
                     })}
                 </div>
             )}
-            <div className="wlext-infobox">
+            <ExtFoldBox name="work" title="作品情報">
                 {rows.length
-                    ? <div className="wlext-detail-grid">{rows}</div>
+                    ? <div className="wlext-detail-grid">{gridRows(rows)}</div>
                     : <div style={{ color: 'var(--text-secondary,#888)' }}>詳細情報は未設定です。右下の「詳細情報を編集」ボタン（鉛筆）から登録できます。</div>}
-            </div>
+            </ExtFoldBox>
         </div>
     );
 }
