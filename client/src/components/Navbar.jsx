@@ -9,6 +9,7 @@ import { theme } from '../theme';
 import { useUI } from '../contexts/UIContext';
 import { ExtHelpButton, ExtMenuButton } from './ExtNavParts';
 import { ExtLibraryPill } from './ExtLibraryPill';
+import { ExtPasteWords } from './ExtSearchWords';
 
 // Linaria styles
 const styles = {
@@ -373,6 +374,8 @@ export default function Navbar() {
                     </div>
                     {/* LadyTube: 検索のヘルプ (？) */}
                     <ExtHelpButton />
+                    {/* LadyTube: ためた検索ワードを検索欄の末尾に貼り付ける (語があるときだけ。ExtSearchWords.jsx。v3.14.0) */}
+                    <ExtPasteWords onPaste={(t) => { setLocalInput(v => (v.trim() ? v.trim() + ' ' : '') + t); document.getElementById('navi-search').focus(); }} />
                 </div>
 
                 {/* LadyTube: メニューを置くときは、狭い画面でも操作欄を出す (womanlive-ext.css の .wlext-actions-force) */}

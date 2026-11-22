@@ -2,7 +2,7 @@
 //  ・ExtRating: タイトルの下の評価 (★)。押すと保存する。v3.13.0 から再生回数・公開日と同じ行の右端
 //  ・ExtMetaBlock: 詳細欄の先頭のジャンル・出演者と、作品情報 (公開日・品番・シリーズ名・メーカー・レーベル・作品監督) の欄
 //  ・ExtFileInfo: その下のファイル情報の欄 (場所・動画ファイル名・カテゴリー・長さ・サイズ・前回再生・更新日・登録日。v3.12.0 までは本体の詳細欄)。
-//    「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)
+//    「動画ファイル名」の行に名前を変えるボタン (v3.12.0。PC だけ。ExtRename.jsx)。空白で区切った語は押すと検索ワードに足す (v3.14.0。ExtSearchWords.jsx)
 //  ・ExtFoldBox: 作品情報とファイル情報の欄。見出しを押すと折りたたむ (閉じた欄は端末に覚える。v3.13.0)
 //  ・ExtSummary: ジャンルの下の作品紹介 (v3.13.0)。最初は2行だけ出し、押すと全文。許可したタグだけを出す (utils/richText.js)。
 //    標準モードでは右欄の中ではなくタイトルの下に出す (WatchPage が className="wlext-summary-std" でもう1つ置き、CSS の body.wlext-std で出し分ける)
@@ -28,6 +28,7 @@ import { isLocalPC } from '../utils/library';
 import { openRenameDialog } from '../utils/fileRule';
 import { toast } from '../utils/toast';
 import { richText } from '../utils/richText';
+import { ExtFileWords } from './ExtSearchWords';
 import { extApi } from '../services/extApi';
 
 const WL = () => window.WLExt;
@@ -117,7 +118,7 @@ export function ExtFileInfo({ video }) {
         <ExtFoldBox name="file" title="ファイル情報">
             <div className="wlext-detail-grid">{gridRows([
                 ['場所', getFolderPath(video.path)],
-                ['動画ファイル名', <>{video.filename}{isLocalPC && (
+                ['動画ファイル名', <><span data-wlext-pick=""><ExtFileWords filename={video.filename} /></span>{isLocalPC && (
                     <button className="wlext-rename-btn" title="ファイル名を変更" onClick={() => openRenameDialog(String(video.id))}><Icon name="pencil" size={13} /></button>
                 )}</>],
                 ['カテゴリー', getFolderName(video.path)],
@@ -140,8 +141,8 @@ export function ExtSummary({ text, className }) {
             <button type="button" className="wlext-fold-head" aria-expanded={open} title={open ? '折りたたむ' : '全文を表示'} onClick={() => setOpen(!open)}>
                 <Icon name="chevron-down" size={14} /><span>作品紹介</span>
             </button>
-            <div className={'wlext-summary-body' + (plain ? ' plain' : '')} title={open ? undefined : '押すと全文を表示'}
-                onClick={open ? undefined : () => setOpen(true)}>{nodes}</div>
+            <div className={'wlext-summary-body' + (plain ? ' plain' : '')} title={open ? undefined : '押すと全文を表示'} data-wlext-pick=""
+                onClick={open ? undefined : () => { if (!String(window.getSelection())) setOpen(true); }}>{nodes}</div>
         </div>
     );
 }

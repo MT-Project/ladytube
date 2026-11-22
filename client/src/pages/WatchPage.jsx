@@ -8,6 +8,7 @@ import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
 import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
 import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtSummary, ExtWatchFabs } from '../components/ExtWatchMeta';
+import { ExtPickWord } from '../components/ExtSearchWords';
 import LoadingDots from '../components/LoadingDots';
 import { useUI } from '../contexts/UIContext';
 import { ChevronLeft, Play, Image, Trash2, X, LayoutGrid } from 'lucide-react';
@@ -1208,7 +1209,8 @@ export default function WatchPage() {
 
                 {/* Title & Tags (Full width) */}
                 <div style={{ marginBottom: '1.5rem' }} data-wlext-std="title">
-                    <h1 className={styles.videoInfoTitle}>
+                    {/* LadyTube: 文字を選ぶと「検索ワード」のボタン (data-wlext-pick。ExtSearchWords.jsx の ExtPickWord。v3.14.0) */}
+                    <h1 className={styles.videoInfoTitle} data-wlext-pick="">
                         {videoName(video, showExtension, showDisplayName)}{video.display_name ? ` ${video.display_name}` : ''}
                     </h1>
                     {/* LadyTube: 再生回数・公開日・評価 (★) を1行に (v3.13.0)。公開日は「N年Mヶ月前」だけで、年月日はマウスを載せると出る。
@@ -1237,6 +1239,8 @@ export default function WatchPage() {
 
                     {/* LadyTube: 本体のタグ編集ボタン (FAB) の代わりに、動画情報を検索 / タグを編集 (グループ対応) / 詳細情報を編集 の丸ボタン */}
                     <ExtWatchFabs videoId={video.id} />
+                    {/* LadyTube: タイトル・動画ファイル名・作品紹介の文字を選んだときの「検索ワード」のボタン (v3.14.0) */}
+                    <ExtPickWord />
                 </div>
 
                 {/* LadyTube: 標準モードの作品紹介 (v3.13.0)。右欄 (詳細欄の中) ではなくタイトルの下に出す。詳細欄の中のものとは CSS (body.wlext-std) で出し分ける */}
