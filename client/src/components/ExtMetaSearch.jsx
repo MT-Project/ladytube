@@ -1,12 +1,13 @@
 // LadyTube: 動画ページの「動画情報を検索」の画面 (v3.2.1 までは拡張の server/ext/public/videometa.js)。開くのは utils/metaSearch.jsx。
-//  ・MetaSelectDialog: 検索結果が複数のとき、選ばせる
+//  ・MetaSelectDialog: 検索結果が複数のとき、選ばせる。品番の末尾の英字で絞れた候補 (サーバーの dmm.js の markBest が先頭に置く) に印を付ける (v3.15.1)
 //  ・MetaPreviewDialog: 取り込む項目の確認。チェックを付けた項目だけを /ext/api/dmm/apply で反映する
 //    (サーバーは空の項目を今の値のまま残すので、チェックを外した項目は空にして送る)。
 //    PC では、ファイル名のルールで作る名前が今と違えば「ファイル名」の行も出す (v3.12.0。既定のチェックは設定「動画情報を取得したらルールで変える」)
 //  ・BulkMetaFetchDialog: 一括操作と「⋮」の「動画情報を取得」(ExtVideoMenu.jsx が開く)。今の値がある項目を空にして送り、空の項目だけを埋める。
-//    取得する項目を選べる (v3.15.0)。選んだ項目がすべて埋まっている動画は検索しない
+//    取得する項目を選べる (v3.15.0)。選んだ項目がすべて埋まっている動画は検索しない。
+//    候補が複数でも品番の末尾で絞れればそれで埋め、絞れなければ終わったあとの一覧の「選ぶ」で選ばせる (v3.15.1)
 // 見た目は womanlive-ext.css の .wlext-dmm-* / .wlext-prev-* / .wlext-bulkfetch-*。
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { ExtDialog } from './ExtDialog';
 import { extGet, extSend } from '../services/extApi';
 import { formatYmd } from '../utils/formatters';
@@ -51,7 +52,7 @@ export function MetaSelectDialog({ vid, items, onClose }) {
                     <div key={i} className="wlext-dmm-select-item" onClick={() => { onClose(); window.WLExt.showMetaPreview(vid, item); }}>
                         <ItemThumb item={item} />
                         <div className="wlext-dmm-select-info">
-                            <div className="wlext-dmm-select-title">{item.title || '(無題)'}</div>
+                            <div className="wlext-dmm-select-title">{item.best && <span className="wlext-dmm-best">品番が一致</span>}{item.title || '(無題)'}</div>
                             <div className="wlext-dmm-select-sub">{[item.date, item.maker, (item.actresses || []).join(', ')].filter(Boolean).join(' / ')}</div>
                         </div>
                     </div>
@@ -160,7 +161,9 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
 }
 
 // 一括取得。選んだ動画を1本ずつ品番で FANZA から検索し (window.WLExt.dmmSearch。1本ずつの検索と同じ関数なので、包んで足した処理もそのまま効く)、
-// 品番の一致する商品が1つだけなら、空の項目だけを埋める。見つからない・候補が複数・品番なし・失敗は飛ばし、最後に一覧で出す。
+// 品番の一致する商品が1つだけなら、空の項目だけを埋める。複数でも、サーバーが品番の末尾の英字で1つに絞れたら (best。v3.15.1) それで埋める。
+// 見つからない・候補が複数・品番なし・失敗は飛ばし、最後に一覧で出す。候補が複数の行は「選ぶ」で候補を出し、選ぶと同じ決まりで埋める
+// (同じ品番の動画 (パート) もまとめて。v3.15.1)。
 // 同じ品番のパートは、サーバー (dmm.js の findItemsCached) が控えた結果を返すので、問い合わせは1回で済む。
 // 動いている間の「中止」(✕・Esc も) は今の1本を終えてから止まる。ほかのダイアログに替わったときも止まる
 const WHY = { none: '品番なし', notfound: '見つからない', multi: '候補が複数', error: '失敗', rename: 'ファイル名' };
@@ -169,17 +172,23 @@ const isSet = (f, v) => (f.list ? (v || []).length > 0 : !!v);
 const BULK_KEYS = FIELDS.filter(f => f.key !== 'summary').map(f => [f.key, f.label]).concat([['image', 'カバー画像']]);
 // ファイル名のルールが使う項目。これを埋めたときだけ名前を変える (URL だけ埋めて名前が変わらないように)
 const RULE_KEYS = ['title', 'date', 'actresses', 'maker', 'label', 'series'];
-// 1本分。戻りは [結果, 名前の変更の結果]。結果は 'filled' (埋めた) / 'same' (埋める項目なし) / 'have' (選んだ項目に値がある。検索しない) /
+// 1本分。戻りは [結果, 名前の変更の結果, 候補 (multi のとき)]。結果は 'filled' (埋めた) / 'same' (埋める項目なし) / 'have' (選んだ項目に値がある。検索しない) /
 // 'none' / 'notfound' / 'multi'。検索や反映の失敗は投げる。keys は選んだ項目 (BULK_KEYS のキーの Set)。
 // rename: ルールが使う項目を埋めたらファイル名もルールで変える (v3.12.0。設定「動画情報を取得したらルールで変える」)
+const wantOf = (meta, keys) => [FIELDS.filter(f => keys.has(f.key) && !isSet(f, f.cur(meta))), keys.has('image') && !meta.has_cover];
 async function fetchOne(vid, meta, rename, keys) {
     if (!meta.model_no) return ['none'];
-    const want = FIELDS.filter(f => keys.has(f.key) && !isSet(f, f.cur(meta)));
-    const wantImage = keys.has('image') && !meta.has_cover;
+    const [want, wantImage] = wantOf(meta, keys);
     if (!want.length && !wantImage) return ['have'];
     const items = (await window.WLExt.dmmSearch(vid)).items || [];
-    if (items.length !== 1) return [items.length ? 'multi' : 'notfound'];
-    const picked = { ...items[0] };
+    const item = items.length === 1 ? items[0] : items.find(it => it.best);
+    if (!item) return [items.length ? 'multi' : 'notfound', null, items];
+    return fillFrom(vid, meta, rename, keys, item);
+}
+// 商品 item で、選んだ項目のうち空のものだけを埋める (一括取得と、その一覧の「選ぶ」)
+async function fillFrom(vid, meta, rename, keys, item) {
+    const [want, wantImage] = wantOf(meta, keys);
+    const picked = { ...item };
     FIELDS.forEach(f => { if (!want.includes(f)) picked[f.key] = f.list ? [] : ''; });
     if (!wantImage) { picked.imageLarge = ''; picked.imageAlt = ''; }
     const filled = want.filter(f => isSet(f, picked[f.key]));
@@ -194,12 +203,15 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
     const [keys, setKeys] = useState(() => new Set(BULK_KEYS.map(k => k[0])));   // 取得する項目。最初はすべて (今までと同じ)。覚えない
     const setKey = (k, on) => setKeys(s => { const n = new Set(s); if (on) n.add(k); else n.delete(k); return n; });
     const stop = useRef(false);
+    const cfgRef = useRef({});   // 設定 (rename_on_fetch)。「選ぶ」でも使う
+    const [open, setOpen] = useState(null);   // 「選ぶ」で候補を出している行の vid
+    const [busy, setBusy] = useState(false);
     useEffect(() => () => { stop.current = true; }, []);
     const start = async () => {
         if (!keys.size) { toast('取得する項目を選んでください', 'error'); return; }
         stop.current = false;
         const s = { n: 0, filled: 0, same: 0, have: 0, renamed: 0, skipped: [], running: true, retry: 0 };
-        const cfg = isLocalPC ? await extGet('/ext/api/settings').catch(() => ({})) : {};
+        const cfg = cfgRef.current = isLocalPC ? await extGet('/ext/api/settings').catch(() => ({})) : {};
         const show = () => setSt({ ...s, skipped: s.skipped.slice(), stopping: stop.current });
         let fatal = false;
         const run = async (vid) => {
@@ -207,8 +219,8 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
             try {
                 const meta = await loadMeta(vid);
                 name = (meta.model_no ? meta.model_no + '  ' : '') + (meta.file_name || '');
-                const [res, rn] = await fetchOne(vid, meta, cfg.rename_on_fetch, keys);
-                if (res === 'filled') s.filled++; else if (res === 'same') s.same++; else if (res === 'have') s.have++; else s.skipped.push({ vid, name, why: res });
+                const [res, rn, items] = await fetchOne(vid, meta, cfg.rename_on_fetch, keys);
+                if (res === 'filled') s.filled++; else if (res === 'same') s.same++; else if (res === 'have') s.have++; else s.skipped.push({ vid, name, why: res, pn: meta.model_no, items });
                 if (rn?.status === 'done') s.renamed++;
                 if (rn?.status === 'error') s.skipped.push({ vid, name, why: 'rename', msg: rn.error });   // 詳細情報は埋めた。飛ばした数には入れない
             } catch (e) {
@@ -249,6 +261,28 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
         const t = setTimeout(start, 0);
         return () => clearTimeout(t);
     }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+    // 候補が複数だった行で商品を選ぶ (v3.15.1)。同じ品番で候補が複数だった動画 (パート) にも、同じ商品 (content_id) を入れる。
+    // 商品は動画ごとに検索した候補から取る (パート番号の付与が、動画ごとに表示動画名へ _NN を足しているため)
+    const choose = async (x, item) => {
+        if (busy) return;
+        setBusy(true);
+        const rows = st.skipped.filter(y => y.why === 'multi' && y.pn === x.pn);
+        const add = { filled: 0, same: 0, renamed: 0 }, out = [];
+        for (const y of rows) {
+            const own = (y.items || []).find(it => it.content_id === item.content_id) || item;
+            try {
+                const [res, rn] = await fillFrom(y.vid, await loadMeta(y.vid), cfgRef.current.rename_on_fetch, keys, own);
+                add[res]++;
+                if (rn?.status === 'done') add.renamed++;
+                if (rn?.status === 'error') out.push({ vid: y.vid, name: y.name, why: 'rename', msg: rn.error });
+            } catch (e) { out.push({ vid: y.vid, name: y.name, why: 'error', msg: e.message || String(e) }); }
+        }
+        setSt(p => ({ ...p, filled: p.filled + add.filled, same: p.same + add.same, renamed: p.renamed + add.renamed,
+            skipped: p.skipped.flatMap(y => (rows.includes(y) ? out.filter(o => o.vid === y.vid) : [y])) }));
+        setOpen(null);
+        setBusy(false);
+        if (add.filled) onDone?.();
+    };
     const pct = st ? Math.round(st.n / ids.length * 100) : 0;
     const halt = () => { stop.current = true; setSt(p => ({ ...p, stopping: true })); };
     return (
@@ -258,7 +292,7 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
             onSave={st ? null : start} saveLabel="取得する">
             <div style={{ fontSize: '0.85rem', lineHeight: 1.7 }}>
                 {auto && <div>スキャンで増えた動画のうち、品番があってメーカーが空の動画です。</div>}
-                <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つだけなら、下で選んだ項目のうち<b>空のものだけ</b>を埋めます。今の値がある項目は変えません。選んだ項目がすべて埋まっている動画は、検索せずに飛ばします。カバー画像は未設定のときだけ取得します。</div>
+                <div>選んだ動画を品番で FANZA から検索し、品番の一致する商品が1つに決まれば、下で選んだ項目のうち<b>空のものだけ</b>を埋めます。候補が複数でも、品番の末尾の英字（DANDY-681A の A）で決まれば、それを使います。今の値がある項目は変えません。選んだ項目がすべて埋まっている動画は、検索せずに飛ばします。カバー画像は未設定のときだけ取得します。候補が複数で決まらなかった動画は、終わったあとの一覧の「選ぶ」で選べます。</div>
                 {!st && <div className="wlext-bulkfetch-keys">
                     <label className="all"><input type="checkbox" checked={keys.size === BULK_KEYS.length} onChange={(e) => setKeys(new Set(e.target.checked ? BULK_KEYS.map(k => k[0]) : []))}
                         ref={(el) => { if (el) el.indeterminate = keys.size > 0 && keys.size < BULK_KEYS.length; }} />すべて</label>
@@ -271,11 +305,26 @@ export function BulkMetaFetchDialog({ ids, onDone, onClose, auto }) {
                         + (st.renamed ? '・ファイル名を変えた ' + st.renamed + '本' : '')}</div>
                     {st.skipped.length > 0 && <div className="wlext-bulkfetch-list">
                         {st.skipped.map(x => (
-                            <div key={x.vid}>
-                                <span className="why">{WHY[x.why]}</span>
-                                {/* 一覧を残したまま1本ずつ直せるよう、別のタブで開く */}
-                                <a href={'/watch/' + x.vid} target="_blank" rel="noreferrer" title={x.msg || ''}>{x.name}</a>
-                            </div>
+                            <Fragment key={x.vid}>
+                                <div>
+                                    <span className="why">{WHY[x.why]}</span>
+                                    {/* 一覧を残したまま1本ずつ直せるよう、別のタブで開く */}
+                                    <a href={'/watch/' + x.vid} target="_blank" rel="noreferrer" title={x.msg || ''}>{x.name}</a>
+                                    {x.why === 'multi' && x.items?.length > 0 && !st.running
+                                        && <button type="button" className="wlext-bulkfetch-pick" onClick={() => setOpen(open === x.vid ? null : x.vid)}>{open === x.vid ? '閉じる' : '選ぶ'}</button>}
+                                </div>
+                                {open === x.vid && <div className={'wlext-dmm-select wlext-bulkfetch-cands' + (busy ? ' busy' : '')}>
+                                    {x.items.map(item => (
+                                        <div key={item.content_id} className="wlext-dmm-select-item" onClick={() => choose(x, item)}>
+                                            <ItemThumb item={item} />
+                                            <div className="wlext-dmm-select-info">
+                                                <div className="wlext-dmm-select-title">{item.title || '(無題)'}</div>
+                                                <div className="wlext-dmm-select-sub">{[item.content_id, item.date, item.label || item.maker].filter(Boolean).join(' / ')}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>}
+                            </Fragment>
                         ))}
                     </div>}
                 </>}

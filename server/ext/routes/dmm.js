@@ -39,6 +39,23 @@ function matchesModelNo(contentId, pn) {
     return re.test(String(contentId || '').toLowerCase());
 }
 
+// 品番の一致する商品が複数のとき (v3.15.1)、品番の数字の後ろの英字と content_id の数字の後ろをそろえて1つに絞る。
+// 複数になるのは、同じ番号の分割販売 (1dandy00681a/b/c) や版違い (1nhdtb00396z・AIリマスターの …ai) が並ぶとき。
+//   DANDY-681A・NHDTB-301-C → 末尾が a・c のもの / NHDTB-301 → 末尾の無いもの (全編)
+// 1つに絞れたらそれを先頭に置いて best: true を付ける (一括取得はそれで埋め、1本ずつの検索は印を付ける)。絞れなければそのまま
+function partLetter(pn) {
+    const m = String(pn || '').trim().match(/^[A-Za-z]+[-_ ]?\d+[-_]?([A-Za-z])(?![A-Za-z])/);
+    return m ? m[1].toLowerCase() : '';
+}
+function markBest(pn, items) {
+    const p = parseModelNo(pn);
+    if (!p || items.length < 2) return items;
+    const re = new RegExp('(^|[^a-z])' + p.alpha + '0*' + p.num + '(?![0-9])([a-z]*)');
+    const part = partLetter(pn);
+    const hit = items.filter(it => { const m = re.exec(String(it.content_id || '').toLowerCase()); return m && m[2] === part; });
+    return hit.length === 1 ? [{ ...hit[0], best: true }].concat(items.filter(it => it !== hit[0])) : items;
+}
+
 function normDate(s) {
     if (!s) return '';
     const m = String(s).trim().match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
@@ -160,8 +177,9 @@ exports.searchItems = async (pn) => {
     const apiId = getSetting('ext_dmm_api_id', '');
     const affId = getSetting('ext_dmm_affiliate_id', '');
     if (!apiId || !affId) { const e = new Error('DMM API ID / アフィリエイトID が未設定です'); e.notConfigured = true; throw e; }
-    const { result } = await findItemsCached(apiId, affId, String(pn || '').trim());
-    return (result.items || []).map(mapItem);
+    const q = String(pn || '').trim();
+    const { result } = await findItemsCached(apiId, affId, q);
+    return markBest(q, (result.items || []).map(mapItem));
 };
 
 // GET /ext/api/dmm/search?id=<videoId>
@@ -182,7 +200,7 @@ exports.search = async (req, res) => {
         if (!pn) return res.status(400).json({ error: '品番が設定されていません。先に品番を登録してください。' });
 
         const { result, method } = await findItemsCached(apiId, affId, pn);
-        const items = (result.items || []).map(mapItem);
+        const items = markBest(pn, (result.items || []).map(mapItem));
         res.json({
             status: result.status,
             total_count: items.length,   // 品番が一致したものだけを数える

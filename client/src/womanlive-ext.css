@@ -1194,6 +1194,22 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-bulkfetch-list > div { display: flex; gap: 0.6rem; white-space: nowrap; }
 .wlext-bulkfetch-list .why { flex-shrink: 0; width: 6.5em; color: var(--text-secondary, #888); }
 .wlext-bulkfetch-list a { overflow: hidden; text-overflow: ellipsis; color: inherit; }
+/* 候補が複数だった行の「選ぶ」と候補 (v3.15.1) */
+.wlext-bulkfetch-list:has(.wlext-bulkfetch-cands) { max-height: min(28rem, 60vh); }
+.wlext-bulkfetch-pick {
+    flex-shrink: 0; margin-left: auto; padding: 0 0.6rem; font-size: 0.75rem; line-height: 1.6; cursor: pointer;
+    background: transparent; color: var(--accent, #007acc); border: 1px solid var(--accent, #007acc); border-radius: 999px;
+}
+.wlext-bulkfetch-pick:hover { background: var(--bg-hover, #eee); }
+.wlext-bulkfetch-list > .wlext-bulkfetch-cands { flex-direction: column; gap: 0.4rem; white-space: normal; margin: 0.2rem 0 0.6rem 1rem; }
+.wlext-bulkfetch-cands .wlext-dmm-select-item { padding: 0.35rem; }
+.wlext-bulkfetch-cands .wlext-dmm-thumb { width: 80px; height: 57px; }
+.wlext-bulkfetch-cands.busy { opacity: 0.5; pointer-events: none; }
+/* 1本ずつの検索の候補で、品番の末尾の英字まで合ったもの (v3.15.1) */
+.wlext-dmm-best {
+    display: inline-block; margin-right: 0.4rem; padding: 0 0.4rem; font-size: 0.68rem; vertical-align: middle;
+    border: 1px solid var(--accent, #007acc); border-radius: 3px; color: var(--accent, #007acc);
+}
 
 /* ファイル名の変更 (v3.12.0。ExtRename.jsx と、動画ページの「動画ファイル名」の行のボタン ExtWatchMeta.jsx) */
 .wlext-rename-btn {
