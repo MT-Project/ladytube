@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { db, splitList, joinList, getSetting, IMG_EXTS } = require('../db');
 const trash = require('../trash');
+const { normalizeUrl } = require('../perfurl.mjs');
 
 // 選択 id 群を hash 単位(重複排除)で処理するためのヘルパ
 function eachHash(ids, fn) {
@@ -45,11 +46,16 @@ exports.tags = (req, res) => {
 
 // POST /ext/api/bulk/meta  { ids, meta }
 //  入力された項目のみ上書き(空欄は変更なし)。ジャンルは既存に追加(union)。表示動画名は不変。
+//  URL (作品のページ。v3.15.1) も入力されたときだけ上書きする。http/https でなければ何も書かずに 400
 exports.meta = (req, res) => {
     try {
         const { ids, meta } = req.body || {};
         const m = meta || {};
         if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids が必要です' });
+        const urlIn = (m.url == null ? '' : String(m.url)).trim();
+        const url = normalizeUrl(urlIn);
+        if (urlIn && !url) return res.status(400).json({ error: 'URL は http か https で始まるものだけです' });
+        const setUrl = db.prepare('UPDATE ext_video_meta SET url = ? WHERE hash = ?');
 
         const rating = Math.max(0, Math.min(5, parseInt(m.rating, 10) || 0));
         const performerIds = Array.isArray(m.performers)
@@ -91,6 +97,7 @@ exports.meta = (req, res) => {
                     performers: performerIds.length ? joinList(performerIds) : (cur.performers || null),
                     genres: joinList(genres),
                 });
+                if (url) setUrl.run(url, hash);
             });
         })();
         res.json({ success: true, count });

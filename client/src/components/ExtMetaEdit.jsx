@@ -1,6 +1,6 @@
 // LadyTube: 詳細情報の編集ダイアログ (openExtDialog で開く。見た目は womanlive-ext.css の .wlext-field・.wlext-chips・.wlext-suggest)。
 //  ・ExtMetaEditDialog: 動画ページの「詳細情報を編集」(ExtWatchMeta.jsx)。v3.2.1 までは拡張の videometa.js。作品紹介の欄はこちらだけ (v3.13.0)
-//  ・ExtBulkMetaDialog: 検索画面の一括操作 / ⋮ の「詳細情報編集」(ExtVideoMenu.jsx)。入力した項目だけ上書きし、表示動画名は無い
+//  ・ExtBulkMetaDialog: 検索画面の一括操作 / ⋮ の「詳細情報編集」(ExtVideoMenu.jsx)。入力した項目だけ上書きし、表示動画名は無い。URL はある (v3.15.1)
 // 入力欄は ExtChipInput.jsx (監督・ジャンル) とここの PerformerInput (出演者)。拡張の WL.chipInput / WL.performerInput と同じ形と動き。
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -92,7 +92,7 @@ function useMetaForm(m) {
 export function ExtMetaEditDialog({ vid, meta, onClose }) {
     const { fields, read, displayName } = useMetaForm({ ...metaToPayload(meta), performersFull: meta.performers });
     const summary = useRef(null);   // 作品紹介 (v3.13.0。一括の編集には無い)
-    const url = useRef(null);       // 作品のページの URL (v3.15.0。1つだけ。一括の編集には無い)
+    const url = useRef(null);       // 作品のページの URL (v3.15.0。1つだけ。一括の編集にもある)
     const save = async () => {
         const u = url.current.value.trim();
         if (u && !normalizeUrl(u)) { toast('URL は http か https で始まるものだけです', 'error'); return; }
@@ -121,8 +121,11 @@ export function ExtMetaEditDialog({ vid, meta, onClose }) {
 // onDone は適用したあと (選択の解除と一覧の取り直し)
 export function ExtBulkMetaDialog({ ids, onDone, onClose }) {
     const { fields, read } = useMetaForm({});
+    const url = useRef(null);   // 作品のページの URL (v3.15.1)。入れたときだけ、選んだ動画すべてを上書きする
     const save = async () => {
-        try { const r = await extSend('POST', '/ext/api/bulk/meta', { ids, meta: read() }); toast(r.count + '件を更新しました', 'success'); onClose(); onDone(); }
+        const u = url.current.value.trim();
+        if (u && !normalizeUrl(u)) { toast('URL は http か https で始まるものだけです', 'error'); return; }
+        try { const r = await extSend('POST', '/ext/api/bulk/meta', { ids, meta: { ...read(), url: normalizeUrl(u) } }); toast(r.count + '件を更新しました', 'success'); onClose(); onDone(); }
         catch (e) { toast('失敗: ' + e.message, 'error'); }
     };
     return (
@@ -133,6 +136,9 @@ export function ExtBulkMetaDialog({ ids, onDone, onClose }) {
                 <Field label="出演者（上書き）">{fields.performers}</Field>
                 <Field label="ジャンル（追加）">{fields.genres}</Field>
                 {fields.rest}
+                <Field label="URL（作品のページ。上書き）">
+                    <input ref={url} className="wlext-input" type="url" placeholder="https://" />
+                </Field>
             </div>
         </ExtDialog>
     );
