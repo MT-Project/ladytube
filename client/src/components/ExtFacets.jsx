@@ -9,8 +9,8 @@ import { createPortal } from 'react-dom';
 import { Icon } from './ExtIcon';
 import { searchToken } from '../utils/formatters';
 
-// 表示順は上から 視聴 → タグ → ジャンル → メーカー → 出演者 → シリーズ (評価と再生時間はその上)。
-// 各項目の先頭の「未設定」は値 none (サーバーの search.js の @xxx:none)
+// 表示順は上から 視聴 → タグ → ジャンル → メーカー → 出演者 → シリーズ → URL (評価と再生時間はその上)。
+// 各項目の先頭の「未設定」は値 none (サーバーの search.js の @xxx:none)。URL は「未設定」と「設定あり」(any) だけ (v3.15.1)
 const SECTIONS = [
     { key: 'play', field: 'play', label: '視聴', icon: 'play' },
     { key: 'tag', field: 'tag', label: 'タグ', icon: 'tag' },
@@ -18,6 +18,7 @@ const SECTIONS = [
     { key: 'maker', field: 'maker', label: 'メーカー', icon: 'factory' },
     { key: 'performer', field: 'performer', label: '出演者', icon: 'users' },
     { key: 'series', field: 'series', label: 'シリーズ', icon: 'library' },
+    { key: 'url', field: 'url', label: 'URL', icon: 'globe' },
 ];
 const TOP_N = 5;
 const MAX_RATING = 5;

@@ -82,10 +82,10 @@ function conditionsFor(query) {
 }
 
 // 値が none のとき「未設定」で引く列 (@maker:none など)。改行区切りの複数値は改行と空白だけなら未設定。
-// 値が any なら逆に「設定あり」(v3.11.0。@model:any maker:none = 動画情報が未取得)
+// 値が any なら逆に「設定あり」(v3.11.0。@model:any maker:none = 動画情報が未取得)。url は none と any だけ (v3.15.1。値では引かない)
 const NONE_COLUMN = {
     maker: 'e.maker', series: 'e.series', label: 'e.label', model: 'e.model_no', release: 'e.release_date',
-    director: 'e.directors', genre: 'e.genres', performer: 'e.performers', tag: 'm.tags',
+    director: 'e.directors', genre: 'e.genres', performer: 'e.performers', tag: 'm.tags', url: 'e.url',
 };
 const noneSql = (col) => `TRIM(IFNULL(${col},''), char(10,13,32)) = ''`;
 
@@ -328,14 +328,14 @@ exports.facets = (req, res) => {
         const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
 
         const rows = db.prepare(`
-            SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers,
+            SELECT m.tags AS tags, e.genres AS genres, e.maker AS maker, e.series AS series, e.performers AS performers, e.url AS url,
                    ${GROUP_KEY} AS gk, ${PLAY_SQL.unwatched} AS unwatched, ${PLAY_SQL.partial} AS partial, ${PLAY_SQL.next} AS next
             ${BASE}${whereSql}
         `).all(...params);
 
         // 品番でまとめているときは、一覧のカードと同じく「まとめた件数」で数える
         const grouped = req.query.group === '1';
-        const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map(), play: new Map() };
+        const counts = { genre: new Map(), tag: new Map(), maker: new Map(), performer: new Map(), series: new Map(), play: new Map(), url: new Map() };
         const seen = new Set();
         // 値 none は「未設定」(検索の @xxx:none と同じ)
         const bump = (kind, v, gk) => {
@@ -353,6 +353,7 @@ exports.facets = (req, res) => {
             if (r.unwatched) bump('play', 'unwatched', r.gk);
             if (r.partial) bump('play', 'partial', r.gk);
             if (r.next) bump('play', 'next', r.gk);
+            bump('url', String(r.url || '').trim() ? 'any' : '', r.gk);   // URL は値ごとに違うので、未設定 (none) と設定あり (any) だけを数える
         });
 
         // 出演者は id で数えているので氏名を引く
@@ -378,6 +379,7 @@ exports.facets = (req, res) => {
             maker: list('maker'),
             performer: list('performer'),
             series: list('series'),
+            url: ['none', 'any'].filter(v => counts.url.has(v)).map(v => ({ value: v, label: v === 'none' ? '未設定' : '設定あり', count: counts.url.get(v) })),
         });
     } catch (e) {
         if (e.badRequest) return res.status(400).json({ error: e.message });
