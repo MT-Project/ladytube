@@ -747,6 +747,9 @@ body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); 
 .wlext-series-rating .wlext-rating { margin: 0; }
 .wlext-series-rating .wlext-star { font-size: 0.85rem; }
 .wlext-series-ratingnum { font-size: 0.75rem; color: var(--text-secondary, #888); margin-left: 0.3rem; }
+/* シリーズ一覧の「複数のメーカーのみ」で出すメーカー名 (SeriesPage.jsx)。名前のみの表示では名前の右に並べる */
+.wlext-series-makers { font-size: 0.75rem; color: var(--text-secondary, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wlext-name-list .wlext-series-makers { display: inline; margin-left: 0.6rem; }
 
 /* ---- タグ一覧 (シリーズ一覧を踏襲。既定は無地背景+タグ名) ---- */
 .wlext-tag-thumb { display: flex; align-items: center; justify-content: center; }

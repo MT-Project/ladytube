@@ -269,8 +269,19 @@ exports.count = (req, res) => respond(req, res, true);
 
 // シリーズ別に集計 (シリーズ一覧用)
 //  name: シリーズ名 / count: 動画(ファイル)本数 / avgRating: 評価平均(0は除外) / thumbId: サムネ用動画id
+//  makers: そのシリーズの動画のメーカー (本数の多い順。シリーズ一覧の「メーカーでまとめる」と「複数のメーカーのみ」)
 exports.seriesList = (req, res) => {
     try {
+        const makers = new Map();
+        db.prepare(`
+            SELECT e.series AS name, TRIM(e.maker) AS maker, COUNT(f.id) AS n
+            FROM ext_video_meta e
+            JOIN files f ON f.hash = e.hash
+            JOIN metadata m ON m.hash = f.hash
+            WHERE e.series IS NOT NULL AND e.series != '' AND TRIM(IFNULL(e.maker, '')) != ''
+            GROUP BY e.series, TRIM(e.maker)
+            ORDER BY n DESC, maker
+        `).all().forEach(r => { if (!makers.has(r.name)) makers.set(r.name, []); makers.get(r.name).push(r.maker); });
         const rows = db.prepare(`
             SELECT e.series AS name,
                    COUNT(f.id) AS count,
@@ -287,7 +298,8 @@ exports.seriesList = (req, res) => {
             name: r.name,
             count: r.count,
             avgRating: r.avg_rating != null ? Math.round(r.avg_rating * 10) / 10 : null,
-            thumbId: r.thumb_id || null
+            thumbId: r.thumb_id || null,
+            makers: makers.get(r.name) || [],
         }));
         res.json(series);
     } catch (e) {
