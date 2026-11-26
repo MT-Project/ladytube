@@ -10,9 +10,9 @@ import { Icon as ExtIcon } from '../components/ExtIcon';
 import Navbar from '../components/Navbar';
 import LoadingDots from '../components/LoadingDots';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { LayoutGrid, Grid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder, Layers } from 'lucide-react';
+import { LayoutGrid, Square, List as ListIcon, ChevronLeft, ChevronRight, MonitorCog, RectangleHorizontal, Folder, Layers } from 'lucide-react';
 import { theme } from '../theme';
-import { removeExtension, groupMemberIds } from '../utils/formatters';
+import { removeExtension, groupMemberIds, THUMB_SIZES, thumbKind, storedViewMode, storedThumbSize, saveThumbSize } from '../utils/formatters';
 import ExtVideoMenu from '../components/ExtVideoMenu';
 import { closeExtDialog, extDialogSnapshot } from '../utils/extDialog';
 
@@ -400,12 +400,12 @@ export default function SearchPage() {
 
   const isCategoryMode = !!categoryPath;
 
-  const [viewMode, setViewMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('viewMode') || 'grid-lg';
-    }
-    return 'grid-lg';
-  });
+  // LadyTube: 表示形式はグリッド・ポスター・リストの3つ (小さいグリッドはグリッドにまとめた。storedViewMode が直す)
+  const [viewMode, setViewMode] = useState(storedViewMode);
+  // LadyTube: サムネイルの大きさ (表示形式ごと・端末ごと。formatters.js の THUMB_SIZES)
+  const [thumbSizes, setThumbSizes] = useState(() => Object.fromEntries(Object.keys(THUMB_SIZES).map(k => [k, storedThumbSize(k)])));
+  const thumbK = thumbKind(viewMode);
+  const setThumbSize = (n) => { setThumbSizes(s => ({ ...s, [thumbK]: n })); saveThumbSize(thumbK, n); };
 
   useEffect(() => {
     localStorage.setItem('viewMode', viewMode);
@@ -785,8 +785,7 @@ export default function SearchPage() {
               {/* View Modes */}
               <div className={styles.controlGroup}>
                 {[
-                  { id: 'grid-lg', icon: LayoutGrid, title: '大きいグリッド' },
-                  { id: 'grid-sm', icon: Grid, title: '小さいグリッド' },
+                  { id: 'grid-lg', icon: LayoutGrid, title: 'グリッド' },
                   { id: 'grid-poster', icon: RectangleHorizontal, title: 'ポスター' },
                   { id: 'list', icon: ListIcon, title: 'リスト' }
                 ].map(({ id, icon: Icon, title }) => (
@@ -799,6 +798,10 @@ export default function SearchPage() {
                     <Icon size={20} strokeWidth={2} />
                   </div>
                 ))}
+                {/* LadyTube: サムネイルの大きさ。動かしている間も並びが変わる (見た目は womanlive-ext.css の .wlext-thumbsize) */}
+                <input type="range" className="wlext-thumbsize" aria-label="サムネイルの大きさ"
+                  min={THUMB_SIZES[thumbK].min} max={THUMB_SIZES[thumbK].max} step={10} value={thumbSizes[thumbK]}
+                  title={'サムネイルの大きさ（' + thumbSizes[thumbK] + 'px）'} onChange={(e) => setThumbSize(Number(e.target.value))} />
               </div>
 
               {/* LadyTube: サムネイル切替 (スクリーンショット / ジャケット画像) */}
@@ -877,6 +880,7 @@ export default function SearchPage() {
               videos={currentVideos}
               onPlay={(video) => handleVideoClick(video.id)}
               viewMode={viewMode}
+              thumbSize={thumbSizes[thumbK]}
               onVideoUpdate={handleVideoUpdate}
               showThumbnailButton={showThumbnailButton}
               extMeta

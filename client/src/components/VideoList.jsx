@@ -140,9 +140,10 @@ const styles = {
         color: ${theme.colors.text.secondary};
         white-space: nowrap;
     `,
+    // LadyTube: 1枚の最小の幅は --wlext-thumb (検索画面と公開カレンダーのスライダー。無ければ前と同じ値)。画面より広くはしない
     grid: css`
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(var(--wlext-thumb, 270px), 100%), 1fr));
         gap: 0.9rem;
         width: 100%;
         &.small {
@@ -151,7 +152,7 @@ const styles = {
         }
         &.poster {
             gap: 0.5rem;
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(min(var(--wlext-thumb, 190px), 100%), 1fr));
         }
         &.home {
             gap: 0.7rem;
@@ -177,8 +178,9 @@ const styles = {
         position: relative;
         overflow: hidden;
         border-radius: 0.4rem;
+        /* LadyTube: リストのサムネイルの幅も --wlext-thumb。文字の欄が残るよう、行の7割まで */
         .list & {
-            width: 180px;
+            width: min(var(--wlext-thumb, 180px), 70%);
             flex-shrink: 0;
         }
     `,
@@ -968,7 +970,8 @@ function VideoCard({
     );
 }
 
-export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false, selectionMode = false, selectedIds, onToggleSelect, coverThumbs = false }) {
+// thumbSize: サムネイルの大きさ (px。LadyTube。検索画面と公開カレンダーが渡す。無ければ表示形式ごとの前と同じ大きさ)
+export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highlightedId, onVideoUpdate, extMeta = false, selectionMode = false, selectedIds, onToggleSelect, coverThumbs = false, thumbSize }) {
     const { showThumbnailButton } = useUI();
     const [lastPreviewedId, setLastPreviewedId] = useState(null);
     const [allTags, setAllTags] = useState([]);
@@ -998,7 +1001,8 @@ export default function VideoList({ videos, onPlay, viewMode = 'grid-lg', highli
     const containerClass = viewMode === 'list' ? styles.listView : styles.grid;
     if (videos.length === 0) return (<div className={containerClass}></div>);
     return (
-        <div className={`${containerClass} ${viewMode === 'grid-sm' ? 'small' : ''} ${viewMode === 'grid-poster' ? 'poster' : ''} ${viewMode === 'home' ? 'home' : ''} ${viewMode === 'list' ? 'list' : ''}`}>
+        <div className={`${containerClass} ${viewMode === 'grid-sm' ? 'small' : ''} ${viewMode === 'grid-poster' ? 'poster' : ''} ${viewMode === 'home' ? 'home' : ''} ${viewMode === 'list' ? 'list' : ''}`}
+            style={thumbSize ? { '--wlext-thumb': thumbSize + 'px' } : undefined}>
             {activeMenuId && (
                 <div
                     className={styles.modalBackdrop}

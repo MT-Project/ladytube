@@ -136,6 +136,29 @@ export function storedView(storeKey) {
     try { return localStorage.getItem(storeKey) === 'names' ? 'names' : 'thumb'; } catch { return 'thumb'; }
 }
 
+// LadyTube: 検索画面と公開カレンダーの表示形式 (localStorage の viewMode。'grid-lg' がグリッド。キーと値は前のまま) と、サムネイルの大きさ。
+// 小さいグリッド ('grid-sm') はグリッドにまとめたので、保存されていたらグリッドに直し、大きさを前と同じ 190px にする。
+// 大きさは表示形式ごと・端末ごとに wlext_thumb_size_<grid|poster|list> に覚える (px。グリッドとポスターは1枚の最小の幅、リストはサムネイルの幅)
+export const THUMB_SIZES = { grid: { min: 160, max: 480, def: 270 }, poster: { min: 140, max: 480, def: 190 }, list: { min: 120, max: 360, def: 180 } };
+export const thumbKind = (viewMode) => (viewMode === 'grid-poster' ? 'poster' : viewMode === 'list' ? 'list' : 'grid');
+export function storedViewMode() {
+    try {
+        const m = localStorage.getItem('viewMode') || 'grid-lg';
+        if (m !== 'grid-sm') return m;
+        localStorage.setItem('viewMode', 'grid-lg');
+        if (localStorage.getItem('wlext_thumb_size_grid') === null) localStorage.setItem('wlext_thumb_size_grid', '190');
+    } catch { /* 覚えられなくても既定で動く */ }
+    return 'grid-lg';
+}
+export function storedThumbSize(kind) {
+    const r = THUMB_SIZES[kind];
+    try { const n = parseInt(localStorage.getItem('wlext_thumb_size_' + kind), 10); if (n >= r.min && n <= r.max) return n; } catch { /* 既定 */ }
+    return r.def;
+}
+export function saveThumbSize(kind, n) {
+    try { localStorage.setItem('wlext_thumb_size_' + kind, String(n)); } catch { /* 覚えられなくても動く */ }
+}
+
 // LadyTube: 画像が無いカード (タグ・メーカー) の既定の背景。名前から決めるので毎回同じ色 (v3.2.1 までは拡張の WL.colorFor)
 export function colorFor(s) {
     let n = 0;

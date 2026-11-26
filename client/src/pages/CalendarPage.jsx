@@ -12,7 +12,7 @@ import VideoList from '../components/VideoList';
 import { api } from '../services/api';
 import { theme } from '../theme';
 import { Icon } from '../components/ExtIcon';
-import { searchToken } from '../utils/formatters';
+import { searchToken, storedViewMode, storedThumbSize, thumbKind } from '../utils/formatters';
 
 const styles = {
     page: css`
@@ -333,6 +333,7 @@ export default function CalendarPage() {
 function CalendarList({ q, label, count, onPlay }) {
     const [videos, setVideos] = useState(null);
     const perPage = storage('search_perPage') || '20';
+    const viewMode = storedViewMode();
     useEffect(() => {
         let stale = false;
         api.getVideos({ q, perPage, page: 1 })
@@ -347,7 +348,7 @@ function CalendarList({ q, label, count, onPlay }) {
                 <Link className={styles.openBtn} to={'/search?q=' + encodeURIComponent(q)}><Icon name="search" size={14} />検索画面で開く</Link>
             </div>
             {videos === null ? <div className={styles.loading}><LoadingDots /></div>
-                : <VideoList videos={videos} onPlay={onPlay} viewMode={storage('viewMode') || 'grid-lg'} extMeta
+                : <VideoList videos={videos} onPlay={onPlay} viewMode={viewMode} thumbSize={storedThumbSize(thumbKind(viewMode))} extMeta
                     coverThumbs={storage('wlext_thumb_mode') === 'cover'}
                     onVideoUpdate={(u) => setVideos(vs => vs.map(v => (v.id === u.id ? u : v)))} />}
         </>

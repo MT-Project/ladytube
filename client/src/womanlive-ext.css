@@ -1194,6 +1194,9 @@ body.wlext-setnav-on.wlext-setnav-open .wlext-settings-page { padding-left: 256p
 .wlext-bulkfetch-list > div { display: flex; gap: 0.6rem; white-space: nowrap; }
 .wlext-bulkfetch-list .why { flex-shrink: 0; width: 6.5em; color: var(--text-secondary, #888); }
 .wlext-bulkfetch-list a { overflow: hidden; text-overflow: ellipsis; color: inherit; }
+/* 検索画面の表示形式の枠の中の、サムネイルの大きさのスライダー (SearchPage.jsx) */
+.wlext-thumbsize { width: 96px; margin: 0 0.3rem; accent-color: var(--accent, #007acc); cursor: pointer; }
+@media (max-width: 600px) { .wlext-thumbsize { width: 64px; } }
 /* 候補が複数だった行の「選ぶ」と候補 (v3.15.1) */
 .wlext-bulkfetch-list:has(.wlext-bulkfetch-cands) { max-height: min(28rem, 60vh); }
 .wlext-bulkfetch-pick {
