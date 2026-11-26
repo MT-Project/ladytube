@@ -949,7 +949,8 @@ function VideoCard({
                         </div>
                         {renderTagMenu()}
                     </div>
-                    {tags.length > 0 && extMeta && viewMode === 'list' && (
+                    {/* LadyTube: リスト表示はジャンルとタグの行。タグが無くてもジャンルがあれば出す */}
+                    {(tags.length > 0 || (video.ext_genres || []).length > 0) && extMeta && viewMode === 'list' && (
                         <ExtTagRow genres={video.ext_genres || []} tags={tags} className={styles.tagBadgeContainer} badgeClass={styles.tagBadge} />
                     )}
                     {tags.length > 0 && !(extMeta && viewMode === 'list') && (
