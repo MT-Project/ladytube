@@ -23,8 +23,10 @@ export async function loadMeta(vid) {
 
 // 保存して、出演者の展開や file_name を含む最新版を取り直して知らせる
 export async function saveMeta(vid, payload) {
-    await extSend('PUT', '/ext/api/video/' + vid + '/meta', payload);
+    const r = await extSend('PUT', '/ext/api/video/' + vid + '/meta', payload);
     const fresh = await loadMeta(vid);
+    // シリーズが変わって、そのシリーズのルールのタグが付いたとき (server/ext/routes/seriestags.js)。タグの表示は fresh.tags で直る
+    if (r && r.tags_added && r.tags_added.length) toast('シリーズのタグを追加しました: ' + r.tags_added.join('、'), 'success');
     window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta: fresh } }));
     return fresh;
 }

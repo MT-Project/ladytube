@@ -125,7 +125,7 @@ export function ExtBulkMetaDialog({ ids, onDone, onClose }) {
     const save = async () => {
         const u = url.current.value.trim();
         if (u && !normalizeUrl(u)) { toast('URL は http か https で始まるものだけです', 'error'); return; }
-        try { const r = await extSend('POST', '/ext/api/bulk/meta', { ids, meta: { ...read(), url: normalizeUrl(u) } }); toast(r.count + '件を更新しました', 'success'); onClose(); onDone(); }
+        try { const r = await extSend('POST', '/ext/api/bulk/meta', { ids, meta: { ...read(), url: normalizeUrl(u) } }); toast(r.count + '件を更新しました' + (r.tags_added ? '（シリーズのタグを ' + r.tags_added + '件に追加）' : ''), 'success'); onClose(); onDone(); }
         catch (e) { toast('失敗: ' + e.message, 'error'); }
     };
     return (

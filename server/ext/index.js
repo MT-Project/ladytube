@@ -27,6 +27,7 @@ const replace = require('./routes/replace');
 const makers = require('./routes/makers');
 const file = require('./routes/file');
 const saved = require('./routes/saved');
+const seriestags = require('./routes/seriestags');
 const createInject = require('./inject');
 const libraryRoutes = require('./routes/library');
 const library = require('./library');
@@ -212,6 +213,9 @@ module.exports = function setupExt(app) {
     app.get('/ext/api/video/:id/siblings', search.siblings);
     app.get('/ext/api/calendar/days', search.calendarDays);
     app.get('/ext/api/series', search.seriesList);
+    // -- シリーズ → タグの自動付与のルール (v3.17.0)
+    app.get('/ext/api/series-tags', seriestags.list);
+    app.put('/ext/api/series-tags', seriestags.save);
 
     // -- タグ一覧 / タグサムネイル
     app.get('/ext/api/tags', tags.list);

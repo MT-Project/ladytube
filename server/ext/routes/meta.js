@@ -2,13 +2,15 @@
 // 動画の拡張メタデータ ルート
 // =============================================================
 const { db, splitList, joinList, hashOfVideo } = require('../db');
+const seriestags = require('./seriestags');
 const { normalizeUrl } = require('../perfurl.mjs');
 const { hasCover } = require('./cover');   // 本体の画面 (ExtMetaEdit.jsx) と同じもの
 
 const EMPTY = {
     rating: 0, display_name: '', model_no: '', release_date: '',
     series: '', maker: '', label: '',
-    directors: [], genres: [], performers: [], summary: '', url: ''
+    directors: [], genres: [], performers: [], summary: '', url: '',
+    tags: []   // 動画のタグ (v3.17.0。保存で自動付与のタグが増えることがあるので、動画ページが保存のあと読み直す)
 };
 
 function expandPerformers(idsCsvLines) {
@@ -30,12 +32,14 @@ exports.getMeta = (req, res) => {
         if (!file) return res.status(404).json({ error: 'video not found' });
 
         const row = db.prepare('SELECT * FROM ext_video_meta WHERE hash = ?').get(file.hash);
+        const tagRow = db.prepare('SELECT tags FROM metadata WHERE hash = ?').get(file.hash);
 
         const meta = {
             ...EMPTY,
             file_name: file.filename,
             video_date: file.updated_at,   // 動画の作成日時(ファイル更新日時) 年齢計算の既定基準
             has_cover: hasCover(file),     // カバー画像があるか (v3.15.0。一括取得が、カバーだけを取りに行くかを決める)
+            tags: splitList(tagRow && tagRow.tags),
         };
 
         if (row) {
@@ -76,6 +80,8 @@ exports.putMeta = (req, res) => {
         const url = typeof b.url === 'string' ? normalizeUrl(b.url) : undefined;
         if (url === '' && b.url.trim()) return res.status(400).json({ error: 'URL は http か https で始まるものだけです' });
 
+        const prev = db.prepare('SELECT series FROM ext_video_meta WHERE hash = ?').get(hash);
+        const series = (b.series || '').trim() || null;
         db.prepare(`
             INSERT INTO ext_video_meta
                 (hash, rating, display_name, model_no, release_date, series, maker, label, directors, genres, performers, updated_at)
@@ -90,7 +96,7 @@ exports.putMeta = (req, res) => {
             (b.display_name || '').trim() || null,
             (b.model_no || '').trim() || null,
             (b.release_date || '').trim() || null,
-            (b.series || '').trim() || null,
+            series,
             (b.maker || '').trim() || null,
             (b.label || '').trim() || null,
             joinList(b.directors),
@@ -104,7 +110,9 @@ exports.putMeta = (req, res) => {
         // URL も送られてきたときだけ書く (同じ理由)
         if (url !== undefined) db.prepare('UPDATE ext_video_meta SET url = ? WHERE hash = ?').run(url || null, hash);
 
-        res.json({ success: true });
+        // シリーズが変わったときだけ、そのシリーズのルールのタグを足す (評価の保存などシリーズが同じなら何もしない。seriestags.js)
+        const tagsAdded = seriestags.onSeries(hash, prev && prev.series, series);
+        res.json({ success: true, tags_added: tagsAdded });
     } catch (e) {
         console.error('[ext meta put]', e);
         res.status(500).json({ error: e.message });

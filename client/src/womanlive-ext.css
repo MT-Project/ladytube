@@ -750,6 +750,10 @@ body [data-wlext-std="imagelist-fab"] { right: 16rem; bottom: calc(2rem + 6px); 
 /* シリーズ一覧の「複数のメーカーのみ」で出すメーカー名 (SeriesPage.jsx)。名前のみの表示では名前の右に並べる */
 .wlext-series-makers { font-size: 0.75rem; color: var(--text-secondary, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wlext-name-list .wlext-series-makers { display: inline; margin-left: 0.6rem; }
+/* シリーズから自動で付けるタグ (SeriesPage.jsx の RuleTags。v3.17.0)。ルールのあるシリーズだけ、名前の下 (名前のみの表示では右) に出す */
+.wlext-series-rule { display: flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; color: var(--accent, #007acc); min-width: 0; }
+.wlext-series-rule span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wlext-name-list .wlext-series-rule { display: inline-flex; margin-left: 0.6rem; vertical-align: middle; max-width: 60%; }
 
 /* ---- タグ一覧 (シリーズ一覧を踏襲。既定は無地背景+タグ名) ---- */
 .wlext-tag-thumb { display: flex; align-items: center; justify-content: center; }

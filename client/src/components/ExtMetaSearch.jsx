@@ -116,7 +116,7 @@ export function MetaPreviewDialog({ vid, item, onClose }) {
             try { fresh = await loadMeta(vid); } catch { /* 表は次に開いたときに直る */ }
             window.dispatchEvent(new CustomEvent('wlext-meta-updated', { detail: { id: vid, meta: fresh } }));
             window.dispatchEvent(new CustomEvent('wlext-cover-refresh', { detail: { id: vid } }));   // 動画ページのカバーを取り直す
-            toast('メタデータを設定しました' + (r.coverSet ? '（カバー画像も取得）' : '') + (r.renamed?.status === 'done' ? '（ファイル名も変更）' : ''), 'success');
+            toast('メタデータを設定しました' + (r.coverSet ? '（カバー画像も取得）' : '') + (r.renamed?.status === 'done' ? '（ファイル名も変更）' : '') + (r.tags_added?.length ? '（シリーズのタグを追加: ' + r.tags_added.join('、') + '）' : ''), 'success');
             if (r.renamed?.status === 'error') toast('ファイル名は変えられませんでした: ' + r.renamed.error, 'error');
             if (r.renamed?.status === 'done') window.dispatchEvent(new Event('library-updated'));
         } catch (e) { toast('設定に失敗: ' + e.message, 'error'); }

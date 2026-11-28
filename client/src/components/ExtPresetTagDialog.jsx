@@ -1,6 +1,6 @@
 // LadyTube: プリセットのタグから選ぶダイアログ (v3.2.1 までは拡張の core.js の WL.presetTagDialog)。openExtDialog で開く。
 // 使うところ: 動画ページのタグ編集 (utils/videoMeta.js)・一括のタグ追加 (ExtVideoMenu.jsx)・出演者タグ (PerformerPage.jsx)。
-//  props: title / current (選ばれているタグ) / loadPresets() / savePresets(arr) / onSave(selected) (済んだら閉じる)
+//  props: title / current (選ばれているタグ) / loadPresets() / savePresets(arr) / onSave(selected) (済んだら閉じる) / note (上に出す説明。任意)
 // プリセットは「# 名前」「## 名前」の見出しでグループにでき (utils/tagPresets.js の parseTagGroups)、見出しを押すと畳む。
 // プリセットに無い選択中のタグは先頭のグループに足す。「プリセット編集...」で1行1タグの欄に替わり、タイトルの右に「？」のヘルプ。
 // 見た目は womanlive-ext.css の .wlext-tagselect-* / .wlext-taggroup-*。
@@ -16,7 +16,7 @@ const PRESET_HELP = <>
 </>;
 const PLACEHOLDER = 'タグを1行に1つずつ入力...\n「# 名前」でグループ、「## 名前」で下位グループ(ネスト)。\n例:\n# 干支\n犬\n猿\n# 魚\nマグロ';
 
-export default function ExtPresetTagDialog({ title, current, loadPresets, savePresets, onSave, onClose }) {
+export default function ExtPresetTagDialog({ title, current, loadPresets, savePresets, onSave, onClose, note }) {
     const [selected, setSelected] = useState(() => (current || []).slice());
     const [presets, setPresets] = useState(null);   // null = 読み込み中 (読めなければ空)
     const [editing, setEditing] = useState(false);
@@ -66,6 +66,7 @@ export default function ExtPresetTagDialog({ title, current, loadPresets, savePr
     return (
         <ExtDialog title={heading} onClose={onClose} onSave={ok} saveLabel="OK">
             <div>
+                {note && !editing && <div style={{ color: 'var(--text-secondary,#888)', fontSize: '0.8rem', lineHeight: 1.6, marginBottom: '0.6rem' }}>{note}</div>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.6rem' }}>
                     <button className="wlext-btn" onClick={editOrSave}>{editing ? 'プリセットを保存' : 'プリセット編集...'}</button>
                 </div>

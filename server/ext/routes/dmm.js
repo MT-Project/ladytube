@@ -5,6 +5,7 @@
 // =============================================================
 const { db, getSetting, splitList, joinList, hashOfVideo } = require('../db');
 const cover = require('./cover');
+const seriestags = require('./seriestags');
 const library = require('../library');
 const { normalizeUrl } = require('../perfurl.mjs');
 
@@ -250,6 +251,7 @@ exports.apply = async (req, res) => {
             const gg = String(g).trim();
             if (gg && !genres.includes(gg)) genres.push(gg);
         });
+        const series = sv(item.series) || cur.series || null;
         db.prepare(`
             INSERT INTO ext_video_meta
                 (hash, rating, display_name, model_no, release_date, series, maker, label, directors, genres, performers, updated_at)
@@ -265,7 +267,7 @@ exports.apply = async (req, res) => {
             sv(item.title) || cur.display_name || null,
             cur.model_no || null,
             sv(item.date) || cur.release_date || null,
-            sv(item.series) || cur.series || null,
+            series,
             sv(item.maker) || cur.maker || null,
             sv(blankIfDashes(item.label)) || cur.label || null,
             (item.directors || []).length ? joinList(item.directors) : (cur.directors || null),
@@ -277,6 +279,8 @@ exports.apply = async (req, res) => {
         // 作品のページの URL (v3.15.0)。同じく空なら今の値を残す
         const url = normalizeUrl(item.url);
         if (url) db.prepare('UPDATE ext_video_meta SET url = ? WHERE hash = ?').run(url, hash);
+        // シリーズが変わった (新しく入った) ときだけ、そのシリーズのルールのタグを足す (seriestags.js)
+        const tagsAdded = seriestags.onSeries(hash, cur.series, series);
 
         // カバー画像: 未設定かつ URL があれば取得して保存
         let coverSet = false;
@@ -293,7 +297,7 @@ exports.apply = async (req, res) => {
                 ? require('../rename').applyRule([id])[0]
                 : { status: 'error', error: 'ファイル名の変更は、サーバーを動かしている PC（localhost）からのみ行えます' };
         }
-        res.json({ success: true, performers: performerIds.length, coverSet, renamed });
+        res.json({ success: true, performers: performerIds.length, coverSet, renamed, tags_added: tagsAdded });
     } catch (e) {
         console.error('[ext dmm apply]', e);
         res.status(500).json({ error: e.message });

@@ -81,7 +81,8 @@ export function ExtNameList({ items, sel }) {
 // 選択モードの丸ボタン (検索画面と同じ ExtSelectionFabs)。items は表示中の [削除対象の値, 表示名] の並び。
 // 「すべて選択」は表示中を選んだものに足す (絞り込みで隠れた選択は残す。拡張と同じ)。
 // kind / kindLabel は削除の種類 (series / tag ...) と、メニュー・確認に出す名前。メニューと確認は下の ListMenu (v3.2.1 までは拡張の listselect.js)
-export function ExtListFabs({ sel, items, kind, kindLabel }) {
+// extraItems は削除の上に足すメニューの項目 [{ icon, label, run(selected) }] (シリーズ一覧の「タグを自動で付ける」。v3.17.0)
+export function ExtListFabs({ sel, items, kind, kindLabel, extraItems }) {
     return (
         <ExtSelectionFabs selectionMode={sel.mode} selectedIds={sel.selected}
             onToggleMode={() => { closeListMenu(); sel.setMode(!sel.mode); sel.setSelected(new Map()); }}
@@ -89,7 +90,7 @@ export function ExtListFabs({ sel, items, kind, kindLabel }) {
             onDeselectAll={() => sel.setSelected(new Map())}
             onMenu={() => {
                 if (extDialogSnapshot()?.Component === ListMenu) closeExtDialog();
-                else if (sel.selected.size) openExtDialog(ListMenu, { kind, kindLabel, selected: new Map(sel.selected) });
+                else if (sel.selected.size) openExtDialog(ListMenu, { kind, kindLabel, extraItems, selected: new Map(sel.selected) });
             }} />
     );
 }
@@ -97,12 +98,17 @@ export function ExtListFabs({ sel, items, kind, kindLabel }) {
 const closeListMenu = () => { if (extDialogSnapshot()?.Component === ListMenu) closeExtDialog(); };
 
 // 「N件を一括操作」のメニュー (右下)。selected は Map (削除対象の値 -> 表示名)
-function ListMenu({ kind, kindLabel, selected, onClose }) {
+function ListMenu({ kind, kindLabel, extraItems, selected, onClose }) {
     return createPortal(
         <>
             <div className="wlext-sel-menu-backdrop" onClick={onClose} />
             <div className="wlext-sel-menu">
                 <div className="wlext-sel-menu-head">{selected.size + '件を一括操作'}</div>
+                {(extraItems || []).map(it => (
+                    <div key={it.label} className="wlext-sel-menu-item" onClick={() => { onClose(); it.run(selected); }}>
+                        <Icon name={it.icon} size={15} /><span>{it.label}</span>
+                    </div>
+                ))}
                 <div className="wlext-sel-menu-item danger" onClick={() => { onClose(); openExtDialog(ListDeleteDialog, { kind, kindLabel, selected }); }}>
                     <Icon name="trash" size={15} /><span>{kindLabel + 'の削除'}</span>
                 </div>

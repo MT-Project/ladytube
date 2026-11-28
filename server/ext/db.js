@@ -158,6 +158,16 @@ function hashOfVideo(id) {
     const row = db.prepare('SELECT hash FROM files WHERE id = ?').get(id);
     return row ? row.hash : null;
 }
+// 動画 (hash) のタグに add を足す。あるものは足さず、外しもしない (一括のタグ追加 bulk.tags・シリーズからの自動付与 seriestags.js で共用)。
+// 本家 metadata.tags の保存形式 (前後を改行で囲む)。足したタグの配列を返す (metadata の行が無いとき・全部あるときは空)
+function addTags(hash, add) {
+    const row = db.prepare('SELECT tags FROM metadata WHERE hash = ?').get(hash);
+    if (!row) return [];
+    const cur = splitList(row.tags);
+    const added = [...new Set(add)].filter(t => t && !cur.includes(t));
+    if (added.length) db.prepare('UPDATE metadata SET tags = ? WHERE hash = ?').run('\n' + cur.concat(added).join('\n') + '\n', hash);
+    return added;
+}
 
 // 画像バッファ先頭のマジックバイトから Content-Type を判定 (PNG/JPEG/GIF 以外は webp とみなす)
 function imageContentType(buf) {
@@ -193,4 +203,4 @@ const SORT_MAP = {
 let sharp = null;
 try { sharp = require('sharp'); } catch (e) { /* 変換なしでも動作 */ }
 
-module.exports = { db, initSchema, splitList, joinList, getSetting, setSetting, hashOfVideo, imageContentType, IMG_EXTS, SORT_MAP, sharp };
+module.exports = { db, initSchema, splitList, joinList, getSetting, setSetting, hashOfVideo, addTags, imageContentType, IMG_EXTS, SORT_MAP, sharp };

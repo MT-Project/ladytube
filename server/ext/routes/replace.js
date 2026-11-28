@@ -7,6 +7,7 @@
 // =============================================================
 const { db, splitList, joinList, getSetting, setSetting } = require('../db');
 const library = require('../library');
+const seriestags = require('./seriestags');
 
 const PRESET_TAGS_KEY = 'preset_tags';
 const TAG_LAYOUT_KEY = 'ext_video_tag_layout';
@@ -56,6 +57,7 @@ function replaceTag(before, after) {
     // 本家のプリセットと、拡張のグループレイアウトも追従させる
     replaceInStringArraySetting(PRESET_TAGS_KEY, before, after, false);
     replaceInStringArraySetting(TAG_LAYOUT_KEY, before, after, true);
+    seriestags.renameTag(before, after);   // シリーズから自動で付けるタグ (v3.17.0)
     return info.changes;
 }
 
@@ -107,8 +109,10 @@ exports.replace = (req, res) => {
             if (kind === 'genre') return replaceListColumn('genres', before, after);
             if (kind === 'performer') return replacePerformer(before, after);
             const col = COLUMN_KINDS[kind];
-            return db.prepare(`UPDATE ext_video_meta SET ${col} = ?, updated_at = CURRENT_TIMESTAMP WHERE ${col} = ?`)
+            const n = db.prepare(`UPDATE ext_video_meta SET ${col} = ?, updated_at = CURRENT_TIMESTAMP WHERE ${col} = ?`)
                 .run(after, before).changes;
+            if (kind === 'series') seriestags.renameSeries(before, after);   // シリーズから自動でタグを付けるルールも追う (v3.17.0)
+            return n;
         })();
 
         res.json({ success: true, kind, changed });
@@ -138,6 +142,7 @@ function deleteTag(name) {
     // (残すと、動画から消えたタグがタグ入力の候補に出続ける)
     replaceInStringArraySetting(PRESET_TAGS_KEY, name, null, false);
     replaceInStringArraySetting(TAG_LAYOUT_KEY, name, null, true);
+    seriestags.dropTag(name);   // シリーズから自動で付けるタグ (v3.17.0)。残すと、次にそのシリーズへ入った動画に消したタグが戻る
     return info.changes;
 }
 
@@ -184,6 +189,7 @@ exports.remove = (req, res) => {
             if (kind === 'tag') return sum + deleteTag(t);
             if (kind === 'genre') return sum + deleteFromListColumn('genres', t);
             if (kind === 'performer') return sum + deletePerformer(t);
+            seriestags.dropSeries(t);   // シリーズから自動でタグを付けるルールも消す (v3.17.0)
             return sum + db.prepare('UPDATE ext_video_meta SET series = NULL, updated_at = CURRENT_TIMESTAMP WHERE series = ?').run(t).changes;
         }, 0))();
 

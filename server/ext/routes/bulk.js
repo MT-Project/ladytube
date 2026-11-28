@@ -4,7 +4,8 @@
 // =============================================================
 const fs = require('fs');
 const path = require('path');
-const { db, splitList, joinList, getSetting, IMG_EXTS } = require('../db');
+const { db, splitList, joinList, getSetting, addTags, IMG_EXTS } = require('../db');
+const seriestags = require('./seriestags');
 const trash = require('../trash');
 const { normalizeUrl } = require('../perfurl.mjs');
 
@@ -27,19 +28,8 @@ exports.tags = (req, res) => {
         const add = (Array.isArray(tags) ? tags : []).map(t => String(t).trim()).filter(Boolean);
         if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ error: 'ids が必要です' });
 
-        const getTags = db.prepare('SELECT tags FROM metadata WHERE hash = ?');
-        const setTags = db.prepare('UPDATE metadata SET tags = ? WHERE hash = ?');
         let count = 0;
-        db.transaction(() => {
-            count = eachHash(ids, (hash) => {
-                const row = getTags.get(hash);
-                if (!row) return;
-                const cur = row.tags ? row.tags.split('\n').map(t => t.trim()).filter(Boolean) : [];
-                let changed = false;
-                add.forEach(t => { if (!cur.includes(t)) { cur.push(t); changed = true; } });
-                if (changed) setTags.run(cur.length ? '\n' + cur.join('\n') + '\n' : null, hash);
-            });
-        })();
+        db.transaction(() => { count = eachHash(ids, (hash) => { addTags(hash, add); }); })();
         res.json({ success: true, count });
     } catch (e) { console.error('[ext bulk tags]', e); res.status(500).json({ error: e.message }); }
 };
@@ -76,7 +66,7 @@ exports.meta = (req, res) => {
                 updated_at=CURRENT_TIMESTAMP
         `); // display_name は ON CONFLICT で更新しない(=保持)
 
-        let count = 0;
+        let count = 0, tagged = 0;
         db.transaction(() => {
             count = eachHash(ids, (hash) => {
                 const cur = getMeta.get(hash) || {};
@@ -84,13 +74,14 @@ exports.meta = (req, res) => {
                 const genres = splitList(cur.genres);
                 genresIn.forEach(g => { const gg = String(g).trim(); if (gg && !genres.includes(gg)) genres.push(gg); });
 
+                const series = sv('series') || cur.series || null;
                 upsert.run({
                     hash,
                     rating: rating > 0 ? rating : (cur.rating || 0),
                     display_name: cur.display_name || null,
                     model_no: sv('model_no') || cur.model_no || null,
                     release_date: sv('release_date') || cur.release_date || null,
-                    series: sv('series') || cur.series || null,
+                    series,
                     maker: sv('maker') || cur.maker || null,
                     label: sv('label') || cur.label || null,
                     directors: directors.length ? joinList(directors) : (cur.directors || null),
@@ -98,9 +89,11 @@ exports.meta = (req, res) => {
                     genres: joinList(genres),
                 });
                 if (url) setUrl.run(url, hash);
+                // シリーズが変わった動画には、そのシリーズのルールのタグを足す (seriestags.js)
+                if (seriestags.onSeries(hash, cur.series, series).length) tagged++;
             });
         })();
-        res.json({ success: true, count });
+        res.json({ success: true, count, tags_added: tagged });
     } catch (e) { console.error('[ext bulk meta]', e); res.status(500).json({ error: e.message }); }
 };
 
