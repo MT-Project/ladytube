@@ -233,7 +233,7 @@ const PlayerControls = ({
     bufferedRanges = [],
     hasVideo = true,
     screenshots = [],
-    renderExtraControls,  // LadyTube: 「プレイヤー設定」の右に足すボタン (標準モードの切替。ExtStandard.jsx)
+    renderExtraControls,  // LadyTube: スクリーンショットの右に足すボタン (連続再生・標準モードの切替。ExtWatchParts.jsx・ExtStandard.jsx)
     onPip                 // LadyTube: ピクチャーインピクチャー (v3.9.0。対応しないブラウザでは Player が渡さない)
 }) => {
     const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -390,7 +390,7 @@ const PlayerControls = ({
                 </div>
 
                 {/* Right Controls */}
-                <div className={styles.rightControls}>
+                <div className={styles.rightControls + ' wlext-right-controls'}>
                     {hasVideo && onScreenshot && (
                         <button
                             onClick={onScreenshot}
@@ -405,6 +405,16 @@ const PlayerControls = ({
                             <Camera size={20} />
                         </button>
                     )}
+                    {renderExtraControls && renderExtraControls(styles.controlButton)}
+                    {hasVideo && onPip && (
+                        <button onClick={onPip} className={styles.controlButton + ' wlext-pip-btn'} title="ピクチャーインピクチャー">
+                            <PictureInPicture2 size={20} />
+                        </button>
+                    )}
+                    <button onClick={handleFullScreen} className={styles.controlButton} title="フルスクリーン">
+                        <Maximize size={20} />
+                    </button>
+                    {/* LadyTube: プレイヤー設定は一番右 (v3.17.0。本体は全画面の左) */}
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
@@ -414,15 +424,6 @@ const PlayerControls = ({
                         title="プレイヤー設定"
                     >
                         <Settings size={20} />
-                    </button>
-                    {renderExtraControls && renderExtraControls(styles.controlButton)}
-                    {hasVideo && onPip && (
-                        <button onClick={onPip} className={styles.controlButton + ' wlext-pip-btn'} title="ピクチャーインピクチャー">
-                            <PictureInPicture2 size={20} />
-                        </button>
-                    )}
-                    <button onClick={handleFullScreen} className={styles.controlButton} title="フルスクリーン">
-                        <Maximize size={20} />
                     </button>
                 </div>
             </div>
