@@ -34,6 +34,8 @@ const ICONS = {
     search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
     'layout-grid': '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
     list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+    // 連続再生のボタン (ExtWatchParts.jsx の ExtQueueButton。lucide の list-video。v3.17.0)
+    'list-video': '<path d="M21 5H3"/><path d="M10 12H3"/><path d="M10 19H3"/><path d="M15 12.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997a1 1 0 0 1-1.517-.86z"/>',
     archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',

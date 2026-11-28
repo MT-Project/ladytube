@@ -201,6 +201,7 @@ module.exports = function setupExt(app) {
 
     // -- 拡張検索
     app.get('/ext/api/search/facets', search.facets);
+    app.get('/ext/api/search/queue', search.queue);
     // -- 保存した検索 (v3.7.0)
     app.get('/ext/api/saved-searches', saved.list);
     app.put('/ext/api/saved-searches', saved.save);

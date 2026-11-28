@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { css } from '@linaria/core';
 import { theme } from '../../theme';
+import { setQueueOn, useQueueOn } from '../../utils/playQueue';
 
 // Linaria styles
 const styles = {
@@ -125,6 +126,8 @@ const SettingsDialog = ({
     const dialogRef = useRef(null);
     // LadyTube: 次のパートの自動再生 (ExtWatchParts.jsx の ExtAutoNext が同じキーを読む。既定はオン)
     const [autoNext, setAutoNext] = useState(() => localStorage.getItem('wlext_autonext') !== '0');
+    // LadyTube: 連続再生 (v3.17.0。utils/playQueue.js)。操作バーのボタンと同じ値 (既定はオフ)
+    const queueOn = useQueueOn();
 
     useEffect(() => {
         if (!showSettings || !dialogRef.current) return;
@@ -243,6 +246,21 @@ const SettingsDialog = ({
                                 style={{ backgroundColor: autoNext ? theme.colors.accent.primary : '#4b5563' }}
                             >
                                 <div className={styles.toggleKnob} style={{ left: autoNext ? '22px' : '2px' }}></div>
+                            </div>
+                        </div>
+
+                        {/* LadyTube: 連続再生 (検索結果から開いたとき、終わると次の動画へ進む) */}
+                        <div className={styles.toggleRow}>
+                            <span className={styles.toggleLabel}>連続再生（検索結果の次へ）</span>
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setQueueOn(!queueOn);
+                                }}
+                                className={styles.toggle}
+                                style={{ backgroundColor: queueOn ? theme.colors.accent.primary : '#4b5563' }}
+                            >
+                                <div className={styles.toggleKnob} style={{ left: queueOn ? '22px' : '2px' }}></div>
                             </div>
                         </div>
                     </div>

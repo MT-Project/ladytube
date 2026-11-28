@@ -14,6 +14,7 @@ import { LayoutGrid, Square, List as ListIcon, ChevronLeft, ChevronRight, Monito
 import { theme } from '../theme';
 import { removeExtension, groupMemberIds, THUMB_SIZES, thumbKind, storedViewMode, storedThumbSize, saveThumbSize } from '../utils/formatters';
 import ExtVideoMenu from '../components/ExtVideoMenu';
+import { captureQueue, QUEUE_STATE } from '../utils/playQueue';
 import { closeExtDialog, extDialogSnapshot } from '../utils/extDialog';
 
 // LadyTube: 動画の操作メニュー (ExtVideoMenu) が開いていれば閉じる
@@ -596,7 +597,14 @@ export default function SearchPage() {
   const handleVideoClick = (video) => {
     const videoId = typeof video === 'object' && video !== null ? video.id : video;
     sessionStorage.setItem('searchPageScroll', window.scrollY);
-    navigate(`/watch/${videoId}`);
+    // LadyTube: 連続再生の再生順 (v3.17.0)。一覧 (fetchVideos) と同じ条件・並び・まとめ表示で全件の id を控える。移るのは待たない
+    const sort = searchParams.get('sort') || localStorage.getItem('search_sort') || 'updated_desc';
+    const queueParams = { q: searchParams.get('q') || '', sort };
+    if (sort === 'random' && searchParams.get('seed')) queueParams.seed = searchParams.get('seed');
+    if (searchParams.get('path') && searchParams.get('path') !== 'root') queueParams.path = searchParams.get('path');
+    if (localStorage.getItem('wlext_group_model') !== '0') queueParams.group = '1';
+    captureQueue(queueParams);
+    navigate(`/watch/${videoId}`, { state: QUEUE_STATE });
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);

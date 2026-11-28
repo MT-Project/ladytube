@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import VideoList from '../components/VideoList';
 import VideoInfoEditDialog from '../components/VideoInfoEditDialog';
 import ExtStandard, { ExtLayoutButton } from '../components/ExtStandard';
-import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras } from '../components/ExtWatchParts';
+import { CoverCard, MobileActions, ScreenshotSizeSlider, ExtWatchExtras, ExtQueueButton } from '../components/ExtWatchParts';
 import { ExtRating, ExtMetaBlock, ExtFileInfo, ExtSummary, ExtWatchFabs, ExtTitleUrl, ExtPerformerPills } from '../components/ExtWatchMeta';
 import { ExtPickWord } from '../components/ExtSearchWords';
 import LoadingDots from '../components/LoadingDots';
@@ -1064,7 +1064,12 @@ export default function WatchPage() {
                         onVideoUpdate={(updatedVideo) => setVideo(updatedVideo)}
                         onVideoSelect={(selectedVideo) => navigate(`/watch/${selectedVideo.id}`)}
                         screenshots={screenshots}
-                        renderExtraControls={(className) => <ExtLayoutButton className={className} standard={stdMode} onToggle={toggleStdMode} />}
+                        renderExtraControls={(className) => (
+                            <>
+                                <ExtQueueButton key={'queue-' + video.id} className={className} videoId={video.id} />
+                                <ExtLayoutButton className={className} standard={stdMode} onToggle={toggleStdMode} />
+                            </>
+                        )}
                     />
                 </div>
             </div>

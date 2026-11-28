@@ -20,7 +20,9 @@
 //  ・時刻とフレーム番号の表示は body に出す。全画面の間はプレイヤーの枠の中 (v3.1.12 までは全画面で枠の後ろに隠れていた)
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from './ExtIcon';
+import { queueGo, setQueueOn, useQueue } from '../utils/playQueue';
 import ExtSlot from './ExtSlot';
 import { toast } from '../utils/toast';
 import { lightbox } from '../utils/imageDialogs';
@@ -244,33 +246,81 @@ function partsAround(videoId) {
         return { prev: (i > 0 && parts[i - 1]) || null, next: (i >= 0 && parts[i + 1]) || null };
     }, () => ({ prev: null, next: null }));
 }
+//  連続再生 (v3.17.0。utils/playQueue.js) がオンで、検索から開いた動画のときは、次を列の順だけで決める
+//   (同じカードの次のパート → 次のカードの先頭)。パートの続きは「次のパートを自動再生」に従い、オフならパートの途中で止まる。
+//   オフ (または検索から開いていない) のときは、これまでどおり同じ品番の次のパート
+function briefOf(id) {
+    return fetch('/ext/api/videos/brief?ids=' + id).then(r => (r.ok ? r.json() : null)).then(j => (j && j.videos && j.videos[0]) || { id }, () => ({ id }));
+}
 export function ExtAutoNext({ videoId, onGo }) {
-    const [next, setNext] = useState(null);
+    const [next, setNext] = useState(null);   // { video: 次の動画, label: 秒読みの文 }
     const [left, setLeft] = useState(AUTONEXT_SEC);
-    const goRef = useRef(onGo);   // onGo は描くたびに作り直されるので、秒読みの effect の deps に入れない
-    useEffect(() => { goRef.current = onGo; });
+    const navigate = useNavigate();
+    const q = useQueue(videoId);
+    // 移る関数は描くたびに作り直されるので、秒読みの effect の deps に入れない。列の中にいるときは印を付けて移る (列が続く)
+    const goRef = useRef(null);
+    useEffect(() => { goRef.current = (v) => (q ? queueGo(navigate, v.id) : onGo(v)); });
     useEffect(() => {
-        if (localStorage.getItem('wlext_autonext') === '0') return;
         let stale = false;
-        partsAround(videoId).then(p => { if (!stale && p.next) setNext(p.next); });
+        const partsOn = localStorage.getItem('wlext_autonext') !== '0';
+        const queued = !!(q && q.on);
+        let id = null, label = '次のパートを再生';
+        if (queued) {
+            if (q.nextMember) { if (partsOn) id = q.nextMember; }
+            else if (q.nextEntry) { id = q.nextEntry; label = '次の動画を再生（連続再生 ' + (q.index + 1) + ' / ' + q.total + '）'; }
+        }
+        // 次が無いときも null で上書きする (秒読み中に連続再生をオフにしたら、残っている秒読みを止める)
+        const found = queued ? (id ? briefOf(id) : Promise.resolve(null)) : (partsOn ? partsAround(videoId).then(p => p.next) : Promise.resolve(null));
+        found.then(v => { if (!stale) setNext(v ? { video: v, label } : null); });
         return () => { stale = true; };
-    }, [videoId]);
+    }, [videoId, q]);
     useEffect(() => {
         if (!next) return;
-        if (left <= 0) { goRef.current(next); return; }
+        if (left <= 0) { goRef.current(next.video); return; }
         const t = setTimeout(() => setLeft(left - 1), 1000);
         return () => clearTimeout(t);
     }, [next, left]);
     if (!next) return null;
     return (
         <div className="wlext-autonext" onClick={(e) => e.stopPropagation()}>
-            <div className="wlext-autonext-head">{left + ' 秒後に次のパートを再生'}</div>
-            <div className="wlext-autonext-name">{next.ext_display_name || next.filename}</div>
+            <div className="wlext-autonext-head">{left + ' 秒後に' + next.label}</div>
+            <div className="wlext-autonext-name">{next.video.ext_display_name || next.video.filename}</div>
             <div className="wlext-autonext-btns">
-                <span className="wlext-btn wlext-btn-primary" onClick={() => goRef.current(next)}>今すぐ再生</span>
+                <span className="wlext-btn wlext-btn-primary" onClick={() => goRef.current(next.video)}>今すぐ再生</span>
                 <span className="wlext-btn" onClick={() => setNext(null)}>キャンセル</span>
             </div>
         </div>
+    );
+}
+
+// 操作バーの連続再生 (v3.17.0。WatchPage の renderExtraControls)。検索から開いた動画のときだけ出る。
+//  列のボタン = オン・オフ (オンのとき「3 / 120」)。オンのときだけ前へ・次へ (幅 640px 以下では前へ・次へと数を隠す。womanlive-ext.css)
+//  前へ・次へは自動で進むときと同じ順 (同じカードのパート → ほかのカードの先頭)
+export function ExtQueueButton({ className, videoId }) {
+    const q = useQueue(videoId);
+    const navigate = useNavigate();
+    if (!q) return null;
+    const prevId = q.prevMember || q.prevEntry, nextId = q.nextMember || q.nextEntry;
+    const go = (e, id) => { e.stopPropagation(); if (id) queueGo(navigate, id); };
+    return (
+        <>
+            {q.on && (
+                <button className={className + ' wlext-queue-nav'} title="前の動画" disabled={!prevId} onClick={(e) => go(e, prevId)}>
+                    <Icon name="step-back" size={20} />
+                </button>
+            )}
+            <button className={className + ' wlext-queue-btn' + (q.on ? ' on' : '')} aria-pressed={q.on}
+                title={q.on ? '連続再生: オン（動画が終わると検索結果の次の動画へ進みます）' : '連続再生: オフ（押すと、動画が終わったあと検索結果の次の動画へ進みます）'}
+                onClick={(e) => { e.stopPropagation(); setQueueOn(!q.on); }}>
+                <Icon name="list-video" size={20} />
+                {q.on && <span className="wlext-queue-count">{q.index + ' / ' + q.total}</span>}
+            </button>
+            {q.on && (
+                <button className={className + ' wlext-queue-nav'} title="次の動画" disabled={!nextId} onClick={(e) => go(e, nextId)}>
+                    <Icon name="step-forward" size={20} />
+                </button>
+            )}
+        </>
     );
 }
 
@@ -290,6 +340,12 @@ export function ExtMediaSession({ video, videoRef, seek, timeRef, durationRef, o
     const [parts, setParts] = useState({ prev: null, next: null });
     const seekRef = useRef(seek), goRef = useRef(onGo);   // 描くたびに作り直されるので deps に入れない
     useEffect(() => { seekRef.current = seek; goRef.current = onGo; });
+    // 連続再生 (v3.17.0) がオンなら、前へ・次へは列の順 (同じカードのパート → ほかのカードの先頭)。そうでなければ同じ品番の前後のパート。
+    // 列の中にいるときは印を付けて移る (列が続く)
+    const navigate = useNavigate();
+    const q = useQueue(video.id), inQueue = !!q;
+    const prevId = q && q.on ? (q.prevMember || q.prevEntry) : (parts.prev && parts.prev.id);
+    const nextId = q && q.on ? (q.nextMember || q.nextEntry) : (parts.next && parts.next.id);
     const id = video.id, thumb = video.has_thumbnail ? '/api/video/' + id + '/thumbnail?s=' + (video.thumbnail_size || 0) : null;
 
     useEffect(() => {
@@ -320,10 +376,11 @@ export function ExtMediaSession({ video, videoRef, seek, timeRef, durationRef, o
         set('seekbackward', (d) => by(d, -1));
         set('seekforward', (d) => by(d, 1));
         set('seekto', (d) => seekRef.current(d.seekTime));
-        set('previoustrack', parts.prev && goRef.current ? () => goRef.current(parts.prev) : null);
-        set('nexttrack', parts.next && goRef.current ? () => goRef.current(parts.next) : null);
+        const go = (pid) => () => (inQueue ? queueGo(navigate, pid) : goRef.current({ id: pid }));
+        set('previoustrack', prevId && (inQueue || goRef.current) ? go(prevId) : null);
+        set('nexttrack', nextId && (inQueue || goRef.current) ? go(nextId) : null);
         return () => MS_ACTIONS.forEach(a => set(a, null));
-    }, [parts, timeRef, durationRef]);
+    }, [prevId, nextId, inQueue, navigate, timeRef, durationRef]);
 
     useEffect(() => {
         const v = videoRef.current;

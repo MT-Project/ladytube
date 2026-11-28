@@ -267,6 +267,29 @@ function respond(req, res, countOnly) {
 exports.videos = (req, res) => respond(req, res, false);
 exports.count = (req, res) => respond(req, res, true);
 
+// GET /ext/api/search/queue?q=...&sort=...&seed=...&path=...&group=1   連続再生 (v3.17.0) の再生順
+//  一覧 (/api/videos) と同じ条件・並びで、全件の id だけを返す。entries は1件 = 1枚のカード:
+//  [カードの先頭の id, ...同じ品番のほかのパートの id] (group=1 のときだけ複数。ファイル名の自然順)
+exports.queue = (req, res) => {
+    try {
+        const query = req.query;
+        const { where, params } = conditionsFor(query);
+        const whereSql = where.length ? ' WHERE ' + where.join(' AND ') : '';
+        const { orderBy, extraParams } = orderByFor(query.sort, query.seed);
+        const LIMIT = 20000;
+        const entries = query.group === '1'
+            ? groupedVideos(whereSql, params, orderBy, extraParams, LIMIT, 0)
+                .map(v => (v.ext_group_ids ? String(v.ext_group_ids).split(',').map(Number) : [v.id]))
+            : db.prepare(`SELECT f.id AS id ${BASE}${whereSql} ORDER BY ${orderBy} LIMIT ?`)
+                .all(...params, ...extraParams, LIMIT).map(r => [r.id]);
+        res.json({ entries });
+    } catch (e) {
+        if (e.badRequest) return res.status(400).json({ error: e.message });
+        console.error('[ext search queue]', e);
+        res.status(500).json({ error: '連続再生の一覧の取得に失敗しました' });
+    }
+};
+
 // シリーズ別に集計 (シリーズ一覧用)
 //  name: シリーズ名 / count: 動画(ファイル)本数 / avgRating: 評価平均(0は除外) / thumbId: サムネ用動画id
 //  makers: そのシリーズの動画のメーカー (本数の多い順。シリーズ一覧の「メーカーでまとめる」と「複数のメーカーのみ」)

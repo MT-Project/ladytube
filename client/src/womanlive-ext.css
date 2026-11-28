@@ -1503,6 +1503,18 @@ body.wlext-std:not([data-wlext-tab="images"]) [data-wlext-std="imagelist-loading
 /* ピクチャーインピクチャーのボタン (PlayerControls.jsx。v3.9.0): 幅 640px 以下では出さない。
    コントロールの行に収まらず、全画面のボタンを画面の外へ押し出すため (行は幅 440px ほどで本体の並びのまま、はみ出しはじめる) */
 @media (max-width: 640px) { .wlext-pip-btn { display: none !important; } }
+/* 操作バーの連続再生 (ExtWatchParts.jsx の ExtQueueButton。v3.17.0): オンのときはアクセント色と「3 / 120」と前へ・次へ。
+   コントロールの行に収まらない幅では隠す: 前へ・次へと数は 680px 以下 (シアターモードで 641px のとき行が 17px はみ出した)、
+   オン・オフのボタンも PiP と同じ 640px 以下。
+   スマホのオン・オフはプレイヤー設定の「連続再生」。自動で進むときの秒読みの画面とメディアキーはそのまま使える */
+.wlext-queue-btn { align-items: center; gap: 0.3rem; }
+.wlext-queue-btn.on { color: var(--accent); }
+.wlext-queue-count { font-size: 0.8rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wlext-queue-nav:disabled { opacity: 0.35; cursor: default; }
+@media (max-width: 680px) { .wlext-queue-nav, .wlext-queue-count { display: none !important; } }
+@media (max-width: 640px) { .wlext-queue-btn { display: none !important; } }
+/* 標準モードは行の幅が「画面の幅 − 375px」(1000px で 625px) で、切り替えのボタンも並ぶため、全部並ぶと 665px 要る。1000px では 40px はみ出した */
+@media (max-width: 1080px) { body.wlext-std .wlext-queue-nav, body.wlext-std .wlext-queue-count { display: none !important; } }
 body.wlext-std[data-wlext-tab="series"] .wlext-std-pane[data-pane="series"],
 body.wlext-std[data-wlext-tab="related"] .wlext-std-pane[data-pane="related"] { display: block; }
 
