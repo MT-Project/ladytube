@@ -11,7 +11,6 @@ import { useMsePlayback } from './Player/useMsePlayback';
 import { FrameStep, ExtAutoNext, ExtMediaSession } from './ExtWatchParts';
 import { css } from '@linaria/core';
 import { theme } from '../theme';
-import ASS from 'assjs';
 
 const styles = {
     container: css`
@@ -247,17 +246,21 @@ const Player = forwardRef(({ video, onClose, isEmbedded = false, onCapture, isCa
             })
             .then(content => {
                 if (!isMounted || !content.trim()) return;
-                try {
-                    assInstanceRef.current = new ASS(content, videoEl, {
-                        container: containerEl,
-                        resampling: 'video_height'
-                    });
-                    if (!videoEl.paused && !videoEl.ended) {
-                        videoEl.dispatchEvent(new Event('playing'));
+                // LadyTube: assjs (最初の JS の約1割) は字幕があるときだけ読む
+                return import('assjs').then(({ default: ASS }) => {
+                    if (!isMounted) return;
+                    try {
+                        assInstanceRef.current = new ASS(content, videoEl, {
+                            container: containerEl,
+                            resampling: 'video_height'
+                        });
+                        if (!videoEl.paused && !videoEl.ended) {
+                            videoEl.dispatchEvent(new Event('playing'));
+                        }
+                    } catch (e) {
+                        console.error('Failed to initialize ASS subtitle:', e);
                     }
-                } catch (e) {
-                    console.error('Failed to initialize ASS subtitle:', e);
-                }
+                });
             })
             .catch(err => {
                 if (err.name === 'AbortError') return;
