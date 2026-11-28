@@ -692,18 +692,19 @@ export default function SearchPage() {
 
   // LadyTube: keys の2つを持つ項目 (表示名・評価・スクショ数) は、押すたびに向きを切り替える (最初は keys[0])。
   // 並べ替えはサーバー (server/ext/db.js の SORT_MAP) が行う
+  // 並びとラベルは v3.17.0 で変えた (キーは同じなので URL・保存した検索・ホームの行はそのまま):
+  //  「新着」= ファイルの更新日時 (updated_desc / updated_asc。旧「新しい」「古い」)、「更新日」= LadyTube に登録した日時 (created_desc。旧「新着」)
   const sortOptions = [
-    { key: 'updated_desc', label: '新しい' },
-    { key: 'updated_asc', label: '古い' },
-    { key: 'name_asc', label: '名前' },
-    { keys: ['ext_displayname_asc', 'ext_displayname_desc'], label: '表示名' },
-    { key: 'duration_desc', label: '長さ' },
-    { key: 'created_desc', label: '新着' },
-    { key: 'history_desc', label: '再生履歴' },
-    { key: 'play_count_desc', label: '再生数' },
-    { key: 'random', label: 'ランダム' },
+    { keys: ['updated_desc', 'updated_asc'], label: '新着' },
     { keys: ['ext_rating_desc', 'ext_rating_asc'], label: '評価' },
+    { key: 'duration_desc', label: '長さ' },
+    { key: 'name_asc', label: 'ファイル名' },
+    { keys: ['ext_displayname_asc', 'ext_displayname_desc'], label: '表示名' },
+    { key: 'history_desc', label: '最近再生' },
+    { key: 'play_count_desc', label: '再生数' },
     { keys: ['ext_screenshots_desc', 'ext_screenshots_asc'], label: 'スクショ数' },
+    { key: 'created_desc', label: '更新日' },
+    { key: 'random', label: 'ランダム' },
   ];
 
   const getPageNumbers = () => {
